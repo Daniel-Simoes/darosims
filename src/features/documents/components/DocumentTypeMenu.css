@@ -1,0 +1,188 @@
+.dt-menu-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.dt-menu-wrap.disabled {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.dt-menu-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+  color: #0f172a;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.dt-menu-trigger:hover:not(:disabled) {
+  border-color: #cbd5e1;
+}
+
+.dt-menu-trigger.open,
+.dt-menu-trigger:focus-visible {
+  border-color: #1a56db;
+  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.12);
+  outline: none;
+}
+
+.dt-menu-placeholder {
+  color: #94a3b8;
+}
+
+.dt-menu-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dt-menu-panel {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+}
+
+.dt-menu-panel-head {
+  padding: 10px 12px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+  border-bottom: 1px solid #f1f5f9;
+  background: #f8fafc;
+}
+
+.dt-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.dt-menu-item {
+  display: block;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #334155;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dt-menu-item:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.dt-menu-item.selected {
+  background: #eff6ff;
+  color: #1a56db;
+  font-weight: 500;
+}
+
+.dt-menu-add-wrap-first {
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 4px;
+  padding-bottom: 4px;
+}
+
+.dt-menu-add-trigger {
+  color: #1a56db;
+  font-weight: 500;
+}
+
+.dt-menu-add-trigger:hover {
+  background: #eff6ff;
+}
+
+.dt-menu-standard {
+  font-weight: 600;
+  color: #475569;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 4px;
+  border-radius: 0;
+}
+
+.dt-menu-standard.selected {
+  color: #1a56db;
+}
+
+.dt-menu-add-form {
+  padding: 8px 6px 6px;
+}
+
+.dt-menu-add-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.dt-menu-add-input:focus {
+  outline: none;
+  border-color: #1a56db;
+  box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.12);
+}
+
+.dt-menu-add-error {
+  font-size: 12px;
+  color: #dc2626;
+  margin-bottom: 6px;
+}
+
+.dt-menu-add-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.dt-menu-add-btn {
+  flex: 1;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: #1a56db;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dt-menu-add-btn:hover {
+  background: #1e429f;
+}
+
+.dt-menu-add-btn-ghost {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.dt-menu-add-btn-ghost:hover {
+  background: #e2e8f0;
+}

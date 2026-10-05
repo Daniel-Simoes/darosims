@@ -1,0 +1,129 @@
+.doc-editor {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: white;
+}
+
+.doc-editor.disabled {
+  opacity: 0.7;
+}
+
+.doc-editor-loading {
+  padding: 24px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.doc-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #f8fafc;
+}
+
+.doc-editor-toolbar-btn {
+  padding: 5px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: white;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.doc-editor-toolbar-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+
+.doc-editor-toolbar-btn.active {
+  background: #dbeafe;
+  border-color: #93c5fd;
+  color: #1d4ed8;
+}
+
+.doc-editor-toolbar-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.doc-editor-content {
+  min-height: 360px;
+  padding: 18px 20px;
+  outline: none;
+  font-size: 15px;
+  line-height: 1.65;
+  color: #0f172a;
+}
+
+.doc-editor-content:empty::before {
+  content: attr(data-placeholder);
+  color: #94a3b8;
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
+.doc-editor-content h1 {
+  font-size: 1.6rem;
+  margin: 0 0 0.75rem;
+}
+
+.doc-editor-content h2 {
+  font-size: 1.25rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.doc-editor-content p {
+  margin: 0 0 0.75rem;
+}
+
+.doc-editor-content ul,
+.doc-editor-content ol {
+  margin: 0 0 0.75rem 1.25rem;
+  padding: 0;
+}
+
+.doc-editor-content mark {
+  background-color: #fef08a;
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+.doc-editor-track-hint {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 500;
+  color: #92400e;
+  background: #fef9c3;
+  padding: 4px 10px;
+  border-radius: 100px;
+}
+
+.doc-editor-fullscreen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border: none;
+  border-radius: 0;
+  min-height: 0;
+}
+
+.doc-editor-fullscreen .doc-editor-toolbar {
+  flex-shrink: 0;
+}
+
+.doc-editor-fullscreen .doc-editor-content-fullscreen {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  overflow: auto;
+}
+
+.doc-editor-content-fullscreen {
+  min-height: 100%;
+}

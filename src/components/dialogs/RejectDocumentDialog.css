@@ -1,0 +1,111 @@
+.reject-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.reject-dialog {
+  width: min(100%, 480px);
+  padding: 24px;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
+}
+
+.reject-dialog-title {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.reject-dialog-message {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #475569;
+}
+
+.reject-dialog-field {
+  display: block;
+}
+
+.reject-dialog-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.reject-dialog-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 96px;
+}
+
+.reject-dialog-textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.reject-dialog-error {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #dc2626;
+}
+
+.reject-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.reject-dialog-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.reject-dialog-btn-outline {
+  background: white;
+  border-color: #e2e8f0;
+  color: #334155;
+}
+
+.reject-dialog-btn-outline:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
+.reject-dialog-btn-danger {
+  background: #dc2626;
+  color: white;
+}
+
+.reject-dialog-btn-danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.reject-dialog-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -1,0 +1,72 @@
+.daros-entry-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #f7f9fc 0%, #eef4f8 100%);
+  animation: daros-entry-loading-fade-in 0.2s ease;
+}
+
+.daros-entry-loading-icon-wrap {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.daros-entry-loading-icon {
+  width: 52px;
+  height: auto;
+  position: relative;
+  z-index: 1;
+  animation: daros-entry-icon-pulse 1.6s ease-in-out infinite;
+}
+
+.daros-entry-loading-ring {
+  position: absolute;
+  inset: 0;
+  border: 2px solid transparent;
+  border-top-color: var(--color-primary, #29b5e8);
+  border-right-color: rgba(41, 181, 232, 0.35);
+  border-radius: 50%;
+  animation: daros-entry-ring-spin 1.1s linear infinite;
+}
+
+.daros-entry-loading-ring-delay {
+  inset: 10px;
+  border-top-color: rgba(41, 181, 232, 0.45);
+  border-right-color: transparent;
+  animation-direction: reverse;
+  animation-duration: 1.6s;
+}
+
+@keyframes daros-entry-ring-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes daros-entry-icon-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 0.92;
+  }
+}
+
+@keyframes daros-entry-loading-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
