@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { DATA_DIR, USERS_FILE } from '@/config/paths';
+import { DATA_DIR, USERS_FILE, USER_PHOTOS_DIR } from '@/config/paths';
 import { getPermissionsForRole } from '@/lib/permissions';
 import type { AuthUser } from '@/types';
 
@@ -121,5 +121,25 @@ export function getPhotoFileName(email: string) {
 }
 
 export function getPhotoFilePath(email: string) {
-  return path.join(process.cwd(), 'data', 'user-photos', getPhotoFileName(email));
+  return path.join(USER_PHOTOS_DIR, getPhotoFileName(email));
+}
+
+/** First admin from env when no users exist (production bootstrap). */
+export async function ensureDefaultAdminFromEnv(): Promise<void> {
+  const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const password = process.env.ADMIN_PASSWORD;
+  if (!email || !password) return;
+
+  const users = await readAllUsers();
+  if (users.length > 0) return;
+
+  const admin = normalizeUser({
+    email,
+    password,
+    role: 'admin',
+    name: 'Administrator',
+    firstName: 'Admin',
+    lastName: '',
+  });
+  await writeAllUsers([admin]);
 }

@@ -1,6 +1,7 @@
 import path from 'path';
 
-export const DATA_DIR = path.join(process.cwd(), 'data');
+/** On Vercel, set `DATA_DIR=/tmp/darosims-data` (ephemeral; fine for demo/MVP). */
+export const DATA_DIR = process.env.DATA_DIR ?? path.join(process.cwd(), 'data');
 export const DOCUMENTS_FILE = path.join(DATA_DIR, 'documents.json');
 export const NOTIFICATIONS_FILE = path.join(DATA_DIR, 'notifications.json');
 export const DOCUMENT_EVENTS_FILE = path.join(DATA_DIR, 'document_events.json');

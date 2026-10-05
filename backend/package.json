@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
+    "build:vercel": "cd .. && npm ci && npm run build && node scripts/sync-frontend-to-backend.mjs && cd backend && next build",
     "start": "next start -p 3000"
   },
   "dependencies": {

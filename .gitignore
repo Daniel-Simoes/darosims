@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 backend/.next
+backend/public
 backend/data
 .env
 .env.*
