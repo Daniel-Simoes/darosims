@@ -7,7 +7,7 @@ One Vercel project serves the **Vite marketing app + dashboard** and the **Next.
 1. Sign in at [vercel.com](https://vercel.com) with GitHub.
 2. **Add New → Project** → import `Daniel-Simoes/darosims`.
 3. Set **Root Directory** to `backend` (important).
-4. Leave **Framework Preset** as Next.js. Vercel reads `backend/vercel.json` for install/build commands.
+4. Leave **Framework Preset** as Next.js. Vercel reads `backend/vercel.json` for install/build commands (install uses `--include=dev` so Vite/TypeScript are available during build).
 
 ## 2. Environment variables
 
