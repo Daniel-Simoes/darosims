@@ -124,6 +124,17 @@ export function getPhotoFilePath(email: string) {
   return path.join(USER_PHOTOS_DIR, getPhotoFileName(email));
 }
 
+export async function createUserIfMissing(
+  input: Pick<StoredUser, 'email' | 'password' | 'role' | 'firstName' | 'lastName'>,
+): Promise<void> {
+  const existing = await findUserByEmail(input.email);
+  if (existing) return;
+
+  const users = await readAllUsers();
+  users.push(normalizeUser(input));
+  await writeAllUsers(users);
+}
+
 /** First admin from env when no users exist (production bootstrap). */
 export async function ensureDefaultAdminFromEnv(): Promise<void> {
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();

@@ -76,6 +76,14 @@ export async function updateUserByEmail(
 
 export { getPhotoFileName, getPhotoFilePath };
 
+export async function createUserIfMissing(
+  input: Pick<StoredUser, 'email' | 'password' | 'role' | 'firstName' | 'lastName'>,
+): Promise<void> {
+  const existing = await findUserByEmail(input.email);
+  if (existing) return;
+  await upsertUser(normalizeUser(input));
+}
+
 export async function ensureDefaultAdminFromEnv(): Promise<void> {
   const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD;

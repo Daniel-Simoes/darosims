@@ -40,3 +40,9 @@ export function getPhotoFilePath(email: string) {
 export async function ensureDefaultAdminFromEnv() {
   return repo().ensureDefaultAdminFromEnv();
 }
+
+export async function createUserIfMissing(
+  input: Parameters<typeof files.createUserIfMissing>[0],
+) {
+  return repo().createUserIfMissing(input);
+}

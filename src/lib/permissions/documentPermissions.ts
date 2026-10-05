@@ -1,7 +1,7 @@
 import type { AuthUser } from '../../types/auth';
 
 export const DOCUMENT_USERS = [
-  { name: 'Daniel', email: 'daniel@darosapp.com' },
+  { name: 'Daniel', email: 'daniel@daros.com' },
   { name: 'Rodrigo', email: 'rodrigo@daros.com' },
 ] as const;
 
