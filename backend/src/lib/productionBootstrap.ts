@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { DATA_DIR } from '@/config/paths';
+import { isSupabaseDatabase } from '@/database/provider';
 import { ensureDefaultAdminFromEnv } from '@/repositories/users/userRepository';
 
 const SEED_FILES = ['documents.json', 'notifications.json', 'document_events.json', 'users.json'] as const;
@@ -32,6 +33,11 @@ async function copySeedIfMissing() {
 
 export async function bootstrapProductionStorage() {
   if (process.env.VERCEL !== '1' && process.env.NODE_ENV !== 'production') {
+    return;
+  }
+
+  if (isSupabaseDatabase()) {
+    await ensureDefaultAdminFromEnv();
     return;
   }
 

@@ -53,3 +53,5 @@ npm run preview
 ## Production (Vercel + darosims.com)
 
 Deploy from the **`backend`** folder (Next.js serves the built Vite app and `/api`). See [docs/deployment/vercel-darosims.md](docs/deployment/vercel-darosims.md) for env vars and Let's Host DNS.
+
+For **persistent documents** on Vercel, use free [Supabase](docs/deployment/supabase.md) (`DATABASE_PROVIDER=supabase`).

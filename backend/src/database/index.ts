@@ -1,11 +1,10 @@
-/**
- * Database layer placeholder for future PostgreSQL / Supabase migration.
- *
- * CURRENT: JSON file repositories in `backend/src/repositories/`
- * FUTURE: PostgreSQL client, migrations, and Supabase repositories
- */
+import { getDatabaseProvider } from '@/database/provider';
+
+export { getDatabaseProvider, isSupabaseDatabase } from '@/database/provider';
 
 export const databaseStatus = {
-  provider: 'json-files' as const,
-  migrated: false,
+  get provider() {
+    return getDatabaseProvider();
+  },
+  migrated: getDatabaseProvider() === 'supabase',
 };
