@@ -26,6 +26,7 @@ import { HomeCharts } from '../../features/dashboard/components/HomeCharts';
 import { ModuleCarousel } from '../../features/dashboard/components/ModuleCarousel';
 import { ModuleVisualizationView } from '../../features/dashboard/components/ModuleVisualizationView';
 import { useAuth } from '../../features/authentication/context/AuthContext';
+import { TeamUsersProvider } from '../../context/TeamUsersContext';
 import { ProfileSettingsView } from '../../features/users/components/ProfileSettingsView';
 import './DashboardPage.css';
 
@@ -183,6 +184,7 @@ export function DashboardPage() {
   }
 
   return (
+    <TeamUsersProvider>
     <div
       className={`dashboard-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}
     >
@@ -284,5 +286,6 @@ export function DashboardPage() {
         </main>
       </div>
     </div>
+    </TeamUsersProvider>
   );
 }

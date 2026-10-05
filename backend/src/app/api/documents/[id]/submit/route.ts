@@ -2,7 +2,8 @@ import { requireAuth, jsonResponse, corsHeaders } from '@/lib/auth';
 import { getDocumentById, submitDocumentForApproval } from '@/lib/documents';
 import { createDocumentEvent, getLatestSubmissionType } from '@/lib/documentEvents';
 import { createNotification } from '@/lib/notifications';
-import { getUserEmailByName, isDocumentOwnerSameAsEmail } from '@/lib/users';
+import { resolveDocumentOwnerEmail } from '@/lib/documentOwnership';
+import { isDocumentOwnerSameAsEmail } from '@/lib/users';
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders() });
@@ -34,7 +35,7 @@ export async function POST(
       actorEmail: auth.email,
       actorName: auth.name,
     });
-    const approverEmail = await getUserEmailByName(document.owner);
+    const approverEmail = await resolveDocumentOwnerEmail(document.owner);
     const isCreatorAlsoOwner = await isDocumentOwnerSameAsEmail(document.owner, auth.email);
 
     if (approverEmail) {

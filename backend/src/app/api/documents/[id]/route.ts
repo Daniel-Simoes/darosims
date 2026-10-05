@@ -4,6 +4,7 @@ import { deleteDocumentSourceFile } from '@/lib/documentFiles';
 import { createDocumentEvent } from '@/lib/documentEvents';
 import { createNotification } from '@/lib/notifications';
 import type { UpdateDocumentInput } from '@/lib/types';
+import { isAuthUserDocumentOwner } from '@/lib/documentOwnership';
 import { isDocumentApprover, isDocumentOwnerSameAsEmail } from '@/lib/users';
 
 export async function OPTIONS() {
@@ -63,6 +64,13 @@ export async function PUT(
 
     if (isApproving && !(await isDocumentApprover(auth.email))) {
       return jsonResponse({ error: 'You are not authorized to approve documents' }, 403);
+    }
+
+    if (isApproving && existing.submittedAt && !(await isAuthUserDocumentOwner(auth.email, existing.owner))) {
+      return jsonResponse(
+        { error: 'Only the assigned document owner can approve this submission' },
+        403,
+      );
     }
 
     const input: UpdateDocumentInput = {

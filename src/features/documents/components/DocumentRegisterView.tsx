@@ -1,7 +1,8 @@
 import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { api, type CreateDocumentPayload, type DocumentRecord } from '../../../lib/api';
 import { documentTypeBadgeClass } from '../../../data/documentRegister';
-import { canUserDeleteDocument, DOCUMENT_USERS, isDocumentOwnerSameAsUser } from '../../../lib/documentUsers';
+import { useTeamUsers } from '../../../context/TeamUsersContext';
+import { canUserDeleteDocument, isDocumentOwnerSameAsUser } from '../../../lib/documentUsers';
 import { useAuth } from '../../../context/AuthContext';
 import { generateDocumentCode } from '../../../lib/documentCode';
 import {
@@ -23,7 +24,6 @@ import { buildDocumentReviewHistoryRows } from '../utils/reviewHistory';
 import type { DocumentEventRecord } from '../../../types/audit';
 import './DocumentRegisterView.css';
 
-const OWNER_NAMES = DOCUMENT_USERS.map((user) => user.name);
 
 const ORIGINS = ['Internal', 'External'];
 const DEPARTMENTS = ['Quality', 'Production', 'HR', 'Operations', 'Management'];
@@ -140,6 +140,8 @@ export function DocumentRegisterView({
   refreshKey?: number;
 }) {
   const { user } = useAuth();
+  const teamUsers = useTeamUsers();
+  const ownerNames = teamUsers.map((entry) => entry.name);
   const showForm = mode === 'new';
   const showRegister = mode === 'register';
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
@@ -520,7 +522,7 @@ export function DocumentRegisterView({
               <RegisterSelect
                 value={form.owner}
                 onChange={(v) => updateField('owner', v)}
-                options={OWNER_NAMES}
+                options={ownerNames}
                 placeholder="Select owner..."
               />
             </FormField>
@@ -529,7 +531,7 @@ export function DocumentRegisterView({
               <RegisterSelect
                 value={form.approvedBy}
                 onChange={(v) => updateField('approvedBy', v)}
-                options={OWNER_NAMES}
+                options={ownerNames}
                 placeholder="Set automatically on approval"
                 disabled
               />

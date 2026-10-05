@@ -2,6 +2,10 @@ import { apiFetch, setStoredToken } from './client';
 import type { UpdateProfilePayload, UserProfile } from '../../types/auth';
 
 export const usersApi = {
+  listUsers() {
+    return apiFetch<{ users: UserProfile[] }>('/api/users');
+  },
+
   getProfile() {
     return apiFetch<{ profile: UserProfile }>('/api/users/profile');
   },

@@ -5,6 +5,7 @@ import {
   readDocumentFile,
   saveDocumentFile,
 } from '@/lib/documentFiles';
+import { isAuthUserDocumentOwner } from '@/lib/documentOwnership';
 import { isDocumentApprover } from '@/lib/users';
 
 export async function OPTIONS() {
@@ -68,6 +69,16 @@ export async function POST(
 
     if (isInternalDraft) {
       const isApprover = await isDocumentApprover(auth.email);
+      if (
+        document.submittedAt &&
+        isApprover &&
+        !(await isAuthUserDocumentOwner(auth.email, document.owner))
+      ) {
+        return jsonResponse(
+          { error: 'Only the assigned document owner can upload the approval PDF' },
+          403,
+        );
+      }
       if (!isApprover || !isPdf) {
         return jsonResponse(
           {

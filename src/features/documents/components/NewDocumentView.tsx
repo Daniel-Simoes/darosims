@@ -21,7 +21,8 @@ import {
   parseDocxFile,
   parseTextFile,
 } from '../../../lib/documentContent';
-import { DOCUMENT_USERS, isDocumentOwnerSameAsUser } from '../../../lib/documentUsers';
+import { useTeamUsers } from '../../../context/TeamUsersContext';
+import { isDocumentOwnerSameAsUser } from '../../../lib/documentUsers';
 import { useAuth } from '../../../context/AuthContext';
 import { DocumentTypeMenu } from './DocumentTypeMenu';
 import { ProcessMenu } from './ProcessMenu';
@@ -32,7 +33,6 @@ import './NewDocumentView.css';
 const DEPARTMENTS = ['Quality', 'Production', 'HR', 'Operations', 'Management'];
 const ISO_RELATED_OPTIONS = ['No', 'Yes'] as const;
 
-const OWNER_OPTIONS = DOCUMENT_USERS.map((entry) => entry.name);
 
 type IsoChoice = '' | (typeof ISO_RELATED_OPTIONS)[number];
 
@@ -129,6 +129,8 @@ export function NewDocumentView({
   onSubmittedForApproval,
 }: NewDocumentViewProps) {
   const { user } = useAuth();
+  const teamUsers = useTeamUsers();
+  const ownerOptions = teamUsers.map((entry) => entry.name);
   const pageTopRef = useRef<HTMLDivElement>(null);
   const ownerFieldRef = useRef<HTMLDivElement>(null);
   const [origin, setOrigin] = useState<'internal' | 'external'>('internal');
@@ -617,7 +619,7 @@ export function NewDocumentView({
                       panelLabel="Document Owner"
                       value={internalForm.owner}
                       onChange={(v) => updateInternalField('owner', v)}
-                      options={OWNER_OPTIONS}
+                      options={ownerOptions}
                       customOptions={customOwners}
                       onAddCustomOption={(label) => appendCustomOption(setCustomOwners, label)}
                       placeholder="Select document owner..."

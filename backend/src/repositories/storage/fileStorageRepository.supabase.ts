@@ -40,14 +40,23 @@ export async function readPdfFile(documentId: string): Promise<Buffer | null> {
   return Buffer.from(await data.arrayBuffer());
 }
 
+async function listBucketFiles() {
+  const { data, error } = await getSupabaseAdmin().storage.from(BUCKET).list('', { limit: 1000 });
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
 export async function readSourceFile(
   documentId: string,
 ): Promise<{ buffer: Buffer; extension: string } | null> {
   const supabase = getSupabaseAdmin();
-  const { data: listed, error: listError } = await supabase.storage.from(BUCKET).list('', {
-    search: `${documentId}.source.`,
-  });
-  if (listError || !listed?.length) return null;
+  let listed;
+  try {
+    listed = await listBucketFiles();
+  } catch {
+    return null;
+  }
+  if (!listed.length) return null;
 
   const match = listed.find((item) => item.name.startsWith(`${documentId}.source.`));
   if (!match) return null;
@@ -64,10 +73,13 @@ export async function deletePdfFile(documentId: string) {
 
 export async function deleteSourceFiles(documentId: string) {
   const supabase = getSupabaseAdmin();
-  const { data: listed } = await supabase.storage.from(BUCKET).list('', {
-    search: `${documentId}.source.`,
-  });
-  if (!listed?.length) return;
+  let listed;
+  try {
+    listed = await listBucketFiles();
+  } catch {
+    return;
+  }
+  if (!listed.length) return;
   const paths = listed.filter((item) => item.name.startsWith(`${documentId}.source.`)).map((item) => item.name);
   if (paths.length) await supabase.storage.from(BUCKET).remove(paths);
 }

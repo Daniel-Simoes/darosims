@@ -1,3 +1,4 @@
+import { isTeamApproverEmail } from '@/config/teamUsers';
 import {
   findUserByEmail,
   findUserEmailByName,
@@ -24,7 +25,7 @@ export async function listUsers(): Promise<AuthUser[]> {
 
 export async function isDocumentApprover(email: string): Promise<boolean> {
   const user = await findUserByEmail(email);
-  return Boolean(user);
+  return Boolean(user && isTeamApproverEmail(user.email));
 }
 
 export async function getUserEmailByName(name: string): Promise<string | null> {

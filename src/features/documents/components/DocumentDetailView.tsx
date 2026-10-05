@@ -4,7 +4,8 @@ import type { DocumentType } from '../../../data/documentTypes';
 import { documentTypeBadgeClass } from '../../../data/documentRegister';
 import { htmlToPdfFile, isEditorContentEmpty } from '../../../lib/documentContent';
 import { isInternalDraftDocument } from '../../../lib/documentStatus';
-import { canUserApproveDocuments, canUserDeleteDocument, DOCUMENT_USERS, isDocumentOwnerSameAsUser } from '../../../lib/documentUsers';
+import { useTeamUsers } from '../../../context/TeamUsersContext';
+import { canUserApproveDocuments, canUserDeleteDocument, isDocumentOwnerSameAsUser } from '../../../lib/documentUsers';
 import { useAuth } from '../../../context/AuthContext';
 import { DocumentPreview } from './DocumentPreview';
 import { DocumentEditor } from './DocumentEditor';
@@ -86,6 +87,7 @@ export function DocumentDetailView({
   onSubmittedForApproval,
 }: DocumentDetailViewProps) {
   const { user } = useAuth();
+  const teamUsers = useTeamUsers();
   const canApprove = canUserApproveDocuments(user);
   const [document, setDocument] = useState<DocumentRecord | null>(null);
   const [form, setForm] = useState(documentToForm({} as DocumentRecord));
@@ -338,6 +340,8 @@ export function DocumentDetailView({
   const isExternal = document.documentOrigin === 'External';
   const isDraftInternal = isInternalDraftDocument(document);
   const isPendingApproval = Boolean(document.submittedAt) && document.status === 'Draft';
+  const isAssignedOwner = isDocumentOwnerSameAsUser(user, document.owner);
+  const canReviewPending = isPendingApproval && canApprove && isAssignedOwner;
   const isCreator =
     (user?.email?.toLowerCase() ?? '') === (document.createdBy?.toLowerCase() ?? '');
   const canSubmitForApproval = isDraftInternal && !document.submittedAt && isCreator;
@@ -368,7 +372,7 @@ export function DocumentDetailView({
         <div className="dd-topbar-actions">
           {!isEditing ? (
             <>
-              {isPendingApproval && canApprove ? (
+              {canReviewPending ? (
                 <>
                   <button
                     type="button"
@@ -631,7 +635,7 @@ export function DocumentDetailView({
                       onChange={(e) => updateField('owner', e.target.value)}
                     >
                       <option value="">Select document owner...</option>
-                      {DOCUMENT_USERS.map((owner) => (
+                      {teamUsers.map((owner) => (
                         <option key={owner.email} value={owner.name}>{owner.name}</option>
                       ))}
                     </select>

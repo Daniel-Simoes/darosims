@@ -35,3 +35,11 @@ grant all on public.document_events to service_role;
 insert into storage.buckets (id, name, public)
 values ('darosims-files', 'darosims-files', false)
 on conflict (id) do nothing;
+
+-- Service role (backend) manages files; no public access.
+drop policy if exists "darosims service role storage" on storage.objects;
+create policy "darosims service role storage"
+on storage.objects for all
+to service_role
+using (bucket_id = 'darosims-files')
+with check (bucket_id = 'darosims-files');

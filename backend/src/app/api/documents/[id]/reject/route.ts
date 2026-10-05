@@ -2,6 +2,7 @@ import { requireAuth, jsonResponse, corsHeaders } from '@/lib/auth';
 import { getDocumentById, rejectDocumentForApproval } from '@/lib/documents';
 import { createDocumentEvent } from '@/lib/documentEvents';
 import { createNotification } from '@/lib/notifications';
+import { isAuthUserDocumentOwner } from '@/lib/documentOwnership';
 import { isDocumentApprover, isDocumentOwnerSameAsEmail } from '@/lib/users';
 
 export async function OPTIONS() {
@@ -34,6 +35,13 @@ export async function POST(
     const existing = await getDocumentById(id);
     if (!existing) {
       return jsonResponse({ error: 'Document not found' }, 404);
+    }
+
+    if (!(await isAuthUserDocumentOwner(auth.email, existing.owner))) {
+      return jsonResponse(
+        { error: 'Only the assigned document owner can reject this approval request' },
+        403,
+      );
     }
 
     const document = await rejectDocumentForApproval(id, auth.name, reason);
