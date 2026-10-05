@@ -25,7 +25,9 @@ If the SQL bucket insert fails, create manually:
 
 **Project Settings** → **API**:
 
-- **Project URL** → `SUPABASE_URL`
+- **Project URL** (HTTPS, ends with `.supabase.co`) → `SUPABASE_URL`  
+  Example: `https://abcdefghijklmnop.supabase.co`  
+  **Do not** paste the `postgresql://...` connection string here.
 - **service_role** key (secret) → `SUPABASE_SERVICE_ROLE_KEY`  
   Never expose this in the frontend — backend only.
 
