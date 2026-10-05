@@ -22,7 +22,12 @@ export async function POST(request: Request) {
 
     const token = await signToken(user);
     return jsonResponse({ token, user });
-  } catch {
-    return jsonResponse({ error: 'Invalid request body' }, 400);
+  } catch (error) {
+    console.error('[auth/login]', error);
+    const message = error instanceof Error ? error.message : 'Login failed';
+    if (message.includes('JSON')) {
+      return jsonResponse({ error: 'Invalid request body' }, 400);
+    }
+    return jsonResponse({ error: message }, 500);
   }
 }

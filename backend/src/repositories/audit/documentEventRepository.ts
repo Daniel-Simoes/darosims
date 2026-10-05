@@ -1,10 +1,23 @@
-import { isSupabaseDatabase } from '@/database/provider';
+import { getDatabaseProvider } from '@/database/provider';
 import * as files from '@/repositories/audit/documentEventRepository.files';
 import * as supabase from '@/repositories/audit/documentEventRepository.supabase';
 
-const repo = isSupabaseDatabase() ? supabase : files;
+function repo() {
+  return getDatabaseProvider() === 'supabase' ? supabase : files;
+}
 
-export const readAllDocumentEvents = repo.readAllDocumentEvents;
-export const writeAllDocumentEvents = repo.writeAllDocumentEvents;
-export const appendDocumentEventRecord = repo.appendDocumentEventRecord;
-export const backfillDocumentEventsIfNeeded = repo.backfillDocumentEventsIfNeeded;
+export async function readAllDocumentEvents() {
+  return repo().readAllDocumentEvents();
+}
+
+export async function writeAllDocumentEvents(events: Parameters<typeof files.writeAllDocumentEvents>[0]) {
+  return repo().writeAllDocumentEvents(events);
+}
+
+export async function appendDocumentEventRecord(event: Parameters<typeof files.appendDocumentEventRecord>[0]) {
+  return repo().appendDocumentEventRecord(event);
+}
+
+export async function backfillDocumentEventsIfNeeded() {
+  return repo().backfillDocumentEventsIfNeeded();
+}

@@ -33,8 +33,13 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     } else if (!response.ok) {
       const text = await response.text();
       if (text.includes('<!doctype html') || text.includes('<html')) {
+        const onLocalDev =
+          typeof window !== 'undefined' &&
+          (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
         throw new Error(
-          'API request failed. Make sure the backend is running on port 3000 and restart the frontend dev server.',
+          onLocalDev
+            ? 'API request failed. Run `npm run dev:all` (backend on :3000 + frontend on :5173).'
+            : `API error (${response.status}). Check Vercel env vars and open /api/health on this site.`,
         );
       }
     }

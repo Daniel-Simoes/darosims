@@ -1,11 +1,31 @@
-import { isSupabaseDatabase } from '@/database/provider';
+import { getDatabaseProvider } from '@/database/provider';
 import * as files from '@/repositories/notifications/notificationRepository.files';
 import * as supabase from '@/repositories/notifications/notificationRepository.supabase';
 
-const repo = isSupabaseDatabase() ? supabase : files;
+function repo() {
+  return getDatabaseProvider() === 'supabase' ? supabase : files;
+}
 
-export const readAllNotifications = repo.readAllNotifications;
-export const writeAllNotifications = repo.writeAllNotifications;
-export const appendNotificationRecord = repo.appendNotificationRecord;
-export const updateNotificationRecord = repo.updateNotificationRecord;
-export const deleteNotificationRecord = repo.deleteNotificationRecord;
+export async function readAllNotifications() {
+  return repo().readAllNotifications();
+}
+
+export async function writeAllNotifications(notifications: Parameters<typeof files.writeAllNotifications>[0]) {
+  return repo().writeAllNotifications(notifications);
+}
+
+export async function appendNotificationRecord(notification: Parameters<typeof files.appendNotificationRecord>[0]) {
+  return repo().appendNotificationRecord(notification);
+}
+
+export async function updateNotificationRecord(
+  id: string,
+  recipientEmail: string,
+  update: Parameters<typeof files.updateNotificationRecord>[2],
+) {
+  return repo().updateNotificationRecord(id, recipientEmail, update);
+}
+
+export async function deleteNotificationRecord(id: string, recipientEmail: string) {
+  return repo().deleteNotificationRecord(id, recipientEmail);
+}

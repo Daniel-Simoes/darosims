@@ -1,11 +1,27 @@
-import { isSupabaseDatabase } from '@/database/provider';
+import { getDatabaseProvider } from '@/database/provider';
 import * as files from '@/repositories/documents/documentRepository.files';
 import * as supabase from '@/repositories/documents/documentRepository.supabase';
 
-const repo = isSupabaseDatabase() ? supabase : files;
+function repo() {
+  return getDatabaseProvider() === 'supabase' ? supabase : files;
+}
 
-export const readAllDocuments = repo.readAllDocuments;
-export const writeAllDocuments = repo.writeAllDocuments;
-export const findDocumentById = repo.findDocumentById;
-export const saveDocumentRecord = repo.saveDocumentRecord;
-export const removeDocumentRecord = repo.removeDocumentRecord;
+export async function readAllDocuments() {
+  return repo().readAllDocuments();
+}
+
+export async function writeAllDocuments(documents: Parameters<typeof files.writeAllDocuments>[0]) {
+  return repo().writeAllDocuments(documents);
+}
+
+export async function findDocumentById(id: string) {
+  return repo().findDocumentById(id);
+}
+
+export async function saveDocumentRecord(document: Parameters<typeof files.saveDocumentRecord>[0]) {
+  return repo().saveDocumentRecord(document);
+}
+
+export async function removeDocumentRecord(id: string) {
+  return repo().removeDocumentRecord(id);
+}

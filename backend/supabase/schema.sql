@@ -26,6 +26,11 @@ create index if not exists documents_body_status_idx on public.documents ((body-
 create index if not exists notifications_body_recipient_idx on public.notifications ((body->>'recipientEmail'));
 create index if not exists document_events_body_document_idx on public.document_events ((body->>'documentId'));
 
+grant all on public.documents to service_role;
+grant all on public.users to service_role;
+grant all on public.notifications to service_role;
+grant all on public.document_events to service_role;
+
 -- Private bucket for PDFs / source files (create in Storage if this insert fails)
 insert into storage.buckets (id, name, public)
 values ('darosims-files', 'darosims-files', false)

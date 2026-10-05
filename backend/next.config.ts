@@ -7,6 +7,7 @@ const monorepoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), '..
 
 const nextConfig: NextConfig = {
   outputFileTracingRoot: monorepoRoot,
+  serverExternalPackages: ['@supabase/supabase-js'],
   async headers() {
     return [
       {

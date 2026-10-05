@@ -45,10 +45,13 @@ Keep existing `JWT_SECRET`, `ADMIN_*`, `CORS_ORIGIN`. You can remove `DATA_DIR` 
 
 ## 6. Verify
 
-1. Sign in on production.
-2. **New Document** → create a draft.
-3. Supabase **Table Editor** → `documents` → should show a row with JSON `body`.
-4. Refresh the site — draft should still appear.
+1. Open `https://YOUR-SITE/api/health` — should show `"ok": true` and `"provider": "supabase"`.
+2. Sign in on production.
+3. **New Document** → create a draft.
+4. Supabase **Table Editor** → `documents` → should show a row with JSON `body`.
+5. Refresh the site — draft should still appear.
+
+If `/api/health` shows an error about missing tables, run `schema.sql` again in the SQL editor.
 
 ## Local dev with Supabase (optional)
 

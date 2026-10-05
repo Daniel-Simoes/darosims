@@ -1,4 +1,8 @@
 export async function register() {
-  const { bootstrapProductionStorage } = await import('@/lib/productionBootstrap');
-  await bootstrapProductionStorage();
+  try {
+    const { bootstrapProductionStorage } = await import('@/lib/productionBootstrap');
+    await bootstrapProductionStorage();
+  } catch (error) {
+    console.error('[darosims] production bootstrap failed:', error);
+  }
 }

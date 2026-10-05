@@ -1,14 +1,42 @@
-import { isSupabaseDatabase } from '@/database/provider';
+import { getDatabaseProvider } from '@/database/provider';
 import * as files from '@/repositories/users/userRepository.files';
 import * as supabase from '@/repositories/users/userRepository.supabase';
 
-const repo = isSupabaseDatabase() ? supabase : files;
+function repo() {
+  return getDatabaseProvider() === 'supabase' ? supabase : files;
+}
 
-export const readAllUsers = repo.readAllUsers;
-export const findUserByEmail = repo.findUserByEmail;
-export const findUserEmailByName = repo.findUserEmailByName;
-export const listPublicUsers = repo.listPublicUsers;
-export const updateUserByEmail = repo.updateUserByEmail;
-export const getPhotoFileName = repo.getPhotoFileName;
-export const getPhotoFilePath = repo.getPhotoFilePath;
-export const ensureDefaultAdminFromEnv = repo.ensureDefaultAdminFromEnv;
+export async function readAllUsers() {
+  return repo().readAllUsers();
+}
+
+export async function findUserByEmail(email: string) {
+  return repo().findUserByEmail(email);
+}
+
+export async function findUserEmailByName(name: string) {
+  return repo().findUserEmailByName(name);
+}
+
+export async function listPublicUsers() {
+  return repo().listPublicUsers();
+}
+
+export async function updateUserByEmail(
+  email: string,
+  updates: Parameters<typeof files.updateUserByEmail>[1],
+) {
+  return repo().updateUserByEmail(email, updates);
+}
+
+export function getPhotoFileName(email: string) {
+  return repo().getPhotoFileName(email);
+}
+
+export function getPhotoFilePath(email: string) {
+  return repo().getPhotoFilePath(email);
+}
+
+export async function ensureDefaultAdminFromEnv() {
+  return repo().ensureDefaultAdminFromEnv();
+}

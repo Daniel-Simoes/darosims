@@ -1,7 +1,13 @@
 import path from 'path';
 
-/** On Vercel, set `DATA_DIR=/tmp/darosims-data` (ephemeral; fine for demo/MVP). */
-export const DATA_DIR = process.env.DATA_DIR ?? path.join(process.cwd(), 'data');
+function resolveDataDir() {
+  if (process.env.DATA_DIR) return process.env.DATA_DIR;
+  if (process.env.VERCEL === '1') return path.join('/tmp', 'darosims-data');
+  return path.join(process.cwd(), 'data');
+}
+
+/** On Vercel without Supabase, defaults to `/tmp/darosims-data` (ephemeral). */
+export const DATA_DIR = resolveDataDir();
 export const DOCUMENTS_FILE = path.join(DATA_DIR, 'documents.json');
 export const NOTIFICATIONS_FILE = path.join(DATA_DIR, 'notifications.json');
 export const DOCUMENT_EVENTS_FILE = path.join(DATA_DIR, 'document_events.json');
