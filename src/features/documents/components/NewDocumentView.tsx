@@ -31,13 +31,10 @@ import { ConfirmDialog } from '../../../components/dialogs/ConfirmDialog';
 import './NewDocumentView.css';
 
 const DEPARTMENTS = ['Quality', 'Production', 'HR', 'Operations', 'Management'];
-const ISO_RELATED_OPTIONS = ['No', 'Yes'] as const;
 
-
-type IsoChoice = '' | (typeof ISO_RELATED_OPTIONS)[number];
+type DocumentStructure = '' | 'organisation' | 'daros';
 
 const emptyInternalForm = {
-  hasIso: '' as IsoChoice,
   type: '',
   process: '',
   documentCode: '',
@@ -46,7 +43,6 @@ const emptyInternalForm = {
 };
 
 const emptyExternalForm = {
-  hasIso: '' as IsoChoice,
   type: '',
   process: '',
   externalRef: '',
@@ -133,6 +129,7 @@ export function NewDocumentView({
   const ownerOptions = teamUsers.map((entry) => entry.name);
   const pageTopRef = useRef<HTMLDivElement>(null);
   const ownerFieldRef = useRef<HTMLDivElement>(null);
+  const [documentStructure, setDocumentStructure] = useState<DocumentStructure>('');
   const [origin, setOrigin] = useState<'internal' | 'external'>('internal');
   const [internalForm, setInternalForm] = useState(emptyInternalForm);
   const [externalForm, setExternalForm] = useState(emptyExternalForm);
@@ -191,31 +188,19 @@ export function NewDocumentView({
     setExternalForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  function handleInternalHasIsoChange(value: IsoChoice) {
+  function handleDocumentStructureChange(value: DocumentStructure) {
+    setDocumentStructure(value);
     setInternalForm({
       ...emptyInternalForm,
-      hasIso: value,
-      type: value === 'No' ? 'Form' : '',
+      type: value === 'daros' ? 'Form' : '',
     });
     resetFileState();
   }
 
-  function handleExternalHasIsoChange(value: IsoChoice) {
-    setExternalForm({
-      ...emptyExternalForm,
-      hasIso: value,
-      type: value === 'No' ? 'Form' : '',
-    });
-    resetFileState();
-  }
-
-  const internalIsoOrganisation = internalForm.hasIso === 'Yes';
-  const internalDetailsEnabled =
-    internalForm.hasIso === 'Yes' || internalForm.hasIso === 'No';
-
-  const externalIsoOrganisation = externalForm.hasIso === 'Yes';
-  const externalDetailsEnabled =
-    externalForm.hasIso === 'Yes' || externalForm.hasIso === 'No';
+  const usesOrganisationStructure = documentStructure === 'organisation';
+  const usesDarosStructure = documentStructure === 'daros';
+  const internalDetailsEnabled = origin === 'internal' && documentStructure !== '';
+  const externalDetailsEnabled = origin === 'external';
 
   const activeDetailsEnabled =
     origin === 'internal' ? internalDetailsEnabled : externalDetailsEnabled;
@@ -227,6 +212,7 @@ export function NewDocumentView({
   }
 
   function handleCancel() {
+    setDocumentStructure('');
     setInternalForm(emptyInternalForm);
     setExternalForm(emptyExternalForm);
     setOrigin('internal');
@@ -290,13 +276,13 @@ export function NewDocumentView({
       return;
     }
 
-    if (origin === 'internal' && !internalForm.owner.trim()) {
-      showFormError('Document owner is required.');
+    if (origin === 'internal' && !documentStructure) {
+      showFormError('Please select a document structure option.');
       return;
     }
 
-    if (!activeForm.hasIso) {
-      showFormError('Please select whether this document is ISO-related.');
+    if (origin === 'internal' && !internalForm.owner.trim()) {
+      showFormError('Document owner is required.');
       return;
     }
 
@@ -310,8 +296,13 @@ export function NewDocumentView({
       return;
     }
 
-    if (origin === 'internal' && internalIsoOrganisation && !internalForm.documentCode.trim()) {
-      showFormError('Document code is required for ISO-related documents.');
+    if (!activeForm.title.trim()) {
+      showFormError('Document title is required.');
+      return;
+    }
+
+    if (origin === 'internal' && usesOrganisationStructure && !internalForm.documentCode.trim()) {
+      showFormError('Document code is required when using your organisation’s structure.');
       return;
     }
 
@@ -321,7 +312,7 @@ export function NewDocumentView({
       .filter(Boolean);
     if (
       origin === 'internal' &&
-      internalIsoOrganisation &&
+      usesOrganisationStructure &&
       internalCodesInUse.some(
         (code) => code.toLowerCase() === internalForm.documentCode.trim().toLowerCase(),
       )
@@ -335,8 +326,8 @@ export function NewDocumentView({
     try {
       const payload: CreateDocumentPayload = {
         type: activeForm.type.trim(),
-        hasIso: activeForm.hasIso === 'Yes',
-        ...(origin === 'internal' && internalIsoOrganisation
+        hasIso: origin === 'internal' && usesOrganisationStructure,
+        ...(origin === 'internal' && usesOrganisationStructure
           ? { code: internalForm.documentCode.trim() }
           : {}),
         process: activeForm.process.trim(),
@@ -385,6 +376,7 @@ export function NewDocumentView({
       }
 
       setDocuments((prev) => [savedDocument, ...prev]);
+      setDocumentStructure('');
       setInternalForm(emptyInternalForm);
       setExternalForm(emptyExternalForm);
       resetFileState();
@@ -426,14 +418,14 @@ export function NewDocumentView({
     .map((doc) => doc.code);
   const previewCode = useMemo(
     () =>
-      internalForm.hasIso === 'No' && internalForm.type && internalForm.process
+      usesDarosStructure && internalForm.type && internalForm.process
         ? generateDocumentCode(
             internalForm.type,
             internalForm.process,
             existingCodes.filter(Boolean),
           )
         : '',
-    [internalForm.hasIso, internalForm.type, internalForm.process, existingCodes],
+    [usesDarosStructure, internalForm.type, internalForm.process, existingCodes],
   );
 
   return (
@@ -445,10 +437,50 @@ export function NewDocumentView({
       )}
 
       <form onSubmit={handleSubmit} className="nd-form">
-        {/* Section 1: Document Origin */}
+        {/* Section 1: Document Structure */}
         <section className="nd-section">
           <div className="nd-section-head">
             <div className="nd-section-num">1</div>
+            <div>
+              <h2 className="nd-section-title">
+                Document Structure <span className="nd-required">*</span>
+              </h2>
+              <p className="nd-section-desc">
+                Choose how document codes and naming are managed for internal documents.
+              </p>
+            </div>
+          </div>
+
+          <div className="nd-origin-cards">
+            <button
+              type="button"
+              className={`nd-origin-card ${documentStructure === 'organisation' ? 'active' : ''}`}
+              onClick={() => handleDocumentStructureChange('organisation')}
+            >
+              <span className={`nd-radio ${documentStructure === 'organisation' ? 'checked' : ''}`} />
+              <div>
+                <strong>Use my organisation&apos;s existing structure</strong>
+                <p>I already have document codes and naming conventions.</p>
+              </div>
+            </button>
+            <button
+              type="button"
+              className={`nd-origin-card ${documentStructure === 'daros' ? 'active' : ''}`}
+              onClick={() => handleDocumentStructureChange('daros')}
+            >
+              <span className={`nd-radio ${documentStructure === 'daros' ? 'checked' : ''}`} />
+              <div>
+                <strong>Create a structure with DAROS</strong>
+                <p>DAROS will generate document codes automatically based on document type and process.</p>
+              </div>
+            </button>
+          </div>
+        </section>
+
+        {/* Section 2: Document Origin */}
+        <section className="nd-section">
+          <div className="nd-section-head">
+            <div className="nd-section-num">2</div>
             <div>
               <h2 className="nd-section-title">Document Origin</h2>
               <p className="nd-section-desc">Choose whether the document is created internally or comes from an external source.</p>
@@ -487,10 +519,10 @@ export function NewDocumentView({
           </div>
         </section>
 
-        {/* Section 2: Document Information */}
-        <section className="nd-section">
+        {/* Section 3: Document Information */}
+        <section className={`nd-section ${origin === 'internal' && !documentStructure ? 'nd-section-locked' : ''}`}>
           <div className="nd-section-head">
-            <div className="nd-section-num">2</div>
+            <div className="nd-section-num">3</div>
             <div>
               <h2 className="nd-section-title">Document Information</h2>
               <p className="nd-section-desc">Provide the document details based on the selected origin.</p>
@@ -504,92 +536,57 @@ export function NewDocumentView({
                 <h3>Document Information (Internal)</h3>
                 <span
                   className={`nd-badge ${
-                    internalIsoOrganisation
+                    usesOrganisationStructure
                       ? 'nd-badge-amber'
-                      : internalForm.hasIso === 'No'
+                      : usesDarosStructure
                         ? 'nd-badge-green'
                         : 'nd-badge-blue'
                   }`}
                 >
-                  {internalIsoOrganisation
-                    ? 'Manual entry — your organisation’s system'
-                    : internalForm.hasIso === 'No'
+                  {usesOrganisationStructure
+                    ? 'Your organisation’s codes and naming'
+                    : usesDarosStructure
                       ? 'Auto-controlled by DAROS'
-                      : 'Select ISO-related first'}
+                      : 'Select document structure first'}
                 </span>
               </div>
               <div className="nd-fields">
-                <Field
-                  label="ISO-related document"
-                  required
-                  hint="Required first — unlocks the rest of the form. If Yes, use your own codes and naming."
-                >
-                  <OptionPickerMenu
-                    panelLabel="ISO-related"
-                    value={internalForm.hasIso}
-                    onChange={(v) => handleInternalHasIsoChange(v as IsoChoice)}
-                    options={ISO_RELATED_OPTIONS}
-                    placeholder="Select Yes or No…"
-                    disabled={origin !== 'internal'}
-                    allowCustom={false}
-                    includeStandardOption={false}
+                <Field label="Document Type" required>
+                  <DocumentTypeMenu
+                    value={internalForm.type}
+                    onChange={(v) => updateInternalField('type', v)}
+                    disabled={origin !== 'internal' || !internalDetailsEnabled}
+                    customOptions={customDocumentTypes}
+                    onAddCustomOption={(label) => appendCustomOption(setCustomDocumentTypes, label)}
                   />
                 </Field>
-                <Field label="Document Type" required>
-                  {internalIsoOrganisation ? (
-                    <input
-                      className="nd-input"
-                      placeholder="Enter document type (your system)"
-                      value={internalForm.type}
-                      onChange={(e) => updateInternalField('type', e.target.value)}
-                      disabled={origin !== 'internal' || !internalDetailsEnabled}
-                    />
-                  ) : (
-                    <DocumentTypeMenu
-                      value={internalForm.type}
-                      onChange={(v) => updateInternalField('type', v)}
-                      disabled={origin !== 'internal' || !internalDetailsEnabled}
-                      customOptions={customDocumentTypes}
-                      onAddCustomOption={(label) => appendCustomOption(setCustomDocumentTypes, label)}
-                    />
-                  )}
-                </Field>
                 <Field label="Process" required>
-                  {internalIsoOrganisation ? (
-                    <input
-                      className="nd-input"
-                      placeholder="Enter process (your system)"
-                      value={internalForm.process}
-                      onChange={(e) => updateInternalField('process', e.target.value)}
-                      disabled={origin !== 'internal' || !internalDetailsEnabled}
-                    />
-                  ) : (
-                    <ProcessMenu
-                      value={internalForm.process}
-                      onChange={(v) => updateInternalField('process', v)}
-                      disabled={origin !== 'internal' || !internalDetailsEnabled}
-                      customOptions={customProcesses}
-                      onAddCustomOption={(label) => appendCustomOption(setCustomProcesses, label)}
-                    />
-                  )}
+                  <ProcessMenu
+                    value={internalForm.process}
+                    onChange={(v) => updateInternalField('process', v)}
+                    disabled={origin !== 'internal' || !internalDetailsEnabled}
+                    customOptions={customProcesses}
+                    onAddCustomOption={(label) => appendCustomOption(setCustomProcesses, label)}
+                  />
                 </Field>
                 {internalDetailsEnabled ? (
                   <Field
                     label="Document Code"
-                    required
+                    required={usesOrganisationStructure}
                     hint={
-                      internalIsoOrganisation
-                        ? 'Enter the code from your ISO document control system'
+                      usesOrganisationStructure
+                        ? 'Enter the code from your document control system'
                         : 'Automatically generated from document type and process'
                     }
                   >
-                    {internalIsoOrganisation ? (
+                    {usesOrganisationStructure ? (
                       <input
                         className="nd-input"
                         placeholder="e.g. QMS-PR-0042"
                         value={internalForm.documentCode}
                         onChange={(e) => updateInternalField('documentCode', e.target.value)}
                         disabled={origin !== 'internal'}
+                        required
                       />
                     ) : (
                       <div className="nd-locked-input">
@@ -637,59 +634,23 @@ export function NewDocumentView({
                 <span className="nd-badge nd-badge-blue">Control reference only</span>
               </div>
               <div className="nd-fields">
-                <Field
-                  label="ISO-related document"
-                  required
-                  hint="Required first — unlocks the rest of the form. If Yes, use your own codes and naming."
-                >
-                  <OptionPickerMenu
-                    panelLabel="ISO-related"
-                    value={externalForm.hasIso}
-                    onChange={(v) => handleExternalHasIsoChange(v as IsoChoice)}
-                    options={ISO_RELATED_OPTIONS}
-                    placeholder="Select Yes or No…"
-                    disabled={origin !== 'external'}
-                    allowCustom={false}
-                    includeStandardOption={false}
+                <Field label="Document Type" required>
+                  <DocumentTypeMenu
+                    value={externalForm.type}
+                    onChange={(v) => updateExternalField('type', v)}
+                    disabled={origin !== 'external' || !externalDetailsEnabled}
+                    customOptions={customDocumentTypes}
+                    onAddCustomOption={(label) => appendCustomOption(setCustomDocumentTypes, label)}
                   />
                 </Field>
-                <Field label="Document Type" required>
-                  {externalIsoOrganisation ? (
-                    <input
-                      className="nd-input"
-                      placeholder="Enter document type (your system)"
-                      value={externalForm.type}
-                      onChange={(e) => updateExternalField('type', e.target.value)}
-                      disabled={origin !== 'external' || !externalDetailsEnabled}
-                    />
-                  ) : (
-                    <DocumentTypeMenu
-                      value={externalForm.type}
-                      onChange={(v) => updateExternalField('type', v)}
-                      disabled={origin !== 'external' || !externalDetailsEnabled}
-                      customOptions={customDocumentTypes}
-                      onAddCustomOption={(label) => appendCustomOption(setCustomDocumentTypes, label)}
-                    />
-                  )}
-                </Field>
                 <Field label="Process" required>
-                  {externalIsoOrganisation ? (
-                    <input
-                      className="nd-input"
-                      placeholder="Enter process (your system)"
-                      value={externalForm.process}
-                      onChange={(e) => updateExternalField('process', e.target.value)}
-                      disabled={origin !== 'external' || !externalDetailsEnabled}
-                    />
-                  ) : (
-                    <ProcessMenu
-                      value={externalForm.process}
-                      onChange={(v) => updateExternalField('process', v)}
-                      disabled={origin !== 'external' || !externalDetailsEnabled}
-                      customOptions={customProcesses}
-                      onAddCustomOption={(label) => appendCustomOption(setCustomProcesses, label)}
-                    />
-                  )}
+                  <ProcessMenu
+                    value={externalForm.process}
+                    onChange={(v) => updateExternalField('process', v)}
+                    disabled={origin !== 'external' || !externalDetailsEnabled}
+                    customOptions={customProcesses}
+                    onAddCustomOption={(label) => appendCustomOption(setCustomProcesses, label)}
+                  />
                 </Field>
                 <Field label="External Document Reference" required>
                   <input
@@ -745,10 +706,10 @@ export function NewDocumentView({
           </div>
         </section>
 
-        {/* Section 3: Document File */}
+        {/* Section 4: Document File */}
         <section className={`nd-section ${!activeDetailsEnabled ? 'nd-section-locked' : ''}`}>
           <div className="nd-section-head">
-            <div className="nd-section-num">3</div>
+            <div className="nd-section-num">4</div>
             <div>
               <h2 className="nd-section-title">Document File</h2>
               <p className="nd-section-desc">
