@@ -30,10 +30,16 @@
 ```bash
 cd darosims
 npm install
+npm install --prefix backend
+cp backend/.env.example backend/.env.local   # Mac/Linux — no Windows, copy the file manually
 npm run dev:all
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+Open [http://localhost:5173](http://localhost:5173) in your browser (not `:3000` alone).
+
+**Windows:** use two terminals if `dev:all` fails — terminal 1: `npm run dev:backend`, terminal 2: `npm run dev`. Login: `daniel@daros.com` / `1234`.
+
+Check API: http://localhost:5173/api/health should show `"ok": true`.
 
 ## Routes
 
