@@ -1,4 +1,14 @@
 import {
+  HomeChartBadge,
+  HomeChartBody,
+  HomeChartCard,
+  HomeChartCardHeader,
+  HomeChartSubtitle,
+  HomeChartTitle,
+  HomeCharts as HomeChartsRoot,
+  HomeLineChartWrap,
+} from './HomeCharts.styles';
+import {
   activityBreakdown,
   complianceTrend,
   documentsByType,
@@ -10,59 +20,58 @@ import {
   LineChart,
   MiniBarChart,
 } from './ChartWidgets';
-import './HomeCharts.css';
 
 export function HomeCharts() {
   return (
-    <div className="home-charts">
-      <div className="home-chart-card">
-        <div className="home-chart-card-header">
+    <HomeChartsRoot>
+      <HomeChartCard>
+        <HomeChartCardHeader>
           <div>
-            <h3 className="home-chart-title">Compliance Score Trend</h3>
-            <p className="home-chart-subtitle">Last 6 months performance</p>
+            <HomeChartTitle>Compliance Score Trend</HomeChartTitle>
+            <HomeChartSubtitle>Last 6 months performance</HomeChartSubtitle>
           </div>
-          <span className="home-chart-badge up">+15% YTD</span>
-        </div>
-        <div className="home-line-chart-wrap home-chart-body">
+          <HomeChartBadge>+15% YTD</HomeChartBadge>
+        </HomeChartCardHeader>
+        <HomeLineChartWrap>
           <LineChart data={complianceTrend} />
-        </div>
-      </div>
+        </HomeLineChartWrap>
+      </HomeChartCard>
 
-      <div className="home-chart-card">
-        <div className="home-chart-card-header">
+      <HomeChartCard>
+        <HomeChartCardHeader>
           <div>
-            <h3 className="home-chart-title">Documents by Type</h3>
-            <p className="home-chart-subtitle">Controlled document breakdown</p>
+            <HomeChartTitle>Documents by Type</HomeChartTitle>
+            <HomeChartSubtitle>Controlled document breakdown</HomeChartSubtitle>
           </div>
-        </div>
-        <div className="home-chart-body home-chart-body-bars">
+        </HomeChartCardHeader>
+        <HomeChartBody>
           <BarChart data={documentsByType} />
-        </div>
-      </div>
+        </HomeChartBody>
+      </HomeChartCard>
 
-      <div className="home-chart-card">
-        <div className="home-chart-card-header">
+      <HomeChartCard>
+        <HomeChartCardHeader>
           <div>
-            <h3 className="home-chart-title">Open Activity</h3>
-            <p className="home-chart-subtitle">Items requiring attention</p>
+            <HomeChartTitle>Open Activity</HomeChartTitle>
+            <HomeChartSubtitle>Items requiring attention</HomeChartSubtitle>
           </div>
-        </div>
-        <div className="home-chart-body">
+        </HomeChartCardHeader>
+        <HomeChartBody>
           <DonutChart data={activityBreakdown} />
-        </div>
-      </div>
+        </HomeChartBody>
+      </HomeChartCard>
 
-      <div className="home-chart-card">
-        <div className="home-chart-card-header">
+      <HomeChartCard>
+        <HomeChartCardHeader>
           <div>
-            <h3 className="home-chart-title">Audits Completed</h3>
-            <p className="home-chart-subtitle">Monthly audit activity</p>
+            <HomeChartTitle>Audits Completed</HomeChartTitle>
+            <HomeChartSubtitle>Monthly audit activity</HomeChartSubtitle>
           </div>
-        </div>
-        <div className="home-chart-body">
+        </HomeChartCardHeader>
+        <HomeChartBody>
           <MiniBarChart data={monthlyAudits} />
-        </div>
-      </div>
-    </div>
+        </HomeChartBody>
+      </HomeChartCard>
+    </HomeChartsRoot>
   );
 }

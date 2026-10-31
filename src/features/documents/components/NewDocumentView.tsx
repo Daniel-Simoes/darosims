@@ -1,4 +1,28 @@
 import {
+  NdBadge,
+  NdField,
+  NdFields,
+  NdFormFooter,
+  NdHint,
+  NdInfoPanelHead,
+  NdLabel,
+  NdLockedInput,
+  NdPage,
+  NdRequired,
+  NdSection,
+  NdSectionDesc,
+  NdSectionHead,
+  NdSectionNum,
+  NdSectionTitle,
+  NdUploadError,
+  NdUploadFormats,
+  NdUploadIcon,
+  NdUploadSpinner,
+  NdUploadSub,
+  NdUploadSuccessIcon,
+  NdUploadTitle,
+} from './NewDocumentView.styles';
+import {
   useCallback,
   useEffect,
   useMemo,
@@ -28,7 +52,6 @@ import { DocumentTypeMenu } from './DocumentTypeMenu';
 import { ProcessMenu } from './ProcessMenu';
 import { OptionPickerMenu } from './OptionPickerMenu';
 import { ConfirmDialog } from '../../../components/dialogs/ConfirmDialog';
-import './NewDocumentView.css';
 
 const DEPARTMENTS = ['Quality', 'Production', 'HR', 'Operations', 'Management'];
 
@@ -73,14 +96,14 @@ function Field({
   hint?: string;
 }) {
   return (
-    <div className="nd-field">
-      <label className="nd-label">
+    <NdField>
+      <NdLabel>
         {label}
-        {required && <span className="nd-required">*</span>}
-      </label>
+        {required && <NdRequired>*</NdRequired>}
+      </NdLabel>
       {children}
-      {hint && <span className="nd-hint">{hint}</span>}
-    </div>
+      {hint && <NdHint>{hint}</NdHint>}
+    </NdField>
   );
 }
 
@@ -429,7 +452,7 @@ export function NewDocumentView({
   );
 
   return (
-    <div className="nd-page" ref={pageTopRef}>
+    <NdPage ref={pageTopRef}>
       {(error || success) && (
         <div className={`nd-alert ${error ? 'nd-alert-error' : 'nd-alert-success'}`}>
           {error || success}
@@ -438,18 +461,18 @@ export function NewDocumentView({
 
       <form onSubmit={handleSubmit} className="nd-form">
         {/* Section 1: Document Structure */}
-        <section className="nd-section">
-          <div className="nd-section-head">
-            <div className="nd-section-num">1</div>
+        <NdSection>
+          <NdSectionHead>
+            <NdSectionNum>1</NdSectionNum>
             <div>
-              <h2 className="nd-section-title">
-                Document Structure <span className="nd-required">*</span>
-              </h2>
-              <p className="nd-section-desc">
+              <NdSectionTitle>
+                Document Structure <NdRequired>*</NdRequired>
+              </NdSectionTitle>
+              <NdSectionDesc>
                 Choose how document codes and naming are managed for internal documents.
-              </p>
+              </NdSectionDesc>
             </div>
-          </div>
+          </NdSectionHead>
 
           <div className="nd-origin-cards">
             <button
@@ -475,17 +498,17 @@ export function NewDocumentView({
               </div>
             </button>
           </div>
-        </section>
+        </NdSection>
 
         {/* Section 2: Document Origin */}
-        <section className="nd-section">
-          <div className="nd-section-head">
-            <div className="nd-section-num">2</div>
+        <NdSection>
+          <NdSectionHead>
+            <NdSectionNum>2</NdSectionNum>
             <div>
-              <h2 className="nd-section-title">Document Origin</h2>
-              <p className="nd-section-desc">Choose whether the document is created internally or comes from an external source.</p>
+              <NdSectionTitle>Document Origin</NdSectionTitle>
+              <NdSectionDesc>Choose whether the document is created internally or comes from an external source.</NdSectionDesc>
             </div>
-          </div>
+          </NdSectionHead>
 
           <div className="nd-origin-cards">
             <button
@@ -517,22 +540,22 @@ export function NewDocumentView({
               </div>
             </button>
           </div>
-        </section>
+        </NdSection>
 
         {/* Section 3: Document Information */}
         <section className={`nd-section ${origin === 'internal' && !documentStructure ? 'nd-section-locked' : ''}`}>
-          <div className="nd-section-head">
-            <div className="nd-section-num">3</div>
+          <NdSectionHead>
+            <NdSectionNum>3</NdSectionNum>
             <div>
-              <h2 className="nd-section-title">Document Information</h2>
-              <p className="nd-section-desc">Provide the document details based on the selected origin.</p>
+              <NdSectionTitle>Document Information</NdSectionTitle>
+              <NdSectionDesc>Provide the document details based on the selected origin.</NdSectionDesc>
             </div>
-          </div>
+          </NdSectionHead>
 
           <div className="nd-info-grid">
             {/* Internal panel */}
             <div className={`nd-info-panel ${origin === 'internal' ? 'active' : 'inactive'}`}>
-              <div className="nd-info-panel-head">
+              <NdInfoPanelHead>
                 <h3>Document Information (Internal)</h3>
                 <span
                   className={`nd-badge ${
@@ -549,8 +572,8 @@ export function NewDocumentView({
                       ? 'Auto-controlled by DAROS'
                       : 'Select document structure first'}
                 </span>
-              </div>
-              <div className="nd-fields">
+              </NdInfoPanelHead>
+              <NdFields>
                 <Field label="Document Type" required>
                   <DocumentTypeMenu
                     value={internalForm.type}
@@ -589,10 +612,10 @@ export function NewDocumentView({
                         required
                       />
                     ) : (
-                      <div className="nd-locked-input">
+                      <NdLockedInput>
                         <input className="nd-input" value={previewCode || '—'} readOnly />
                         <LockIcon />
-                      </div>
+                      </NdLockedInput>
                     )}
                   </Field>
                 ) : null}
@@ -624,16 +647,16 @@ export function NewDocumentView({
                     />
                   </Field>
                 </div>
-              </div>
+              </NdFields>
             </div>
 
             {/* External panel */}
             <div className={`nd-info-panel ${origin === 'external' ? 'active' : 'inactive'}`}>
-              <div className="nd-info-panel-head">
+              <NdInfoPanelHead>
                 <h3>Document Information (External)</h3>
-                <span className="nd-badge nd-badge-blue">Control reference only</span>
-              </div>
-              <div className="nd-fields">
+                <NdBadge>Control reference only</NdBadge>
+              </NdInfoPanelHead>
+              <NdFields>
                 <Field label="Document Type" required>
                   <DocumentTypeMenu
                     value={externalForm.type}
@@ -701,24 +724,24 @@ export function NewDocumentView({
                     disabled={origin !== 'external' || !externalDetailsEnabled}
                   />
                 </Field>
-              </div>
+              </NdFields>
             </div>
           </div>
         </section>
 
         {/* Section 4: Document File */}
         <section className={`nd-section ${!activeDetailsEnabled ? 'nd-section-locked' : ''}`}>
-          <div className="nd-section-head">
-            <div className="nd-section-num">4</div>
+          <NdSectionHead>
+            <NdSectionNum>4</NdSectionNum>
             <div>
-              <h2 className="nd-section-title">Document File</h2>
-              <p className="nd-section-desc">
+              <NdSectionTitle>Document File</NdSectionTitle>
+              <NdSectionDesc>
                 {origin === 'internal'
                   ? 'Upload a Word or text file. Unapproved documents stay as Word; PDF is created on approval.'
                   : 'Upload the controlled document file (PDF only).'}
-              </p>
+              </NdSectionDesc>
             </div>
-          </div>
+          </NdSectionHead>
 
           <div
             className={`nd-upload-zone ${
@@ -742,40 +765,40 @@ export function NewDocumentView({
           >
             {fileUploadStatus === 'checking' ? (
               <>
-                <div className="nd-upload-spinner" aria-hidden="true" />
-                <p className="nd-upload-title">{fileCheckingMessage.title}</p>
-                <p className="nd-upload-sub">{fileCheckingMessage.subtitle}</p>
+                <NdUploadSpinner aria-hidden="true" />
+                <NdUploadTitle>{fileCheckingMessage.title}</NdUploadTitle>
+                <NdUploadSub>{fileCheckingMessage.subtitle}</NdUploadSub>
               </>
             ) : fileUploadStatus === 'success' && selectedFile ? (
               <>
-                <div className="nd-upload-success-icon" aria-hidden="true">
+                <NdUploadSuccessIcon aria-hidden="true">
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <path className="nd-upload-check-path" d="M20 6 9 17l-5-5" />
                   </svg>
-                </div>
-                <p className="nd-upload-title nd-upload-success-title">Document uploaded successfully</p>
-                <p className="nd-upload-sub">{selectedFile.name} · {formatFileSize(selectedFile.size)}</p>
+                </NdUploadSuccessIcon>
+                <NdUploadTitle>Document uploaded successfully</NdUploadTitle>
+                <NdUploadSub>{selectedFile.name} · {formatFileSize(selectedFile.size)}</NdUploadSub>
               </>
             ) : (
               <>
-                <div className="nd-upload-icon">
+                <NdUploadIcon>
                   <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                     <path d="M14 2v6h6" />
                   </svg>
-                </div>
-                <p className="nd-upload-title">
+                </NdUploadIcon>
+                <NdUploadTitle>
                   {selectedFile
                     ? selectedFile.name
                     : origin === 'internal'
                       ? 'Drag and drop Word or text file here'
                       : 'Drag and drop your PDF here'}
-                </p>
-                <p className="nd-upload-sub">
+                </NdUploadTitle>
+                <NdUploadSub>
                   {selectedFile
                     ? `${formatFileSize(selectedFile.size)} · Ready to upload`
                     : 'or click to browse from your computer'}
-                </p>
+                </NdUploadSub>
               </>
             )}
             <div className="nd-upload-actions">
@@ -816,16 +839,16 @@ export function NewDocumentView({
                 </button>
               )}
             </div>
-            <p className="nd-upload-formats">
+            <NdUploadFormats>
               {origin === 'internal'
                 ? 'Accepted formats: Word (.docx), text (.txt) · Max file size: 50 MB · No PDF until approved'
                 : 'Accepted format: PDF · Max file size: 50 MB'}
-            </p>
-            {fileError && <p className="nd-upload-error">{fileError}</p>}
+            </NdUploadFormats>
+            {fileError && <NdUploadError>{fileError}</NdUploadError>}
           </div>
         </section>
 
-        <div className="nd-form-footer">
+        <NdFormFooter>
           <button type="button" className="nd-btn nd-btn-ghost" onClick={handleCancel} disabled={isSaving}>
             Cancel
           </button>
@@ -845,7 +868,7 @@ export function NewDocumentView({
           >
             {isSaving ? 'Saving...' : 'Submit for Approval'}
           </button>
-        </div>
+        </NdFormFooter>
       </form>
 
       <ConfirmDialog
@@ -857,6 +880,6 @@ export function NewDocumentView({
         onConfirm={handleConfirmSubmitForApproval}
         onCancel={handleChangeDocumentOwner}
       />
-    </div>
+    </NdPage>
   );
 }

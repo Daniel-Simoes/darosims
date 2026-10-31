@@ -1,3 +1,22 @@
+import {
+  DashboardHeader,
+  DashboardHeaderActions as DashboardHeaderActionsBar,
+  DashboardHeaderLeft,
+  DashboardHeaderTitle,
+  DashboardLayout,
+  DashboardMain,
+  IsoItemInfo,
+  IsoItemLabel,
+  IsoItemName,
+  IsoList,
+  IsoProgressBar,
+  IsoProgressFill,
+  IsoSection,
+  IsoSectionTitle,
+  StatLabel,
+  StatValue,
+  StatsGrid,
+} from './DashboardPage.styles';
 import { useState, useEffect } from 'react';
 import {
   dashboardModules,
@@ -28,42 +47,40 @@ import { ModuleVisualizationView } from '../../features/dashboard/components/Mod
 import { useAuth } from '../../features/authentication/context/AuthContext';
 import { TeamUsersProvider } from '../../context/TeamUsersContext';
 import { ProfileSettingsView } from '../../features/users/components/ProfileSettingsView';
-import './DashboardPage.css';
 
 function DashboardOverview({ onModuleClick }: { onModuleClick: (moduleId: string) => void }) {
   return (
     <>
       <ModuleCarousel modules={dashboardModules} onModuleClick={onModuleClick} />
 
-      <div className="stats-grid">
+      <StatsGrid>
         {dashboardStats.map((stat) => (
           <div key={stat.label} className="stat-card">
-            <div className="stat-label">{stat.label}</div>
-            <div className="stat-value">{stat.value}</div>
+            <StatLabel>{stat.label}</StatLabel>
+            <StatValue>{stat.value}</StatValue>
             {stat.change && (
               <div className={`stat-change ${stat.trend ?? ''}`}>{stat.change}</div>
             )}
           </div>
         ))}
-      </div>
+      </StatsGrid>
 
       <HomeCharts />
 
-      <div className="iso-section">
-        <h2 className="iso-section-title">ISO Compliance Progress</h2>
-        <div className="iso-list">
+      <IsoSection>
+        <IsoSectionTitle>ISO Compliance Progress</IsoSectionTitle>
+        <IsoList>
           {isoStandards.map((iso) => (
             <div key={iso.id} className="iso-item">
-              <div className="iso-item-info">
-                <div className="iso-item-name">{iso.name}</div>
-                <div className="iso-item-label">{iso.label}</div>
-              </div>
-              <div className="iso-progress-bar">
-                <div
-                  className="iso-progress-fill"
+              <IsoItemInfo>
+                <IsoItemName>{iso.name}</IsoItemName>
+                <IsoItemLabel>{iso.label}</IsoItemLabel>
+              </IsoItemInfo>
+              <IsoProgressBar>
+                <IsoProgressFill
                   style={{ width: `${iso.progress}%` }}
                 />
-              </div>
+              </IsoProgressBar>
               <span
                 className={`iso-item-status ${
                   iso.status === 'In Progress'
@@ -77,8 +94,8 @@ function DashboardOverview({ onModuleClick }: { onModuleClick: (moduleId: string
               </span>
             </div>
           ))}
-        </div>
-      </div>
+        </IsoList>
+      </IsoSection>
     </>
   );
 }
@@ -214,9 +231,7 @@ export function DashboardPage() {
 
   return (
     <TeamUsersProvider>
-    <div
-      className={`dashboard-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}
-    >
+    <DashboardLayout $sidebarCollapsed={isSidebarCollapsed}>
       <DashboardSidebar
         activeNav={sidebarActiveNav}
         onNavChange={handleNavChange}
@@ -226,10 +241,10 @@ export function DashboardPage() {
         onHoverChange={handleSidebarHoverChange}
       />
 
-      <div className="dashboard-main">
+      <DashboardMain>
         {!isDocumentDetail && (
-        <header className="dashboard-header">
-          <div className="dashboard-header-left">
+        <DashboardHeader>
+          <DashboardHeaderLeft>
             <button
               type="button"
               className="dashboard-menu-btn"
@@ -240,10 +255,10 @@ export function DashboardPage() {
                 <path d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <h1 className="dashboard-header-title">{pageTitle}</h1>
-          </div>
+            <DashboardHeaderTitle>{pageTitle}</DashboardHeaderTitle>
+          </DashboardHeaderLeft>
 
-          <div className="dashboard-header-actions">
+          <DashboardHeaderActionsBar>
             <DashboardHeaderActions
               refreshKey={notificationsRefreshKey}
               onNotificationClick={(notification) => handleNotificationClick(notification)}
@@ -251,8 +266,8 @@ export function DashboardPage() {
               onNotificationsChange={bumpNotificationsRefresh}
               onSettingsClick={handleSettingsClick}
             />
-          </div>
-        </header>
+          </DashboardHeaderActionsBar>
+        </DashboardHeader>
         )}
 
         <main className={`dashboard-content ${isDocumentView || isDocumentDetail || isNotifications || isNotificationHistory || isProfileSettings ? 'dashboard-content-full' : ''}`}>
@@ -313,8 +328,8 @@ export function DashboardPage() {
             <DashboardOverview onModuleClick={handleModuleClick} />
           )}
         </main>
-      </div>
-    </div>
+      </DashboardMain>
+    </DashboardLayout>
     </TeamUsersProvider>
   );
 }

@@ -1,11 +1,10 @@
+import * as S from './DocumentRegisterView.styles';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, type DocumentRecord } from '../../../lib/api';
 import { documentTypeBadgeClass } from '../../../data/documentRegister';
 import { ListSearchBar } from '../../../components/common/ListSearchBar';
 import { matchesTitleOrCode } from '../../../lib/search/documentSearch';
 import { EmptyDraftsLottie } from './EmptyDraftsLottie';
-import './MyDraftsView.css';
-import './DocumentRegisterView.css';
 
 function SortIcon() {
   return (
@@ -57,57 +56,57 @@ export function MyDraftsView({ onNewDocument, onDocumentClick, refreshKey = 0 }:
   const total = filteredDocuments.length;
 
   return (
-    <div className="my-drafts">
+    <S.MyDrafts>
       {(error) && (
-        <div className="doc-alert doc-alert-error">{error}</div>
+        <S.DocAlert>{error}</S.DocAlert>
       )}
 
-      <section className="doc-card">
-        <div className="doc-card-header">
-          <div className="doc-card-title-group">
-            <div className="doc-card-icon doc-card-icon-blue">
+      <S.DocCard>
+        <S.DocCardHeader>
+          <S.DocCardTitleGroup>
+            <S.DocCardIcon>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                 <path d="M14 2v6h6M12 11v6M9 14h6" />
               </svg>
-            </div>
+            </S.DocCardIcon>
             <div>
-              <h2 className="doc-card-title">My Drafts</h2>
-              <p className="doc-card-subtitle">Documents you saved as draft and have not submitted yet</p>
+              <S.DocCardTitle>My Drafts</S.DocCardTitle>
+              <S.DocCardSubtitle>Documents you saved as draft and have not submitted yet</S.DocCardSubtitle>
             </div>
-          </div>
-          <div className="doc-card-actions">
+          </S.DocCardTitleGroup>
+          <S.DocCardActions>
             <button type="button" className="doc-btn doc-btn-primary" onClick={() => onNewDocument?.()}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 5v14M5 12h14" />
               </svg>
               New Document
             </button>
-          </div>
-        </div>
+          </S.DocCardActions>
+        </S.DocCardHeader>
 
-        <div className="doc-card-toolbar">
+        <S.DocCardToolbar>
           <ListSearchBar value={searchQuery} onChange={setSearchQuery} />
-        </div>
+        </S.DocCardToolbar>
 
-        <div className="doc-table-wrap">
+        <S.DocTableWrap>
           {isLoading ? (
-            <div className="doc-table-loading">Loading your drafts...</div>
+            <S.DocTableLoading>Loading your drafts...</S.DocTableLoading>
           ) : documents.length === 0 ? (
-            <div className="my-drafts-empty-state">
+            <S.MyDraftsEmptyState>
               <EmptyDraftsLottie />
-              <h3 className="my-drafts-empty-title">You have no draft documents yet</h3>
-              <p className="my-drafts-empty-text">
+              <S.MyDraftsEmptyTitle>You have no draft documents yet</S.MyDraftsEmptyTitle>
+              <S.MyDraftsEmptyText>
                 When you save a document as draft, it will appear here ready for you to continue editing.
-              </p>
-            </div>
+              </S.MyDraftsEmptyText>
+            </S.MyDraftsEmptyState>
           ) : filteredDocuments.length === 0 ? (
-            <div className="my-drafts-empty-state">
-              <h3 className="my-drafts-empty-title">No matching drafts</h3>
-              <p className="my-drafts-empty-text">Try a different title or document code.</p>
-            </div>
+            <S.MyDraftsEmptyState>
+              <S.MyDraftsEmptyTitle>No matching drafts</S.MyDraftsEmptyTitle>
+              <S.MyDraftsEmptyText>Try a different title or document code.</S.MyDraftsEmptyText>
+            </S.MyDraftsEmptyState>
           ) : (
-            <table className="doc-table">
+            <S.DocTable>
               <thead>
                 <tr>
                   <th>Document Code <SortIcon /></th>
@@ -123,27 +122,26 @@ export function MyDraftsView({ onNewDocument, onDocumentClick, refreshKey = 0 }:
               </thead>
               <tbody>
                 {filteredDocuments.map((doc) => (
-                    <tr
+                    <S.DocTableRowClickable
                       key={doc.id}
-                      className="doc-table-row-clickable"
                       onClick={() => onDocumentClick?.(doc.id, { edit: true })}
                     >
-                      <td className="doc-code">{doc.code || '—'}</td>
+                      <S.DocCode as="td">{doc.code || '—'}</S.DocCode>
                       <td>{doc.title}</td>
                       <td>{String(doc.version).padStart(2, '0')}</td>
                       <td>
-                        <span className={`doc-badge ${documentTypeBadgeClass(doc.type)}`}>
+                        <S.DocBadge $variant={S.badgeVariantFromClass(documentTypeBadgeClass(doc.type))}>
                           {doc.type}
-                        </span>
+                        </S.DocBadge>
                       </td>
                       <td>{doc.process}</td>
                       <td>{doc.owner || '—'}</td>
-                      <td className="doc-date-cell">{formatDate(doc.createdAt)}</td>
+                      <S.DocDateCell as="td">{formatDate(doc.createdAt)}</S.DocDateCell>
                       <td>
-                        <span className="doc-badge badge-draft">Draft</span>
+                        <S.DocBadge $variant="draft">Draft</S.DocBadge>
                       </td>
                       <td>
-                        <div className="doc-row-actions" onClick={(e) => e.stopPropagation()}>
+                        <S.DocRowActions onClick={(e) => e.stopPropagation()}>
                           <button
                             type="button"
                             className="doc-action-btn"
@@ -165,21 +163,21 @@ export function MyDraftsView({ onNewDocument, onDocumentClick, refreshKey = 0 }:
                               <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
                             </svg>
                           </button>
-                        </div>
+                        </S.DocRowActions>
                       </td>
-                    </tr>
+                    </S.DocTableRowClickable>
                   ))}
               </tbody>
-            </table>
+            </S.DocTable>
           )}
-        </div>
+        </S.DocTableWrap>
 
         {!isLoading && total > 0 && (
-          <div className="doc-table-footer">
+          <S.DocTableFooter>
             <span>{total} draft{total === 1 ? '' : 's'}</span>
-          </div>
+          </S.DocTableFooter>
         )}
-      </section>
-    </div>
+      </S.DocCard>
+    </S.MyDrafts>
   );
 }

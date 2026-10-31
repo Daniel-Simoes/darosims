@@ -1,69 +1,76 @@
+import {
+  Footer as FooterRoot,
+  FooterBottom,
+  FooterBrand,
+  FooterColumnTitle,
+  FooterGrid,
+  FooterLinks,
+} from './Footer.styles';
 import { Link } from 'react-router-dom';
 import { footerNavigation } from '../../data/navigation';
 import { brand } from '../../data/brand';
 import logo from '../../assets/daros-logo.png';
-import './Footer.css';
 
 export function Footer() {
   return (
-    <footer className="footer">
+    <FooterRoot>
       <div className="container">
-        <div className="footer-grid">
-          <div className="footer-brand">
+        <FooterGrid>
+          <FooterBrand>
             <img src={logo} alt="daros" />
             <p>{brand.mission}</p>
-          </div>
+          </FooterBrand>
 
           <div>
-            <h4 className="footer-column-title">Platform</h4>
-            <ul className="footer-links">
+            <FooterColumnTitle>Platform</FooterColumnTitle>
+            <FooterLinks>
               {footerNavigation.platform.map((link) => (
                 <li key={link.label}>
                   <Link to={link.href}>{link.label}</Link>
                 </li>
               ))}
-            </ul>
+            </FooterLinks>
           </div>
 
           <div>
-            <h4 className="footer-column-title">Solutions</h4>
-            <ul className="footer-links">
+            <FooterColumnTitle>Solutions</FooterColumnTitle>
+            <FooterLinks>
               {footerNavigation.solutions.map((link) => (
                 <li key={link.label}>
                   <Link to={link.href}>{link.label}</Link>
                 </li>
               ))}
-            </ul>
+            </FooterLinks>
           </div>
 
           <div>
-            <h4 className="footer-column-title">Resources</h4>
-            <ul className="footer-links">
+            <FooterColumnTitle>Resources</FooterColumnTitle>
+            <FooterLinks>
               {footerNavigation.resources.map((link) => (
                 <li key={link.label}>
                   <Link to={link.href}>{link.label}</Link>
                 </li>
               ))}
-            </ul>
+            </FooterLinks>
           </div>
 
           <div>
-            <h4 className="footer-column-title">Company</h4>
-            <ul className="footer-links">
+            <FooterColumnTitle>Company</FooterColumnTitle>
+            <FooterLinks>
               {footerNavigation.company.map((link) => (
                 <li key={link.label}>
                   <Link to={link.href}>{link.label}</Link>
                 </li>
               ))}
-            </ul>
+            </FooterLinks>
           </div>
-        </div>
+        </FooterGrid>
 
-        <div className="footer-bottom">
+        <FooterBottom>
           <span>© {new Date().getFullYear()} {brand.fullName}. All rights reserved.</span>
           <span>{brand.domain}</span>
-        </div>
+        </FooterBottom>
       </div>
-    </footer>
+    </FooterRoot>
   );
 }

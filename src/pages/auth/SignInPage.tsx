@@ -1,10 +1,27 @@
+import {
+  FormGroup,
+  SigninCard,
+  SigninError,
+  SigninForm,
+  SigninFormPanel,
+  SigninHint,
+  SigninLogo,
+  SigninPage,
+  SigninSubtitle,
+  SigninTitle,
+  SigninVisual,
+  SigninVisualContent,
+  SigninVisualFeatures,
+  SigninVisualOverlay,
+  SigninVisualText,
+  SigninVisualTitle,
+} from './SignInPage.styles';
 import { type FormEvent, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/authentication/context/AuthContext';
 import { waitForEntryLoading } from '../../lib/entryLoading';
 import { images } from '../../data/images';
 import logo from '../../assets/daros-logo.png';
-import './SignInPage.css';
 
 export function SignInPage() {
   const navigate = useNavigate();
@@ -48,42 +65,42 @@ export function SignInPage() {
   }
 
   return (
-    <div className="signin-page">
-      <div className="signin-visual">
+    <SigninPage>
+      <SigninVisual>
         <img
           src={images.heroDashboard}
           alt="Daros dashboard preview"
           className="signin-visual-image"
         />
-        <div className="signin-visual-overlay">
-          <div className="signin-visual-content">
+        <SigninVisualOverlay>
+          <SigninVisualContent>
             <img src={logo} alt="daros" className="signin-visual-logo" />
-            <h2 className="signin-visual-title">Your compliance hub</h2>
-            <p className="signin-visual-text">
+            <SigninVisualTitle>Your compliance hub</SigninVisualTitle>
+            <SigninVisualText>
               Manage processes, documents, risks, audits and KPIs — all in one integrated platform.
-            </p>
-            <ul className="signin-visual-features">
+            </SigninVisualText>
+            <SigninVisualFeatures>
               <li>8 integrated IMS modules</li>
               <li>4 ISO standards supported</li>
               <li>Built for SMEs in IE & UK</li>
-            </ul>
-          </div>
-        </div>
-      </div>
+            </SigninVisualFeatures>
+          </SigninVisualContent>
+        </SigninVisualOverlay>
+      </SigninVisual>
 
-      <div className="signin-form-panel">
-        <div className="signin-card">
-          <div className="signin-logo">
+      <SigninFormPanel>
+        <SigninCard>
+          <SigninLogo>
             <img src={logo} alt="daros" />
-          </div>
+          </SigninLogo>
 
-          <h1 className="signin-title">Welcome back</h1>
-          <p className="signin-subtitle">Sign in to your Daros dashboard</p>
+          <SigninTitle>Welcome back</SigninTitle>
+          <SigninSubtitle>Sign in to your Daros dashboard</SigninSubtitle>
 
-          <form className="signin-form" onSubmit={handleSubmit}>
-            {error && <div className="signin-error">{error}</div>}
+          <SigninForm onSubmit={handleSubmit}>
+            {error && <SigninError>{error}</SigninError>}
 
-            <div className="form-group">
+            <FormGroup>
               <label htmlFor="email">Email address</label>
               <input
                 id="email"
@@ -94,9 +111,9 @@ export function SignInPage() {
                 required
                 disabled={isSubmitting}
               />
-            </div>
+            </FormGroup>
 
-            <div className="form-group">
+            <FormGroup>
               <label htmlFor="password">Password</label>
               <input
                 id="password"
@@ -107,22 +124,22 @@ export function SignInPage() {
                 required
                 disabled={isSubmitting}
               />
-            </div>
+            </FormGroup>
 
             <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
               {isSubmitting ? 'Signing in...' : 'Sign In'}
             </button>
-          </form>
+          </SigninForm>
 
-          <p className="signin-hint">
+          <SigninHint>
             Accounts: <code>daniel@daros.com</code> or <code>rodrigo@daros.com</code> (password <code>1234</code>)
-          </p>
+          </SigninHint>
 
           <Link to="/" className="signin-back">
             ← Back to website
           </Link>
-        </div>
-      </div>
-    </div>
+        </SigninCard>
+      </SigninFormPanel>
+    </SigninPage>
   );
 }

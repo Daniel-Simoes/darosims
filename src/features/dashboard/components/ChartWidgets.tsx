@@ -1,5 +1,17 @@
+import {
+  ChartBarFill,
+  ChartBarLabel,
+  ChartBarList,
+  ChartBarTrack,
+  ChartBarValue,
+  ChartDonutLegend,
+  ChartDonutLegendValue,
+  ChartDonutWrap,
+  ChartMiniBar,
+  ChartMiniBarLabel,
+  ChartMiniBars,
+} from './ChartWidgets.styles';
 import type { ChartPoint, ColoredChartPoint } from '../../../data/moduleVisualizations';
-import './ChartWidgets.css';
 
 export function LineChart({
   data,
@@ -52,20 +64,19 @@ export function BarChart({ data }: { data: ChartPoint[] }) {
   const max = Math.max(...data.map((d) => d.value), 1);
 
   return (
-    <div className="chart-bar-list">
+    <ChartBarList>
       {data.map((item) => (
         <div key={item.label} className="chart-bar-row">
-          <span className="chart-bar-label">{item.label}</span>
-          <div className="chart-bar-track">
-            <div
-              className="chart-bar-fill"
+          <ChartBarLabel>{item.label}</ChartBarLabel>
+          <ChartBarTrack>
+            <ChartBarFill
               style={{ width: `${Math.max((item.value / max) * 100, 2)}%` }}
             />
-          </div>
-          <span className="chart-bar-value">{item.value}</span>
+          </ChartBarTrack>
+          <ChartBarValue>{item.value}</ChartBarValue>
         </div>
       ))}
-    </div>
+    </ChartBarList>
   );
 }
 
@@ -74,14 +85,13 @@ export function ProgressChart({ data, maxY = 100 }: { data: ChartPoint[]; maxY?:
     <div className="chart-bar-list">
       {data.map((item) => (
         <div key={item.label} className="chart-bar-row">
-          <span className="chart-bar-label">{item.label}</span>
-          <div className="chart-bar-track">
-            <div
-              className="chart-bar-fill chart-bar-fill-green"
+          <ChartBarLabel>{item.label}</ChartBarLabel>
+          <ChartBarTrack>
+            <ChartBarFill
               style={{ width: `${Math.max((item.value / maxY) * 100, 2)}%` }}
             />
-          </div>
-          <span className="chart-bar-value">{item.value}%</span>
+          </ChartBarTrack>
+          <ChartBarValue>{item.value}%</ChartBarValue>
         </div>
       ))}
     </div>
@@ -115,7 +125,7 @@ export function DonutChart({ data }: { data: ColoredChartPoint[] }) {
   });
 
   return (
-    <div className="chart-donut-wrap">
+    <ChartDonutWrap>
       <svg viewBox="0 0 140 140" className="chart-donut-svg" aria-hidden="true">
         {slices.map((slice) => (
           <path key={slice.label} d={slice.path} fill={slice.color} />
@@ -124,16 +134,16 @@ export function DonutChart({ data }: { data: ColoredChartPoint[] }) {
         <text x={cx} y={cy - 4} textAnchor="middle" className="chart-donut-total">{total}</text>
         <text x={cx} y={cy + 12} textAnchor="middle" className="chart-donut-sub">Total</text>
       </svg>
-      <ul className="chart-donut-legend">
+      <ChartDonutLegend>
         {data.map((item) => (
           <li key={item.label}>
             <span className="chart-donut-swatch" style={{ background: item.color }} />
             {item.label}
-            <span className="chart-donut-legend-value">{item.value}</span>
+            <ChartDonutLegendValue>{item.value}</ChartDonutLegendValue>
           </li>
         ))}
-      </ul>
-    </div>
+      </ChartDonutLegend>
+    </ChartDonutWrap>
   );
 }
 
@@ -141,17 +151,16 @@ export function MiniBarChart({ data }: { data: ChartPoint[] }) {
   const max = Math.max(...data.map((d) => d.value), 1);
 
   return (
-    <div className="chart-mini-bars">
+    <ChartMiniBars>
       {data.map((item) => (
         <div key={item.label} className="chart-mini-bar-col">
-          <div
-            className="chart-mini-bar"
+          <ChartMiniBar
             style={{ height: `${Math.max((item.value / max) * 100, 8)}%` }}
             title={`${item.label}: ${item.value}`}
           />
-          <span className="chart-mini-bar-label">{item.label}</span>
+          <ChartMiniBarLabel>{item.label}</ChartMiniBarLabel>
         </div>
       ))}
-    </div>
+    </ChartMiniBars>
   );
 }

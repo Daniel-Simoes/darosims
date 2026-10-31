@@ -1,9 +1,15 @@
+import {
+  Navbar as NavbarRoot,
+  NavbarActions,
+  NavbarLink,
+  NavbarLinkChevron,
+  NavbarNav,
+} from './Navbar.styles';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { mainNavigation } from '../../data/navigation';
 import logo from '../../assets/daros-logo.png';
 import { MegaMenu } from './MegaMenu';
-import './Navbar.css';
 
 export function Navbar() {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -20,8 +26,7 @@ export function Navbar() {
   }, [location.pathname, closeMenu]);
 
   return (
-    <header
-      className="navbar"
+    <NavbarRoot
       onMouseLeave={() => {
         setActiveMenu(null);
         blockHoverOpenRef.current = false;
@@ -33,7 +38,7 @@ export function Navbar() {
         </Link>
 
         <nav>
-          <ul className="navbar-nav">
+          <NavbarNav>
             {mainNavigation.map((item) => (
               <li
                 key={item.label}
@@ -43,19 +48,19 @@ export function Navbar() {
                   setActiveMenu(item.label);
                 }}
               >
-                <button className="navbar-link" type="button">
+                <NavbarLink type="button">
                   {item.label}
-                  {item.sections && <span className="navbar-link-chevron">▾</span>}
-                </button>
+                  {item.sections && <NavbarLinkChevron>▾</NavbarLinkChevron>}
+                </NavbarLink>
                 {item.sections && activeMenu === item.label && (
                   <MegaMenu sections={item.sections} onNavigate={closeMenu} />
                 )}
               </li>
             ))}
-          </ul>
+          </NavbarNav>
         </nav>
 
-        <div className="navbar-actions">
+        <NavbarActions>
           <Link to="/signin" className="btn btn-ghost">
             Sign In
           </Link>
@@ -65,8 +70,8 @@ export function Navbar() {
           <a href="#demo" className="btn btn-primary">
             Request Demo
           </a>
-        </div>
+        </NavbarActions>
       </div>
-    </header>
+    </NavbarRoot>
   );
 }

@@ -1,8 +1,18 @@
+import {
+  UploadRejectedActions,
+  UploadRejectedDialog,
+  UploadRejectedMessage,
+  UploadRejectedOverlay,
+  UploadRejectedReason,
+  UploadRejectedReasonLabel,
+  UploadRejectedSpinner,
+  UploadRejectedZoneSub,
+  UploadRejectedZoneTitle,
+} from './UploadRejectedDocumentDialog.styles';
 import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState } from 'react';
 import type { DocumentRecord } from '../../types/documents';
 import { formatFileSize, verifyInternalDocumentFile } from '../../lib/documentUpload';
-import './UploadRejectedDocumentDialog.css';
 
 interface UploadRejectedDocumentDialogProps {
   open: boolean;
@@ -65,9 +75,8 @@ export function UploadRejectedDocumentDialog({
   }
 
   return createPortal(
-    <div className="upload-rejected-overlay" onClick={handleCancel}>
-      <div
-        className="upload-rejected-dialog"
+    <UploadRejectedOverlay onClick={handleCancel}>
+      <UploadRejectedDialog
         role="dialog"
         aria-modal="true"
         aria-labelledby="upload-rejected-title"
@@ -76,15 +85,15 @@ export function UploadRejectedDocumentDialog({
         <h2 id="upload-rejected-title" className="upload-rejected-title">
           Upload new document
         </h2>
-        <p className="upload-rejected-message">
+        <UploadRejectedMessage>
           Replace the file for <strong>{documentRecord.title}</strong> and address the feedback below.
-        </p>
+        </UploadRejectedMessage>
 
         {documentRecord.rejectionReason ? (
-          <div className="upload-rejected-reason">
-            <span className="upload-rejected-reason-label">Reason for not approving</span>
+          <UploadRejectedReason>
+            <UploadRejectedReasonLabel>Reason for not approving</UploadRejectedReasonLabel>
             <p>{documentRecord.rejectionReason}</p>
-          </div>
+          </UploadRejectedReason>
         ) : null}
 
         <div
@@ -115,26 +124,26 @@ export function UploadRejectedDocumentDialog({
 
           {isChecking ? (
             <>
-              <div className="upload-rejected-spinner" aria-hidden="true" />
-              <p className="upload-rejected-zone-title">Checking document...</p>
-              <p className="upload-rejected-zone-sub">Verifying Word or text file format</p>
+              <UploadRejectedSpinner aria-hidden="true" />
+              <UploadRejectedZoneTitle>Checking document...</UploadRejectedZoneTitle>
+              <UploadRejectedZoneSub>Verifying Word or text file format</UploadRejectedZoneSub>
             </>
           ) : selectedFile ? (
             <>
-              <p className="upload-rejected-zone-title">{selectedFile.name}</p>
-              <p className="upload-rejected-zone-sub">{formatFileSize(selectedFile.size)} · Ready to upload</p>
+              <UploadRejectedZoneTitle>{selectedFile.name}</UploadRejectedZoneTitle>
+              <UploadRejectedZoneSub>{formatFileSize(selectedFile.size)} · Ready to upload</UploadRejectedZoneSub>
             </>
           ) : (
             <>
-              <p className="upload-rejected-zone-title">Drag and drop Word or text file here</p>
-              <p className="upload-rejected-zone-sub">or click to browse from your computer</p>
+              <UploadRejectedZoneTitle>Drag and drop Word or text file here</UploadRejectedZoneTitle>
+              <UploadRejectedZoneSub>or click to browse from your computer</UploadRejectedZoneSub>
             </>
           )}
         </div>
 
         {fileError ? <p className="upload-rejected-error">{fileError}</p> : null}
 
-        <div className="upload-rejected-actions">
+        <UploadRejectedActions>
           <button
             type="button"
             className="upload-rejected-btn upload-rejected-btn-outline"
@@ -159,9 +168,9 @@ export function UploadRejectedDocumentDialog({
           >
             {isSubmitting ? 'Sending...' : 'Upload & resubmit'}
           </button>
-        </div>
-      </div>
-    </div>,
+        </UploadRejectedActions>
+      </UploadRejectedDialog>
+    </UploadRejectedOverlay>,
     document.body,
   );
 }

@@ -1,4 +1,8 @@
-import './ListSearchBar.css';
+import {
+  ListSearchBarIcon,
+  ListSearchBarInput,
+  ListSearchBarRoot,
+} from './ListSearchBar.styles';
 
 interface ListSearchBarProps {
   value: string;
@@ -16,9 +20,8 @@ export function ListSearchBar({
   id,
 }: ListSearchBarProps) {
   return (
-    <div className={`list-search-bar ${className}`.trim()}>
-      <svg
-        className="list-search-bar-icon"
+    <ListSearchBarRoot className={className || undefined}>
+      <ListSearchBarIcon
         width="18"
         height="18"
         viewBox="0 0 24 24"
@@ -29,16 +32,15 @@ export function ListSearchBar({
       >
         <circle cx="11" cy="11" r="7" />
         <path d="m20 20-3.5-3.5" />
-      </svg>
-      <input
+      </ListSearchBarIcon>
+      <ListSearchBarInput
         id={id}
         type="search"
-        className="list-search-bar-input"
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         autoComplete="off"
       />
-    </div>
+    </ListSearchBarRoot>
   );
 }

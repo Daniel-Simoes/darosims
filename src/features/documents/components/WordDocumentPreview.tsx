@@ -1,7 +1,20 @@
+import {
+  DocWordPageContent,
+  DocWordPageLabel,
+  DocWordPageSheet,
+  DocWordPageThumb,
+  DocWordPageThumbContent,
+  DocWordPageToolbar,
+  DocWordPageViewport,
+  DocWordPages,
+  DocWordPagesMain,
+  DocWordPagesSidebar,
+  DocWordPreviewEmpty,
+  DocWordPreviewLoading,
+} from './WordDocumentPreview.styles';
 import { useEffect, useRef, useState } from 'react';
 import { renderAsync } from 'docx-preview';
 import { fetchDocumentSourceBlob } from '../../../lib/api';
-import './WordDocumentPreview.css';
 
 interface WordDocumentPreviewProps {
   documentId: string;
@@ -30,8 +43,8 @@ function PagedDocumentLayout({
   const current = pages[activePage];
 
   return (
-    <div className="doc-word-pages">
-      <aside className="doc-word-pages-sidebar" aria-label="Document pages">
+    <DocWordPages>
+      <DocWordPagesSidebar aria-label="Document pages">
         {pages.map((page, index) => (
           <button
             key={page.id}
@@ -41,44 +54,43 @@ function PagedDocumentLayout({
             aria-label={`Page ${index + 1}`}
             aria-current={activePage === index ? 'page' : undefined}
           >
-            <div className="doc-word-page-thumb">
+            <DocWordPageThumb>
               {page.isPlainText ? (
                 <pre className="doc-word-page-thumb-text">{page.html.slice(0, 280)}</pre>
               ) : (
                 <div className="doc-word-preview-styles">
                   {docxStyles ? <style>{docxStyles}</style> : null}
-                  <div
-                    className="doc-word-page-thumb-content"
+                  <DocWordPageThumbContent
                     dangerouslySetInnerHTML={{ __html: page.html }}
                   />
                 </div>
               )}
-            </div>
-            <span className="doc-word-page-label">Page {index + 1}</span>
+            </DocWordPageThumb>
+            <DocWordPageLabel>Page {index + 1}</DocWordPageLabel>
           </button>
         ))}
-      </aside>
+      </DocWordPagesSidebar>
 
-      <div className="doc-word-pages-main">
-        <div className="doc-word-page-toolbar">
+      <DocWordPagesMain>
+        <DocWordPageToolbar>
           <span>
             Page {activePage + 1} of {pages.length}
           </span>
-        </div>
-        <div className="doc-word-page-viewport">
-          <article className="doc-word-page-sheet">
+        </DocWordPageToolbar>
+        <DocWordPageViewport>
+          <DocWordPageSheet>
             {current?.isPlainText ? (
               <pre className="doc-word-page-text">{current.html}</pre>
             ) : (
-              <div className="doc-word-page-content">
+              <DocWordPageContent>
                 {docxStyles ? <style>{docxStyles}</style> : null}
                 <div dangerouslySetInnerHTML={{ __html: current?.html ?? '' }} />
-              </div>
+              </DocWordPageContent>
             )}
-          </article>
-        </div>
-      </div>
-    </div>
+          </DocWordPageSheet>
+        </DocWordPageViewport>
+      </DocWordPagesMain>
+    </DocWordPages>
   );
 }
 
@@ -191,7 +203,7 @@ export function WordDocumentPreview({
     return (
       <>
         <div ref={hiddenRenderRef} className="doc-word-preview-hidden" aria-hidden="true" />
-        <div className="doc-word-preview-loading">Loading preview...</div>
+        <DocWordPreviewLoading>Loading preview...</DocWordPreviewLoading>
       </>
     );
   }
@@ -200,7 +212,7 @@ export function WordDocumentPreview({
     return (
       <>
         <div ref={hiddenRenderRef} className="doc-word-preview-hidden" aria-hidden="true" />
-        <div className="doc-word-preview-empty">{error}</div>
+        <DocWordPreviewEmpty>{error}</DocWordPreviewEmpty>
       </>
     );
   }
@@ -209,7 +221,7 @@ export function WordDocumentPreview({
     return (
       <>
         <div ref={hiddenRenderRef} className="doc-word-preview-hidden" aria-hidden="true" />
-        <div className="doc-word-preview-empty">No document content to preview.</div>
+        <DocWordPreviewEmpty>No document content to preview.</DocWordPreviewEmpty>
       </>
     );
   }

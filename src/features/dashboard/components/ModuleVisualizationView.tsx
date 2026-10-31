@@ -1,3 +1,20 @@
+import {
+  ModuleLineChartWrap,
+  ModuleViz,
+  ModuleVizChartBody,
+  ModuleVizChartHeader,
+  ModuleVizChartSubtitle,
+  ModuleVizChartTitle,
+  ModuleVizCharts,
+  ModuleVizEmpty,
+  ModuleVizHero,
+  ModuleVizHeroDesc,
+  ModuleVizHeroIcon,
+  ModuleVizHeroTitle,
+  ModuleVizStatLabel,
+  ModuleVizStatValue,
+  ModuleVizStats,
+} from './ModuleVisualizationView.styles';
 import { dashboardModules } from '../../../data/dashboardModules';
 import {
   moduleVisualizations,
@@ -12,7 +29,6 @@ import {
   MiniBarChart,
   ProgressChart,
 } from './ChartWidgets';
-import './ModuleVisualizationView.css';
 
 function renderChart(chart: ModuleChart) {
   switch (chart.type) {
@@ -22,9 +38,9 @@ function renderChart(chart: ModuleChart) {
       return <ProgressChart data={chart.data as ChartPoint[]} maxY={chart.maxY} />;
     case 'line':
       return (
-        <div className="module-line-chart-wrap">
+        <ModuleLineChartWrap>
           <LineChart data={chart.data as ChartPoint[]} maxY={chart.maxY} />
-        </div>
+        </ModuleLineChartWrap>
       );
     case 'donut':
       return <DonutChart data={chart.data as ColoredChartPoint[]} />;
@@ -45,57 +61,57 @@ export function ModuleVisualizationView({ moduleId }: ModuleVisualizationViewPro
 
   if (!module || !visualization) {
     return (
-      <div className="module-viz-empty">
+      <ModuleVizEmpty>
         <p>Visualization not available for this module.</p>
-      </div>
+      </ModuleVizEmpty>
     );
   }
 
   return (
-    <div className="module-viz">
-      <div className="module-viz-hero">
-        <div className="module-viz-hero-icon">{module.icon}</div>
+    <ModuleViz>
+      <ModuleVizHero>
+        <ModuleVizHeroIcon>{module.icon}</ModuleVizHeroIcon>
         <div>
-          <h2 className="module-viz-hero-title">{module.title}</h2>
-          <p className="module-viz-hero-desc">{module.description}</p>
+          <ModuleVizHeroTitle>{module.title}</ModuleVizHeroTitle>
+          <ModuleVizHeroDesc>{module.description}</ModuleVizHeroDesc>
         </div>
         {module.count !== undefined && (
           <span className={`module-viz-hero-count ${module.status === 'warning' ? 'warning' : ''}`}>
             {module.count} records
           </span>
         )}
-      </div>
+      </ModuleVizHero>
 
-      <div className="module-viz-stats">
+      <ModuleVizStats>
         {visualization.stats.map((stat) => (
           <div key={stat.label} className="module-viz-stat">
-            <div className="module-viz-stat-label">{stat.label}</div>
-            <div className="module-viz-stat-value">{stat.value}</div>
+            <ModuleVizStatLabel>{stat.label}</ModuleVizStatLabel>
+            <ModuleVizStatValue>{stat.value}</ModuleVizStatValue>
             {stat.change && (
               <div className={`module-viz-stat-change ${stat.trend ?? ''}`}>{stat.change}</div>
             )}
           </div>
         ))}
-      </div>
+      </ModuleVizStats>
 
-      <div className="module-viz-charts">
+      <ModuleVizCharts>
         {visualization.charts.map((chart) => (
           <div key={chart.title} className="module-viz-chart-card">
-            <div className="module-viz-chart-header">
+            <ModuleVizChartHeader>
               <div>
-                <h3 className="module-viz-chart-title">{chart.title}</h3>
-                <p className="module-viz-chart-subtitle">{chart.subtitle}</p>
+                <ModuleVizChartTitle>{chart.title}</ModuleVizChartTitle>
+                <ModuleVizChartSubtitle>{chart.subtitle}</ModuleVizChartSubtitle>
               </div>
               {chart.badge && (
                 <span className={`module-viz-badge ${chart.badge.startsWith('-') ? 'down' : 'up'}`}>
                   {chart.badge}
                 </span>
               )}
-            </div>
-            <div className="module-viz-chart-body">{renderChart(chart)}</div>
+            </ModuleVizChartHeader>
+            <ModuleVizChartBody>{renderChart(chart)}</ModuleVizChartBody>
           </div>
         ))}
-      </div>
-    </div>
+      </ModuleVizCharts>
+    </ModuleViz>
   );
 }

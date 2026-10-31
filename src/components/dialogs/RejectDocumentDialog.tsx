@@ -1,6 +1,14 @@
+import {
+  RejectDialog,
+  RejectDialogActions,
+  RejectDialogError,
+  RejectDialogField,
+  RejectDialogLabel,
+  RejectDialogMessage,
+  RejectDialogOverlay,
+} from './RejectDocumentDialog.styles';
 import { createPortal } from 'react-dom';
 import { useState } from 'react';
-import './RejectDocumentDialog.css';
 
 interface RejectDocumentDialogProps {
   open: boolean;
@@ -39,9 +47,8 @@ export function RejectDocumentDialog({
   }
 
   return createPortal(
-    <div className="reject-dialog-overlay" onClick={handleCancel}>
-      <div
-        className="reject-dialog"
+    <RejectDialogOverlay onClick={handleCancel}>
+      <RejectDialog
         role="dialog"
         aria-modal="true"
         aria-labelledby="reject-dialog-title"
@@ -50,12 +57,12 @@ export function RejectDocumentDialog({
         <h2 id="reject-dialog-title" className="reject-dialog-title">
           Do not approve document
         </h2>
-        <p className="reject-dialog-message">
+        <RejectDialogMessage>
           Explain why <strong>{documentTitle}</strong> was not approved. This will be sent to the
           person who requested approval.
-        </p>
-        <label className="reject-dialog-field">
-          <span className="reject-dialog-label">Reason for not approving</span>
+        </RejectDialogMessage>
+        <RejectDialogField>
+          <RejectDialogLabel>Reason for not approving</RejectDialogLabel>
           <textarea
             className="reject-dialog-textarea"
             rows={4}
@@ -67,9 +74,9 @@ export function RejectDocumentDialog({
             placeholder="Describe what needs to be changed or why the document cannot be approved..."
             disabled={isSubmitting}
           />
-        </label>
-        {error ? <p className="reject-dialog-error">{error}</p> : null}
-        <div className="reject-dialog-actions">
+        </RejectDialogField>
+        {error ? <RejectDialogError>{error}</RejectDialogError> : null}
+        <RejectDialogActions>
           <button
             type="button"
             className="reject-dialog-btn reject-dialog-btn-outline"
@@ -86,9 +93,9 @@ export function RejectDocumentDialog({
           >
             {isSubmitting ? 'Sending...' : 'Confirm rejection'}
           </button>
-        </div>
-      </div>
-    </div>,
+        </RejectDialogActions>
+      </RejectDialog>
+    </RejectDialogOverlay>,
     document.body,
   );
 }

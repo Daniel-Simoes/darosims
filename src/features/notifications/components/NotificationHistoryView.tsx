@@ -1,3 +1,21 @@
+import {
+  NotificationHistoryActionChip,
+  NotificationHistoryAlert,
+  NotificationHistoryCardHeader,
+  NotificationHistoryDocMeta,
+  NotificationHistoryDocTitle,
+  NotificationHistoryHeader,
+  NotificationHistoryList,
+  NotificationHistoryPanel,
+  NotificationHistoryReasonBox,
+  NotificationHistoryStepBody,
+  NotificationHistoryStepText,
+  NotificationHistoryStepTop,
+  NotificationHistoryStepTrack,
+  NotificationHistorySubtitle,
+  NotificationHistoryTitle,
+  NotificationHistoryView as NotificationHistoryViewRoot,
+} from './NotificationHistoryView.styles';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, type DocumentTimeline } from '../../../lib/api';
 import {
@@ -7,7 +25,6 @@ import {
 } from '../../../lib/documentEvents';
 import { formatNotificationDate } from '../../../lib/notifications';
 import { ListSearchBar } from '../../../components/common/ListSearchBar';
-import './NotificationHistoryView.css';
 
 interface NotificationHistoryViewProps {
   refreshKey?: number;
@@ -98,47 +115,47 @@ export function NotificationHistoryView({
   }, [search, timelines]);
 
   return (
-    <div className="notification-history-view">
-      <div className="notification-history-header">
+    <NotificationHistoryViewRoot>
+      <NotificationHistoryHeader>
         <div>
-          <h1 className="notification-history-title">Notification History</h1>
-          <p className="notification-history-subtitle">
+          <NotificationHistoryTitle>Notification History</NotificationHistoryTitle>
+          <NotificationHistorySubtitle>
             Document lifecycle map from creation through approval
-          </p>
+          </NotificationHistorySubtitle>
         </div>
         <ListSearchBar
           value={search}
           onChange={setSearch}
           className="notification-history-search"
         />
-      </div>
+      </NotificationHistoryHeader>
 
-      {error ? <div className="notification-history-alert">{error}</div> : null}
+      {error ? <NotificationHistoryAlert>{error}</NotificationHistoryAlert> : null}
 
       {isLoading ? (
-        <div className="notification-history-panel notification-history-empty">
+        <NotificationHistoryPanel>
           <p>Loading history...</p>
-        </div>
+        </NotificationHistoryPanel>
       ) : filteredTimelines.length === 0 ? (
-        <div className="notification-history-panel notification-history-empty">
+        <NotificationHistoryPanel>
           <h2>{search.trim() ? 'No matching history' : 'No history yet'}</h2>
           <p>
             {search.trim()
               ? 'Try a different document title or code.'
               : 'When documents are created, reviewed, edited, and approved, the timeline will appear here.'}
           </p>
-        </div>
+        </NotificationHistoryPanel>
       ) : (
-        <div className="notification-history-list">
+        <NotificationHistoryList>
           {filteredTimelines.map((timeline) => (
             <section key={timeline.documentId} className="notification-history-card">
-              <div className="notification-history-card-header">
+              <NotificationHistoryCardHeader>
                 <div>
-                  <h2 className="notification-history-doc-title">{timeline.documentTitle}</h2>
-                  <p className="notification-history-doc-meta">
+                  <NotificationHistoryDocTitle>{timeline.documentTitle}</NotificationHistoryDocTitle>
+                  <NotificationHistoryDocMeta>
                     {timeline.documentCode ? `${timeline.documentCode} · ` : ''}
                     {timeline.documentStatus}
-                  </p>
+                  </NotificationHistoryDocMeta>
                 </div>
                 {onDocumentClick ? (
                   <button
@@ -149,7 +166,7 @@ export function NotificationHistoryView({
                     Open document
                   </button>
                 ) : null}
-              </div>
+              </NotificationHistoryCardHeader>
 
               <ol className="notification-history-timeline">
                 {timeline.events.map((event, index) => {
@@ -158,43 +175,43 @@ export function NotificationHistoryView({
 
                   return (
                     <li key={event.id} className={`notification-history-step tone-${tone}`}>
-                      <div className="notification-history-step-track">
+                      <NotificationHistoryStepTrack>
                         <span className={`notification-history-step-dot tone-${tone}`}>
                           <TimelineEventIcon type={event.type} />
                         </span>
                         {!isLast ? <span className="notification-history-step-line" aria-hidden="true" /> : null}
-                      </div>
+                      </NotificationHistoryStepTrack>
 
-                      <div className="notification-history-step-body">
-                        <div className="notification-history-step-top">
+                      <NotificationHistoryStepBody>
+                        <NotificationHistoryStepTop>
                           <span className={`notification-history-step-label tone-${tone}`}>
                             {getDocumentEventLabel(event.type)}
                           </span>
                           <time dateTime={event.createdAt}>{formatNotificationDate(event.createdAt)}</time>
-                        </div>
-                        <p className="notification-history-step-text">
+                        </NotificationHistoryStepTop>
+                        <NotificationHistoryStepText>
                           {getDocumentEventDescription(event)}
-                        </p>
+                        </NotificationHistoryStepText>
                         {event.type === 'rejected' && event.metadata?.reason ? (
-                          <div className="notification-history-reason-box">
+                          <NotificationHistoryReasonBox>
                             <span>Reason</span>
                             <p>{event.metadata.reason}</p>
-                          </div>
+                          </NotificationHistoryReasonBox>
                         ) : null}
                         {event.type === 'edited' && event.metadata?.fileName ? (
-                          <div className="notification-history-action-chip">
+                          <NotificationHistoryActionChip>
                             File: {event.metadata.fileName}
-                          </div>
+                          </NotificationHistoryActionChip>
                         ) : null}
-                      </div>
+                      </NotificationHistoryStepBody>
                     </li>
                   );
                 })}
               </ol>
             </section>
           ))}
-        </div>
+        </NotificationHistoryList>
       )}
-    </div>
+    </NotificationHistoryViewRoot>
   );
 }

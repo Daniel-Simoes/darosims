@@ -1,8 +1,12 @@
+import {
+  DocEditorLoading,
+  DocEditorToolbar,
+  DocEditorTrackHint,
+} from './DocumentEditor.styles';
 import { useEffect, useMemo } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { createEditTrackingExtensions } from '../../../lib/editTrackingExtension';
-import './DocumentEditor.css';
 
 interface DocumentEditorProps {
   content: string;
@@ -80,12 +84,12 @@ export function DocumentEditor({
   }, [disabled, editor]);
 
   if (!editor) {
-    return <div className="doc-editor-loading">Loading editor...</div>;
+    return <DocEditorLoading>Loading editor...</DocEditorLoading>;
   }
 
   return (
     <div className={`doc-editor ${variant === 'fullscreen' ? 'doc-editor-fullscreen' : ''} ${disabled ? 'disabled' : ''}`}>
-      <div className="doc-editor-toolbar">
+      <DocEditorToolbar>
         <ToolbarButton
           label="Bold"
           active={editor.isActive('bold')}
@@ -133,9 +137,9 @@ export function DocumentEditor({
           onClick={() => editor.chain().focus().redo().run()}
         />
         {trackEdits ? (
-          <span className="doc-editor-track-hint">Edits highlighted in yellow</span>
+          <DocEditorTrackHint>Edits highlighted in yellow</DocEditorTrackHint>
         ) : null}
-      </div>
+      </DocEditorToolbar>
       <EditorContent editor={editor} />
     </div>
   );

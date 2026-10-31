@@ -1,16 +1,13 @@
 import { Lottie } from 'lottie-react';
 import emptyDraftsAnimation from '../../../assets/lottie/empty-drafts.json';
-import './EmptyDraftsLottie.css';
+import { EmptyDraftsLottiePlayer, EmptyDraftsLottieRoot } from './EmptyDraftsLottie.styles';
 
 export function EmptyDraftsLottie() {
   return (
-    <div className="empty-drafts-lottie" aria-hidden="true">
-      <Lottie
-        src={emptyDraftsAnimation}
-        loop={false}
-        autoplay
-        className="empty-drafts-lottie-player"
-      />
-    </div>
+    <EmptyDraftsLottieRoot aria-hidden="true">
+      <EmptyDraftsLottiePlayer>
+        <Lottie src={emptyDraftsAnimation} loop={false} autoplay style={{ width: '100%', height: '100%' }} />
+      </EmptyDraftsLottiePlayer>
+    </EmptyDraftsLottieRoot>
   );
 }

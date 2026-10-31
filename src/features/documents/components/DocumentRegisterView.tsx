@@ -1,3 +1,4 @@
+import * as S from './DocumentRegisterView.styles';
 import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { api, type CreateDocumentPayload, type DocumentRecord } from '../../../lib/api';
 import { documentTypeBadgeClass } from '../../../data/documentRegister';
@@ -22,7 +23,6 @@ import { RegisterSelect } from './RegisterSelect';
 import { DocumentReviewHistoryDialog } from './DocumentReviewHistoryDialog';
 import { buildDocumentReviewHistoryRows } from '../utils/reviewHistory';
 import type { DocumentEventRecord } from '../../../types/audit';
-import './DocumentRegisterView.css';
 
 
 const ORIGINS = ['Internal', 'External'];
@@ -114,12 +114,12 @@ function FormField({
 }) {
   return (
     <div className={`doc-form-field ${wide ? 'wide' : ''}`}>
-      <label className="doc-form-label">
+      <S.DocFormLabel>
         {label}
-        {required && <span className="doc-required">*</span>}
-      </label>
+        {required && <S.DocRequired>*</S.DocRequired>}
+      </S.DocFormLabel>
       {children}
-      {hint && <span className="doc-form-hint">{hint}</span>}
+      {hint && <S.DocFormHint>{hint}</S.DocFormHint>}
     </div>
   );
 }
@@ -427,7 +427,7 @@ export function DocumentRegisterView({
   }
 
   return (
-    <div className="doc-register">
+    <S.DocRegister>
       {(error || success) && (
         <div className={`doc-alert ${error ? 'doc-alert-error' : 'doc-alert-success'}`}>
           {error || success}
@@ -436,21 +436,21 @@ export function DocumentRegisterView({
 
       {showForm && (
         <form onSubmit={handleSave}>
-          <section className="doc-card">
-            <div className="doc-card-header">
-              <div className="doc-card-title-group">
-                <div className="doc-card-icon doc-card-icon-blue">
+          <S.DocCard>
+            <S.DocCardHeader>
+              <S.DocCardTitleGroup>
+                <S.DocCardIcon>
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                     <path d="M14 2v6h6M12 11v6M9 14h6" />
                   </svg>
-                </div>
+                </S.DocCardIcon>
                 <div>
-                  <h2 className="doc-card-title">New Document</h2>
-                  <p className="doc-card-subtitle">Create a new controlled document record</p>
+                  <S.DocCardTitle>New Document</S.DocCardTitle>
+                  <S.DocCardSubtitle>Create a new controlled document record</S.DocCardSubtitle>
                 </div>
-              </div>
-              <div className="doc-card-actions">
+              </S.DocCardTitleGroup>
+              <S.DocCardActions>
                 <button type="button" className="doc-btn doc-btn-outline" onClick={handleClear}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
@@ -465,10 +465,10 @@ export function DocumentRegisterView({
                   </svg>
                   {isSaving ? 'Saving...' : 'Save'}
                 </button>
-              </div>
-            </div>
+              </S.DocCardActions>
+            </S.DocCardHeader>
 
-            <div className="doc-form-grid">
+            <S.DocFormGrid>
             <FormField label="Document Type" required>
               <DocumentTypeMenu
                 value={form.type}
@@ -547,15 +547,15 @@ export function DocumentRegisterView({
             </FormField>
 
             <FormField label="Effective Date" required>
-              <div className="doc-date-wrap">
+              <S.DocDateWrap>
                 <input
                   className="doc-input doc-date"
                   type="date"
                   value={form.effectiveDate}
                   onChange={(e) => updateField('effectiveDate', e.target.value)}
                 />
-                <span className="doc-date-icon"><CalendarIcon /></span>
-              </div>
+                <S.DocDateIcon><CalendarIcon /></S.DocDateIcon>
+              </S.DocDateWrap>
             </FormField>
 
             <FormField label="Review Frequency" required>
@@ -568,15 +568,15 @@ export function DocumentRegisterView({
             </FormField>
 
             <FormField label="Next Review Date">
-              <div className="doc-date-wrap">
+              <S.DocDateWrap>
                 <input
                   className="doc-input doc-date"
                   type="date"
                   value={form.nextReviewDate}
                   onChange={(e) => updateField('nextReviewDate', e.target.value)}
                 />
-                <span className="doc-date-icon"><CalendarIcon /></span>
-              </div>
+                <S.DocDateIcon><CalendarIcon /></S.DocDateIcon>
+              </S.DocDateWrap>
             </FormField>
 
             <FormField label="Repository / Location" required>
@@ -634,27 +634,27 @@ export function DocumentRegisterView({
                 onChange={(e) => updateField('comments', e.target.value)}
               />
             </FormField>
-          </div>
-        </section>
+          </S.DocFormGrid>
+        </S.DocCard>
       </form>
       )}
 
       {showRegister && (
-      <section className="doc-card">
-        <div className="doc-card-header">
-          <div className="doc-card-title-group">
-            <div className="doc-card-icon doc-card-icon-blue">
+      <S.DocCard>
+        <S.DocCardHeader>
+          <S.DocCardTitleGroup>
+            <S.DocCardIcon>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                 <path d="M14 2v6h6" />
               </svg>
-            </div>
+            </S.DocCardIcon>
             <div>
-              <h2 className="doc-card-title">Document Register</h2>
-              <p className="doc-card-subtitle">Manage and track all controlled documents</p>
+              <S.DocCardTitle>Document Register</S.DocCardTitle>
+              <S.DocCardSubtitle>Manage and track all controlled documents</S.DocCardSubtitle>
             </div>
-          </div>
-          <div className="doc-card-actions">
+          </S.DocCardTitleGroup>
+          <S.DocCardActions>
             <button type="button" className="doc-btn doc-btn-outline">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M22 3H2l8 9.46V19l4-2v-4.54L22 3z" />
@@ -677,33 +677,33 @@ export function DocumentRegisterView({
               </svg>
               New Document
             </button>
-          </div>
-        </div>
+          </S.DocCardActions>
+        </S.DocCardHeader>
 
-        <div className="doc-card-toolbar">
+        <S.DocCardToolbar>
           <ListSearchBar value={searchQuery} onChange={setSearchQuery} />
-        </div>
+        </S.DocCardToolbar>
 
-        <div className="doc-reg-table-wrap">
+        <S.DocRegTableWrap>
           {isLoading ? (
-            <div className="doc-table-loading">Loading documents...</div>
+            <S.DocTableLoading>Loading documents...</S.DocTableLoading>
           ) : documents.length === 0 ? (
-            <div className="doc-register-empty-state">
+            <S.DocRegisterEmptyState>
               <EmptyDraftsLottie />
-              <h3 className="doc-register-empty-title">No documents yet</h3>
-              <p className="doc-register-empty-text">
+              <S.DocRegisterEmptyTitle>No documents yet</S.DocRegisterEmptyTitle>
+              <S.DocRegisterEmptyText>
                 When you create or submit a document, it will appear here in the register.
-              </p>
-            </div>
+              </S.DocRegisterEmptyText>
+            </S.DocRegisterEmptyState>
           ) : filteredDocuments.length === 0 ? (
-            <div className="doc-register-empty-state">
-              <h3 className="doc-register-empty-title">No matching documents</h3>
-              <p className="doc-register-empty-text">
+            <S.DocRegisterEmptyState>
+              <S.DocRegisterEmptyTitle>No matching documents</S.DocRegisterEmptyTitle>
+              <S.DocRegisterEmptyText>
                 Try a different title or document code.
-              </p>
-            </div>
+              </S.DocRegisterEmptyText>
+            </S.DocRegisterEmptyState>
           ) : (
-            <table className="doc-reg-table">
+            <S.DocRegTable>
               <thead>
                 <tr>
                   <th className="doc-reg-col-check">
@@ -737,7 +737,7 @@ export function DocumentRegisterView({
                       className={`doc-reg-row ${selectedIds.has(doc.id) ? 'selected' : ''}`}
                     >
                       <td className="doc-reg-col-check">
-                        <div className="doc-reg-check-cell">
+                        <S.DocRegCheckCell>
                           <input
                             type="checkbox"
                             className="doc-reg-checkbox"
@@ -745,16 +745,16 @@ export function DocumentRegisterView({
                             onChange={() => toggleSelectRow(doc.id)}
                             aria-label={`Select ${doc.title}`}
                           />
-                          <span className="doc-reg-bookmark" aria-hidden="true">
+                          <S.DocRegBookmark aria-hidden="true">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
                               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
                             </svg>
-                          </span>
-                        </div>
+                          </S.DocRegBookmark>
+                        </S.DocRegCheckCell>
                       </td>
                       <td>
-                        <span
-                          className={`doc-reg-origin-icon ${doc.documentOrigin === 'External' ? 'external' : 'internal'}`}
+                        <S.DocRegOriginIcon
+                          $external={doc.documentOrigin === 'External'}
                           title={doc.documentOrigin === 'External' ? 'External document' : 'Internal document'}
                         >
                           {doc.documentOrigin === 'External' ? (
@@ -768,15 +768,15 @@ export function DocumentRegisterView({
                               <path d="m22 6-10 7L2 6" />
                             </svg>
                           )}
-                        </span>
+                        </S.DocRegOriginIcon>
                       </td>
                       <td>
-                        <span
-                          className={`doc-reg-pill ${getRegisterStatusClass(doc)}`}
+                        <S.DocRegPill
+                          $variant={S.pillVariantFromClass(getRegisterStatusClass(doc))}
                           title={doc.rejectionReason || undefined}
                         >
                           {getRegisterStatusLabel(doc)}
-                        </span>
+                        </S.DocRegPill>
                       </td>
                       <td className="doc-reg-col-info">
                         <button
@@ -793,8 +793,8 @@ export function DocumentRegisterView({
                         </button>
                       </td>
                       <td>
-                        <div className="doc-reg-code-cell">
-                          <span className="doc-reg-avatar">{getOwnerInitials(doc.owner)}</span>
+                        <S.DocRegCodeCell>
+                          <S.DocRegAvatar>{getOwnerInitials(doc.owner)}</S.DocRegAvatar>
                           <div className="doc-reg-code-text">
                             <button
                               type="button"
@@ -817,37 +817,37 @@ export function DocumentRegisterView({
                               </button>
                             ) : null}
                           </div>
-                        </div>
+                        </S.DocRegCodeCell>
                       </td>
-                      <td className="doc-reg-title-cell">{doc.title}</td>
+                      <S.DocRegTitleCell>{doc.title}</S.DocRegTitleCell>
                       <td>
-                        <span className={`doc-reg-type-pill ${documentTypeBadgeClass(doc.type)}`}>
+                        <S.DocRegTypePill $variant={S.badgeVariantFromClass(documentTypeBadgeClass(doc.type))}>
                           {doc.type}
-                        </span>
+                        </S.DocRegTypePill>
                       </td>
                       <td>
-                        <div className="doc-reg-stack">
-                          <span className="doc-reg-stack-primary">{doc.process || '—'}</span>
+                        <S.DocRegStack>
+                          <S.DocRegStackPrimary>{doc.process || '—'}</S.DocRegStackPrimary>
                           {doc.department ? (
-                            <span className="doc-reg-stack-secondary">{doc.department}</span>
+                            <S.DocRegStackSecondary>{doc.department}</S.DocRegStackSecondary>
                           ) : null}
-                        </div>
+                        </S.DocRegStack>
                       </td>
                       <td>
-                        <div className="doc-reg-stack">
-                          <span className="doc-reg-stack-primary">{doc.owner || '—'}</span>
+                        <S.DocRegStack>
+                          <S.DocRegStackPrimary>{doc.owner || '—'}</S.DocRegStackPrimary>
                           {doc.approvedBy ? (
-                            <span className="doc-reg-stack-secondary">Approved: {doc.approvedBy}</span>
+                            <S.DocRegStackSecondary>Approved: {doc.approvedBy}</S.DocRegStackSecondary>
                           ) : null}
-                        </div>
+                        </S.DocRegStack>
                       </td>
                       <td className="doc-reg-col-actions">
                         {canManageRejectedDocument(doc) ? (
-                          <div className="doc-resubmit-actions" onClick={(e) => e.stopPropagation()}>
+                          <S.DocResubmitActions onClick={(e) => e.stopPropagation()}>
                             {doc.rejectionReason ? (
-                              <p className="doc-rejection-hint" title={doc.rejectionReason}>
+                              <S.DocRejectionHint title={doc.rejectionReason}>
                                 {doc.rejectionReason}
-                              </p>
+                              </S.DocRejectionHint>
                             ) : null}
                             <button
                               type="button"
@@ -865,9 +865,9 @@ export function DocumentRegisterView({
                             >
                               {resubmittingId === doc.id ? 'Sending...' : 'Resubmit'}
                             </button>
-                          </div>
+                          </S.DocResubmitActions>
                         ) : (
-                          <div className="doc-reg-action-grid" onClick={(e) => e.stopPropagation()}>
+                          <S.DocRegActionGrid onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
                               className="doc-reg-round-btn"
@@ -937,24 +937,24 @@ export function DocumentRegisterView({
                                 <circle cx="12" cy="12" r="3" />
                               </svg>
                             </button>
-                          </div>
+                          </S.DocRegActionGrid>
                         )}
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
-            </table>
+            </S.DocRegTable>
           )}
-        </div>
+        </S.DocRegTableWrap>
 
-        <div className="doc-table-footer">
-          <span className="doc-table-count">
+        <S.DocTableFooter>
+          <S.DocTableCount>
             {total === 0
               ? 'No entries'
               : `Showing ${showingFrom} to ${showingTo} of ${total} entries`}
-          </span>
-          <div className="doc-pagination">
+          </S.DocTableCount>
+          <S.DocPagination>
             <button type="button" className="doc-page-btn" disabled>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="m15 18-6-6 6-6" />
@@ -972,9 +972,9 @@ export function DocumentRegisterView({
                 <path d="m9 18 6-6-6-6" />
               </svg>
             </button>
-          </div>
-        </div>
-      </section>
+          </S.DocPagination>
+        </S.DocTableFooter>
+      </S.DocCard>
       )}
 
       <UploadRejectedDocumentDialog
@@ -1028,6 +1028,6 @@ export function DocumentRegisterView({
         error={historyError}
         onClose={closeReviewHistory}
       />
-    </div>
+    </S.DocRegister>
   );
 }

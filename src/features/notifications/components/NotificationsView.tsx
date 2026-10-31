@@ -1,3 +1,22 @@
+import {
+  NotificationsAlert,
+  NotificationsCardActions,
+  NotificationsCardBody,
+  NotificationsCardDate,
+  NotificationsCardMessage,
+  NotificationsCardMeta,
+  NotificationsCardTitle,
+  NotificationsCardTop,
+  NotificationsEmptyIcon,
+  NotificationsHeader,
+  NotificationsPageSubtitle,
+  NotificationsPageTitle,
+  NotificationsPanel,
+  NotificationsStat,
+  NotificationsStats,
+  NotificationsTypeLabel,
+  NotificationsView as NotificationsViewRoot,
+} from './NotificationsView.styles';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, type DocumentRecord } from '../../../lib/api';
 import { ListSearchBar } from '../../../components/common/ListSearchBar';
@@ -9,7 +28,6 @@ import {
   type DashboardNotification,
 } from '../../../lib/notifications';
 import { ConfirmDialog } from '../../../components/dialogs/ConfirmDialog';
-import './NotificationsView.css';
 
 interface NotificationsViewProps {
   refreshKey?: number;
@@ -156,56 +174,56 @@ export function NotificationsView({
   const readCount = filteredNotifications.length - unreadCount;
 
   return (
-    <div className="notifications-view">
-      <div className="notifications-header">
+    <NotificationsViewRoot>
+      <NotificationsHeader>
         <div>
-          <h1 className="notifications-page-title">Notifications</h1>
-          <p className="notifications-page-subtitle">
+          <NotificationsPageTitle>Notifications</NotificationsPageTitle>
+          <NotificationsPageSubtitle>
             Stay on top of document approvals and updates
-          </p>
+          </NotificationsPageSubtitle>
         </div>
         <ListSearchBar
           value={searchQuery}
           onChange={setSearchQuery}
           className="notifications-search"
         />
-        <div className="notifications-stats">
-          <span className="notifications-stat">
+        <NotificationsStats>
+          <NotificationsStat>
             <strong>{filteredNotifications.length}</strong> shown
-          </span>
-          <span className="notifications-stat notifications-stat-unread">
+          </NotificationsStat>
+          <NotificationsStat>
             <strong>{unreadCount}</strong> unread
-          </span>
-          <span className="notifications-stat">
+          </NotificationsStat>
+          <NotificationsStat>
             <strong>{readCount}</strong> read
-          </span>
-        </div>
-      </div>
+          </NotificationsStat>
+        </NotificationsStats>
+      </NotificationsHeader>
 
-      {error && <div className="notifications-alert">{error}</div>}
+      {error && <NotificationsAlert>{error}</NotificationsAlert>}
 
       {isLoading ? (
-        <div className="notifications-panel notifications-empty-state">
+        <NotificationsPanel>
           <p>Loading notifications...</p>
-        </div>
+        </NotificationsPanel>
       ) : notifications.length === 0 ? (
-        <div className="notifications-panel notifications-empty-state">
-          <div className="notifications-empty-icon" aria-hidden="true">
+        <NotificationsPanel>
+          <NotificationsEmptyIcon aria-hidden="true">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5" />
               <path d="M10 20a2 2 0 0 0 4 0" />
             </svg>
-          </div>
+          </NotificationsEmptyIcon>
           <h2>No notifications yet</h2>
           <p>When documents are submitted, approved, or not approved, updates will appear here.</p>
-        </div>
+        </NotificationsPanel>
       ) : filteredNotifications.length === 0 ? (
-        <div className="notifications-panel notifications-empty-state">
+        <NotificationsPanel>
           <h2>No matching notifications</h2>
           <p>Try a different document title or code.</p>
-        </div>
+        </NotificationsPanel>
       ) : (
-        <ul className="notifications-panel notifications-list">
+        <NotificationsPanel>
           {filteredNotifications.map((notification) => (
             <li
               key={notification.id}
@@ -215,27 +233,27 @@ export function NotificationsView({
                 <NotificationTypeIcon type={notification.type} />
               </div>
 
-              <div className="notifications-card-body">
-                <div className="notifications-card-top">
-                  <div className="notifications-card-meta">
-                    <span className="notifications-type-label">
+              <NotificationsCardBody>
+                <NotificationsCardTop>
+                  <NotificationsCardMeta>
+                    <NotificationsTypeLabel>
                       {getNotificationTypeLabel(notification.type)}
-                    </span>
+                    </NotificationsTypeLabel>
                     {notification.unread ? (
                       <span className="notifications-unread-dot" aria-label="Unread" />
                     ) : null}
-                  </div>
+                  </NotificationsCardMeta>
                   <time className="notifications-card-time" dateTime={notification.createdAt}>
                     {notification.time}
                   </time>
-                </div>
+                </NotificationsCardTop>
 
-                <h3 className="notifications-card-title">{notification.title}</h3>
-                <p className="notifications-card-message">{notification.message}</p>
-                <p className="notifications-card-date">{formatNotificationDate(notification.createdAt)}</p>
-              </div>
+                <NotificationsCardTitle>{notification.title}</NotificationsCardTitle>
+                <NotificationsCardMessage>{notification.message}</NotificationsCardMessage>
+                <NotificationsCardDate>{formatNotificationDate(notification.createdAt)}</NotificationsCardDate>
+              </NotificationsCardBody>
 
-              <div className="notifications-card-actions">
+              <NotificationsCardActions>
                 {notification.documentId ? (
                   <button
                     type="button"
@@ -265,10 +283,10 @@ export function NotificationsView({
                 >
                   Delete
                 </button>
-              </div>
+              </NotificationsCardActions>
             </li>
           ))}
-        </ul>
+        </NotificationsPanel>
       )}
 
       <ConfirmDialog
@@ -284,6 +302,6 @@ export function NotificationsView({
         onConfirm={handleConfirmDelete}
         onCancel={() => setPendingDelete(null)}
       />
-    </div>
+    </NotificationsViewRoot>
   );
 }

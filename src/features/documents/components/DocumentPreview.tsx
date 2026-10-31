@@ -1,3 +1,26 @@
+import {
+  DocPreviewDesc,
+  DocPreviewEmpty,
+  DocPreviewEmptyHint,
+  DocPreviewEmptyIcon,
+  DocPreviewFooter,
+  DocPreviewFormat,
+  DocPreviewFrameWrap,
+  DocPreviewFullscreenActions,
+  DocPreviewFullscreenBar,
+  DocPreviewFullscreenEditHint,
+  DocPreviewFullscreenFile,
+  DocPreviewFullscreenInfo,
+  DocPreviewFullscreenTitle,
+  DocPreviewFullscreenWord,
+  DocPreviewHead,
+  DocPreviewHeadActions,
+  DocPreviewMeta,
+  DocPreviewSubtitle,
+  DocPreviewTag,
+  DocPreviewTags,
+  DocPreviewTitle,
+} from './DocumentPreview.styles';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { fetchDocumentFileBlob } from '../../../lib/api';
@@ -6,7 +29,6 @@ import { getDocumentFileLabel, isInternalDraftDocument } from '../../../lib/docu
 import { DocumentEditor } from './DocumentEditor';
 import { WordDocumentPreview } from './WordDocumentPreview';
 import { PdfDocumentPreview } from './PdfDocumentPreview';
-import './DocumentPreview.css';
 
 interface DocumentPreviewProps {
   documentId: string;
@@ -163,23 +185,23 @@ export function DocumentPreview({
         aria-modal="true"
         aria-label={`Full size preview of ${title}`}
       >
-        <div className="doc-preview-fullscreen-bar">
-          <div className="doc-preview-fullscreen-info">
+        <DocPreviewFullscreenBar>
+          <DocPreviewFullscreenInfo>
             <span className={`doc-preview-status doc-preview-status-${status.toLowerCase()}`}>
               {status}
             </span>
             {isWordDraft ? (
-              <span className="doc-preview-format doc-preview-format-word">Word</span>
+              <DocPreviewFormat>Word</DocPreviewFormat>
             ) : (
-              <span className="doc-preview-format doc-preview-format-pdf">PDF</span>
+              <DocPreviewFormat>PDF</DocPreviewFormat>
             )}
-            <span className="doc-preview-fullscreen-title">{title}</span>
-            <span className="doc-preview-fullscreen-file">{fileLabel}</span>
+            <DocPreviewFullscreenTitle>{title}</DocPreviewFullscreenTitle>
+            <DocPreviewFullscreenFile>{fileLabel}</DocPreviewFullscreenFile>
             {canEditDraft ? (
-              <span className="doc-preview-fullscreen-edit-hint">Editing · changes marked in yellow</span>
+              <DocPreviewFullscreenEditHint>Editing · changes marked in yellow</DocPreviewFullscreenEditHint>
             ) : null}
-          </div>
-          <div className="doc-preview-fullscreen-actions">
+          </DocPreviewFullscreenInfo>
+          <DocPreviewFullscreenActions>
             {saveMessage ? (
               <span className={`doc-preview-save-msg ${saveMessage.includes('Failed') ? 'error' : ''}`}>
                 {saveMessage}
@@ -214,8 +236,8 @@ export function DocumentPreview({
                 <path d="M18 6 6 18M6 6l12 12" />
               </svg>
             </button>
-          </div>
-        </div>
+          </DocPreviewFullscreenActions>
+        </DocPreviewFullscreenBar>
         {canEditDraft ? (
           <DocumentEditor
             content={fullscreenContent}
@@ -225,8 +247,7 @@ export function DocumentPreview({
             placeholder="Edit your document..."
           />
         ) : isWordDraft ? (
-          <div
-            className="doc-preview-fullscreen-word"
+          <DocPreviewFullscreenWord
             dangerouslySetInnerHTML={{ __html: sourceContent ?? '' }}
           />
         ) : (
@@ -241,19 +262,19 @@ export function DocumentPreview({
 
   return (
     <section className={`doc-preview ${isWordDraft ? 'doc-preview-draft' : 'doc-preview-pdf'}`}>
-      <div className="doc-preview-head">
+      <DocPreviewHead>
         <div>
           <h2>Document Preview</h2>
-          <p className="doc-preview-subtitle">{fileLabel}</p>
+          <DocPreviewSubtitle>{fileLabel}</DocPreviewSubtitle>
         </div>
-        <div className="doc-preview-head-actions">
+        <DocPreviewHeadActions>
           <span className={`doc-preview-status doc-preview-status-${status.toLowerCase()}`}>
             {status}
           </span>
           {isWordDraft ? (
-            <span className="doc-preview-format doc-preview-format-word">Word</span>
+            <DocPreviewFormat>Word</DocPreviewFormat>
           ) : (
-            <span className="doc-preview-format doc-preview-format-pdf">PDF</span>
+            <DocPreviewFormat>PDF</DocPreviewFormat>
           )}
           <button
             type="button"
@@ -268,26 +289,26 @@ export function DocumentPreview({
             </svg>
             Full Size
           </button>
-        </div>
-      </div>
+        </DocPreviewHeadActions>
+      </DocPreviewHead>
 
-      <div className="doc-preview-frame-wrap">
+      <DocPreviewFrameWrap>
         {isWordDraft ? (
           !hasWordContent ? (
-            <div className="doc-preview-empty">
-              <div className="doc-preview-empty-icon doc-preview-empty-icon-word">
+            <DocPreviewEmpty>
+              <DocPreviewEmptyIcon>
                 <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                   <path d="M14 2v6h6M12 11v6M9 14h6" />
                 </svg>
-              </div>
+              </DocPreviewEmptyIcon>
               <p>No Word content for this draft document.</p>
-              <p className="doc-preview-empty-hint">
+              <DocPreviewEmptyHint>
                 {canEditDraft
                   ? 'Open full size to start writing.'
                   : 'Edit the document to add content before approval.'}
-              </p>
-            </div>
+              </DocPreviewEmptyHint>
+            </DocPreviewEmpty>
           ) : (
             <WordDocumentPreview
               documentId={documentId}
@@ -297,50 +318,50 @@ export function DocumentPreview({
             />
           )
         ) : !fileName ? (
-          <div className="doc-preview-empty">
-            <div className="doc-preview-empty-icon">
+          <DocPreviewEmpty>
+            <DocPreviewEmptyIcon>
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                 <path d="M14 2v6h6" />
               </svg>
-            </div>
+            </DocPreviewEmptyIcon>
             <p>No PDF uploaded for this document.</p>
-          </div>
+          </DocPreviewEmpty>
         ) : isLoadingPreview ? (
-          <div className="doc-preview-empty">
+          <DocPreviewEmpty>
             <p>Loading preview...</p>
-          </div>
+          </DocPreviewEmpty>
         ) : previewError ? (
-          <div className="doc-preview-empty doc-preview-empty-error">
+          <DocPreviewEmpty>
             <p>{previewError}</p>
-          </div>
+          </DocPreviewEmpty>
         ) : pdfUrl ? (
           <PdfDocumentPreview pdfUrl={pdfUrl} title={title} />
         ) : null}
-      </div>
+      </DocPreviewFrameWrap>
 
       {fullscreenModal ? createPortal(fullscreenModal, document.body) : null}
 
-      <div className="doc-preview-meta">
+      <DocPreviewMeta>
         <div>
-          <p className="doc-preview-title">{title}</p>
-          <p className="doc-preview-desc">
+          <DocPreviewTitle>{title}</DocPreviewTitle>
+          <DocPreviewDesc>
             {isWordDraft
               ? 'Draft internal document · Word format until approved'
               : isExternal
                 ? 'External reference document'
                 : 'Approved controlled document · PDF format'}
-          </p>
+          </DocPreviewDesc>
         </div>
-        <div className="doc-preview-tags">
+        <DocPreviewTags>
           <span className={`doc-badge ${documentTypeBadgeClass(type)}`}>{type}</span>
-          <span className="doc-preview-tag">{process}</span>
-          <span className="doc-preview-tag">{origin ?? 'Internal'}</span>
-        </div>
-      </div>
+          <DocPreviewTag>{process}</DocPreviewTag>
+          <DocPreviewTag>{origin ?? 'Internal'}</DocPreviewTag>
+        </DocPreviewTags>
+      </DocPreviewMeta>
 
       {!isWordDraft ? (
-        <div className="doc-preview-footer">
+        <DocPreviewFooter>
           <button
             type="button"
             className="doc-preview-btn"
@@ -349,7 +370,7 @@ export function DocumentPreview({
           >
             Open in New Tab
           </button>
-        </div>
+        </DocPreviewFooter>
       ) : null}
     </section>
   );

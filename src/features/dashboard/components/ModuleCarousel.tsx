@@ -1,6 +1,22 @@
+import {
+  ModuleCarousel as ModuleCarouselRoot,
+  ModuleCarouselCardContent,
+  ModuleCarouselCardCta,
+  ModuleCarouselCardDesc,
+  ModuleCarouselCardGlow,
+  ModuleCarouselCardTitle,
+  ModuleCarouselCardTop,
+  ModuleCarouselDots,
+  ModuleCarouselEyebrow,
+  ModuleCarouselFade,
+  ModuleCarouselHeader,
+  ModuleCarouselIcon,
+  ModuleCarouselNav,
+  ModuleCarouselSoonBadge,
+  ModuleCarouselTitle,
+} from './ModuleCarousel.styles';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DashboardModule } from '../../../data/dashboardModules';
-import './ModuleCarousel.css';
 
 interface ModuleCarouselProps {
   modules: DashboardModule[];
@@ -73,13 +89,13 @@ export function ModuleCarousel({ modules, onModuleClick }: ModuleCarouselProps) 
   }
 
   return (
-    <section className="module-carousel" aria-label="IMS modules">
-      <div className="module-carousel-header">
+    <ModuleCarouselRoot aria-label="IMS modules">
+      <ModuleCarouselHeader>
         <div>
-          <p className="module-carousel-eyebrow">Platform modules</p>
-          <h2 className="module-carousel-title">Manage your organisation in one place</h2>
+          <ModuleCarouselEyebrow>Platform modules</ModuleCarouselEyebrow>
+          <ModuleCarouselTitle>Manage your organisation in one place</ModuleCarouselTitle>
         </div>
-        <div className="module-carousel-nav">
+        <ModuleCarouselNav>
           <button
             type="button"
             className="module-carousel-arrow"
@@ -102,11 +118,11 @@ export function ModuleCarousel({ modules, onModuleClick }: ModuleCarouselProps) 
               <path d="m9 18 6-6-6-6" />
             </svg>
           </button>
-        </div>
-      </div>
+        </ModuleCarouselNav>
+      </ModuleCarouselHeader>
 
       <div className="module-carousel-viewport">
-        <div className="module-carousel-fade module-carousel-fade-left" aria-hidden="true" />
+        <ModuleCarouselFade aria-hidden="true" />
         <div className="module-carousel-fade module-carousel-fade-right" aria-hidden="true" />
         <div ref={trackRef} className="module-carousel-track">
           {modules.map((module) => {
@@ -120,13 +136,13 @@ export function ModuleCarousel({ modules, onModuleClick }: ModuleCarouselProps) 
               aria-disabled={!isAvailable}
               onClick={() => isAvailable && onModuleClick(module.id)}
             >
-              <div className="module-carousel-card-glow" aria-hidden="true" />
+              <ModuleCarouselCardGlow aria-hidden="true" />
               {!isAvailable && (
-                <span className="module-carousel-soon-badge">Coming soon</span>
+                <ModuleCarouselSoonBadge>Coming soon</ModuleCarouselSoonBadge>
               )}
-              <div className="module-carousel-card-content">
-                <div className="module-carousel-card-top">
-                  <span className="module-carousel-icon">{module.icon}</span>
+              <ModuleCarouselCardContent>
+                <ModuleCarouselCardTop>
+                  <ModuleCarouselIcon>{module.icon}</ModuleCarouselIcon>
                   {module.count !== undefined && (
                     <span
                       className={`module-carousel-count ${module.status === 'warning' ? 'warning' : ''}`}
@@ -134,20 +150,20 @@ export function ModuleCarousel({ modules, onModuleClick }: ModuleCarouselProps) 
                       {module.count}
                     </span>
                   )}
-                </div>
-                <h3 className="module-carousel-card-title">{module.title}</h3>
-                <p className="module-carousel-card-desc">{module.description}</p>
-                <span className="module-carousel-card-cta">
+                </ModuleCarouselCardTop>
+                <ModuleCarouselCardTitle>{module.title}</ModuleCarouselCardTitle>
+                <ModuleCarouselCardDesc>{module.description}</ModuleCarouselCardDesc>
+                <ModuleCarouselCardCta>
                   {isAvailable ? 'Open module →' : 'In development'}
-                </span>
-              </div>
+                </ModuleCarouselCardCta>
+              </ModuleCarouselCardContent>
             </button>
             );
           })}
         </div>
       </div>
 
-      <div className="module-carousel-dots" role="tablist" aria-label="Carousel pages">
+      <ModuleCarouselDots role="tablist" aria-label="Carousel pages">
         {Array.from({ length: pageCount }, (_, index) => (
           <button
             key={index}
@@ -159,7 +175,7 @@ export function ModuleCarousel({ modules, onModuleClick }: ModuleCarouselProps) 
             onClick={() => scrollToPage(index)}
           />
         ))}
-      </div>
-    </section>
+      </ModuleCarouselDots>
+    </ModuleCarouselRoot>
   );
 }
