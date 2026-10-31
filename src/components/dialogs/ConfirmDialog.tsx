@@ -1,13 +1,5 @@
 import { createPortal } from 'react-dom';
-import {
-  ConfirmDialogActions,
-  ConfirmDialogBtnOutline,
-  ConfirmDialogBtnPrimary,
-  ConfirmDialogMessage,
-  ConfirmDialogOverlay,
-  ConfirmDialogPanel,
-  ConfirmDialogTitle,
-} from './ConfirmDialog.styles';
+import './ConfirmDialog.css';
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -31,25 +23,28 @@ export function ConfirmDialog({
   if (!open) return null;
 
   return createPortal(
-    <ConfirmDialogOverlay onClick={onCancel}>
-      <ConfirmDialogPanel
+    <div className="confirm-dialog-overlay" onClick={onCancel}>
+      <div
+        className="confirm-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <ConfirmDialogTitle id="confirm-dialog-title">{title}</ConfirmDialogTitle>
-        <ConfirmDialogMessage>{message}</ConfirmDialogMessage>
-        <ConfirmDialogActions>
-          <ConfirmDialogBtnOutline type="button" onClick={onCancel}>
+        <h2 id="confirm-dialog-title" className="confirm-dialog-title">
+          {title}
+        </h2>
+        <p className="confirm-dialog-message">{message}</p>
+        <div className="confirm-dialog-actions">
+          <button type="button" className="confirm-dialog-btn confirm-dialog-btn-outline" onClick={onCancel}>
             {cancelLabel}
-          </ConfirmDialogBtnOutline>
-          <ConfirmDialogBtnPrimary type="button" onClick={onConfirm}>
+          </button>
+          <button type="button" className="confirm-dialog-btn confirm-dialog-btn-primary" onClick={onConfirm}>
             {confirmLabel}
-          </ConfirmDialogBtnPrimary>
-        </ConfirmDialogActions>
-      </ConfirmDialogPanel>
-    </ConfirmDialogOverlay>,
+          </button>
+        </div>
+      </div>
+    </div>,
     document.body,
   );
 }

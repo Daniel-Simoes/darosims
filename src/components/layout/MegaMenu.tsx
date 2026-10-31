@@ -1,12 +1,6 @@
-import {
-  MegaMenu as MegaMenuRoot,
-  MegaMenuLinkDesc,
-  MegaMenuLinkLabel,
-  MegaMenuLinks,
-  MegaMenuSectionTitle,
-} from './MegaMenu.styles';
 import { Link } from 'react-router-dom';
 import type { NavSection } from '../../data/navigation';
+import './MegaMenu.css';
 
 interface MegaMenuProps {
   sections: NavSection[];
@@ -15,28 +9,28 @@ interface MegaMenuProps {
 
 export function MegaMenu({ sections, onNavigate }: MegaMenuProps) {
   return (
-    <MegaMenuRoot>
+    <div className="mega-menu">
       <div className="container">
         <div className="mega-menu-inner">
           {sections.map((section) => (
             <div key={section.title}>
-              <MegaMenuSectionTitle>{section.title}</MegaMenuSectionTitle>
-              <MegaMenuLinks>
+              <h3 className="mega-menu-section-title">{section.title}</h3>
+              <ul className="mega-menu-links">
                 {section.links.map((link) => (
                   <li key={link.label}>
                     <Link to={link.href} className="mega-menu-link" onClick={onNavigate}>
-                      <MegaMenuLinkLabel>{link.label}</MegaMenuLinkLabel>
+                      <span className="mega-menu-link-label">{link.label}</span>
                       {link.description && (
-                        <MegaMenuLinkDesc>{link.description}</MegaMenuLinkDesc>
+                        <span className="mega-menu-link-desc">{link.description}</span>
                       )}
                     </Link>
                   </li>
                 ))}
-              </MegaMenuLinks>
+              </ul>
             </div>
           ))}
         </div>
       </div>
-    </MegaMenuRoot>
+    </div>
   );
 }

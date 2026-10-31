@@ -1,12 +1,6 @@
-import {
-  Showcase,
-  ShowcaseDescription,
-  ShowcaseImageGlow,
-  ShowcaseImageWrap,
-  ShowcaseTitle,
-} from './ShowcaseSection.styles';
 import { Link } from 'react-router-dom';
 import { images } from '../../data/images';
+import './ShowcaseSection.css';
 
 const showcases = [
   {
@@ -37,24 +31,24 @@ const showcases = [
 
 export function ShowcaseSection() {
   return (
-    <Showcase>
+    <section className="showcase">
       {showcases.map((item) => (
         <div key={item.title} className={`showcase-row ${item.reverse ? 'reverse' : ''}`}>
           <div className="container showcase-inner">
             <div className="showcase-text">
-              <ShowcaseTitle>{item.title}</ShowcaseTitle>
-              <ShowcaseDescription>{item.description}</ShowcaseDescription>
+              <h2 className="showcase-title">{item.title}</h2>
+              <p className="showcase-description">{item.description}</p>
               <Link to="/signin" className="showcase-link">
                 Explore the dashboard →
               </Link>
             </div>
-            <ShowcaseImageWrap>
+            <div className="showcase-image-wrap">
               <img src={item.image} alt={item.alt} className="showcase-image" loading="lazy" />
-              <ShowcaseImageGlow />
-            </ShowcaseImageWrap>
+              <div className="showcase-image-glow" />
+            </div>
           </div>
         </div>
       ))}
-    </Showcase>
+    </section>
   );
 }

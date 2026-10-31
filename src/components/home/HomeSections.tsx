@@ -1,23 +1,6 @@
-import {
-  Cta,
-  CtaActions,
-  CtaDescription,
-  CtaTitle,
-  Mission,
-  MissionAuthor,
-  StandardCardBadge,
-  StandardCardBody,
-  StandardCardImageWrap,
-  StandardDescription,
-  StandardName,
-  Standards,
-  StandardsGrid,
-  Values,
-  ValuesImageWrap,
-  ValuesTags,
-} from './HomeSections.styles';
 import { brand } from '../../data/brand';
 import { images } from '../../data/images';
+import './HomeSections.css';
 
 const standards = [
   {
@@ -48,7 +31,7 @@ const standards = [
 
 export function StandardsSection() {
   return (
-    <Standards id="solutions">
+    <section className="standards" id="solutions">
       <div className="container">
         <div className="section-header">
           <h2 className="section-title">Built for international standards</h2>
@@ -58,33 +41,33 @@ export function StandardsSection() {
           </p>
         </div>
 
-        <StandardsGrid>
+        <div className="standards-grid">
           {standards.map((standard) => (
             <div key={standard.code} className="standard-card">
-              <StandardCardImageWrap>
+              <div className="standard-card-image-wrap">
                 <img
                   src={standard.image}
                   alt={standard.name}
                   className="standard-card-image"
                   loading="lazy"
                 />
-                <StandardCardBadge>{standard.code}</StandardCardBadge>
-              </StandardCardImageWrap>
-              <StandardCardBody>
-                <StandardName>{standard.name}</StandardName>
-                <StandardDescription>{standard.description}</StandardDescription>
-              </StandardCardBody>
+                <div className="standard-card-badge">{standard.code}</div>
+              </div>
+              <div className="standard-card-body">
+                <div className="standard-name">{standard.name}</div>
+                <p className="standard-description">{standard.description}</p>
+              </div>
             </div>
           ))}
-        </StandardsGrid>
+        </div>
       </div>
-    </Standards>
+    </section>
   );
 }
 
 export function MissionSection() {
   return (
-    <Mission id="mission">
+    <section className="mission" id="mission">
       <img
         src={images.modernOffice}
         alt=""
@@ -95,43 +78,43 @@ export function MissionSection() {
       <div className="mission-overlay" />
       <div className="container mission-content">
         <blockquote className="mission-quote">"{brand.mission}"</blockquote>
-        <MissionAuthor>— {brand.fullName}</MissionAuthor>
+        <p className="mission-author">— {brand.fullName}</p>
       </div>
-    </Mission>
+    </section>
   );
 }
 
 export function ValuesSection() {
   return (
-    <Values id="values">
+    <section className="values" id="values">
       <div className="container values-grid">
-        <ValuesImageWrap>
+        <div className="values-image-wrap">
           <img
             src={images.teamCollaboration}
             alt="Daros team values in action"
             className="values-image"
             loading="lazy"
           />
-        </ValuesImageWrap>
+        </div>
         <div className="values-content">
           <h2 className="section-title">Our core values</h2>
           <p className="section-subtitle values-subtitle">
             The principles that guide everything we build at Daros.
           </p>
-          <ValuesTags>
+          <div className="values-tags">
             {brand.values.map((value) => (
               <span key={value} className="value-tag">{value}</span>
             ))}
-          </ValuesTags>
+          </div>
         </div>
       </div>
-    </Values>
+    </section>
   );
 }
 
 export function CTASection() {
   return (
-    <Cta id="demo">
+    <section className="cta" id="demo">
       <img
         src={images.analytics}
         alt=""
@@ -141,16 +124,16 @@ export function CTASection() {
       />
       <div className="cta-overlay" />
       <div className="container cta-content">
-        <CtaTitle>Ready to simplify your management system?</CtaTitle>
-        <CtaDescription>
+        <h2 className="cta-title">Ready to simplify your management system?</h2>
+        <p className="cta-description">
           Join SMEs across Ireland and the UK who are replacing spreadsheets
           with an integrated compliance platform.
-        </CtaDescription>
-        <CtaActions>
+        </p>
+        <div className="cta-actions">
           <a href="#contact" className="btn btn-primary">Request a Demo</a>
           <a href="#contact" className="btn btn-outline">Contact Sales</a>
-        </CtaActions>
+        </div>
       </div>
-    </Cta>
+    </section>
   );
 }

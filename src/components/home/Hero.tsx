@@ -1,88 +1,74 @@
-import {
-  Hero as HeroRoot,
-  HeroActions,
-  HeroBadge,
-  HeroContent,
-  HeroDescription,
-  HeroFloatCard,
-  HeroFloatIcon,
-  HeroImageFrame,
-  HeroStatLabel,
-  HeroStatValue,
-  HeroStats,
-  HeroTitle,
-  HeroVisual,
-} from './Hero.styles';
 import { Link } from 'react-router-dom';
 import { brand } from '../../data/brand';
 import { images } from '../../data/images';
+import './Hero.css';
 
 export function Hero() {
   return (
-    <HeroRoot>
+    <section className="hero">
       <div className="container hero-grid">
-        <HeroContent>
-          <HeroBadge>
+        <div className="hero-content">
+          <div className="hero-badge">
             <span className="hero-badge-dot" />
             Integrated Management System Platform
-          </HeroBadge>
+          </div>
 
-          <HeroTitle>
+          <h1 className="hero-title">
             Simplify compliance.<br />
             <span>Accelerate improvement.</span>
-          </HeroTitle>
+          </h1>
 
-          <HeroDescription>{brand.mission}</HeroDescription>
+          <p className="hero-description">{brand.mission}</p>
 
-          <HeroActions>
+          <div className="hero-actions">
             <a href="#demo" className="btn btn-primary">
               Request a Demo
             </a>
             <Link to="/signin" className="btn btn-dark">
               Sign In to Dashboard
             </Link>
-          </HeroActions>
+          </div>
 
-          <HeroStats>
+          <div className="hero-stats">
             <div>
-              <HeroStatValue>4</HeroStatValue>
-              <HeroStatLabel>ISO Standards Supported</HeroStatLabel>
+              <div className="hero-stat-value">4</div>
+              <div className="hero-stat-label">ISO Standards Supported</div>
             </div>
             <div>
-              <HeroStatValue>8+</HeroStatValue>
-              <HeroStatLabel>Integrated Modules</HeroStatLabel>
+              <div className="hero-stat-value">8+</div>
+              <div className="hero-stat-label">Integrated Modules</div>
             </div>
             <div>
-              <HeroStatValue>IE & UK</HeroStatValue>
-              <HeroStatLabel>Target Market</HeroStatLabel>
+              <div className="hero-stat-value">IE & UK</div>
+              <div className="hero-stat-label">Target Market</div>
             </div>
-          </HeroStats>
-        </HeroContent>
+          </div>
+        </div>
 
-        <HeroVisual>
-          <HeroImageFrame>
+        <div className="hero-visual">
+          <div className="hero-image-frame">
             <img
               src={images.heroDashboard}
               alt="Daros compliance dashboard preview"
               className="hero-image"
             />
-            <HeroFloatCard>
-              <HeroFloatIcon>✓</HeroFloatIcon>
+            <div className="hero-float-card hero-float-card--top">
+              <span className="hero-float-icon">✓</span>
               <div>
                 <strong>87%</strong>
                 <span>Compliance Score</span>
               </div>
-            </HeroFloatCard>
-            <HeroFloatCard>
-              <HeroFloatIcon>📊</HeroFloatIcon>
+            </div>
+            <div className="hero-float-card hero-float-card--bottom">
+              <span className="hero-float-icon">📊</span>
               <div>
                 <strong>32 KPIs</strong>
                 <span>Tracked live</span>
               </div>
-            </HeroFloatCard>
-          </HeroImageFrame>
-        </HeroVisual>
+            </div>
+          </div>
+        </div>
       </div>
-    </HeroRoot>
+    </section>
   );
 }

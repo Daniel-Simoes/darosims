@@ -1,10 +1,8 @@
-import {
-  DocPdfToolbarTitle,
-  DocWordPageToolbar,
-} from './PdfDocumentPreview.styles';
 import { useEffect, useRef, useState } from 'react';
 import { getDocument, GlobalWorkerOptions, type PDFDocumentLoadingTask, type PDFDocumentProxy } from 'pdfjs-dist';
 import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import './WordDocumentPreview.css';
+import './PdfDocumentPreview.css';
 
 GlobalWorkerOptions.workerSrc = pdfWorker;
 
@@ -170,12 +168,12 @@ export function PdfDocumentPreview({ pdfUrl, title }: PdfDocumentPreviewProps) {
       </aside>
 
       <div className="doc-word-pages-main">
-        <DocWordPageToolbar>
+        <div className="doc-word-page-toolbar">
           <span>
             Page {activePage + 1} of {pageCount}
           </span>
-          <DocPdfToolbarTitle>{title}</DocPdfToolbarTitle>
-        </DocWordPageToolbar>
+          <span className="doc-pdf-toolbar-title">{title}</span>
+        </div>
         <div className="doc-word-page-viewport doc-pdf-page-viewport">
           <article className="doc-word-page-sheet doc-pdf-page-sheet">
             <canvas ref={mainCanvasRef} className="doc-pdf-main-canvas" />

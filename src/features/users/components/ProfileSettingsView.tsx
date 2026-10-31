@@ -1,27 +1,9 @@
-import {
-  ProfileActions,
-  ProfileAlert,
-  ProfileCard,
-  ProfileContent,
-  ProfileField,
-  ProfileForm,
-  ProfileGrid,
-  ProfileLoading,
-  ProfilePage,
-  ProfilePermissions,
-  ProfilePhotoActions,
-  ProfilePhotoFallback,
-  ProfilePhotoPreview,
-  ProfilePhotoRow,
-  ProfileSectionDesc,
-  ProfileSectionTitle,
-  ProfileTopbar,
-} from './ProfileSettingsView.styles';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { api } from '../../../lib/api';
 import { PERMISSION_LABELS } from '../../../lib/permissions/permissionLabels';
 import { useAuth } from '../../../context/AuthContext';
 import type { UserProfile } from '../../../types/auth';
+import './ProfileSettingsView.css';
 
 interface ProfileSettingsViewProps {
   onBack: () => void;
@@ -238,34 +220,34 @@ export function ProfileSettingsView({ onBack }: ProfileSettingsViewProps) {
   const permissions = profile?.permissions ?? user?.permissions ?? [];
 
   return (
-    <ProfilePage>
-      <ProfileContent>
-        <ProfileTopbar>
+    <div className="profile-page">
+      <div className="profile-content">
+        <div className="profile-topbar">
           <button type="button" className="profile-back-btn" onClick={onBack} aria-label="Go back">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M19 12H5M12 5l-7 7 7 7" />
             </svg>
           </button>
-        </ProfileTopbar>
+        </div>
 
-        {error && <ProfileAlert>{error}</ProfileAlert>}
-        {success && <ProfileAlert>{success}</ProfileAlert>}
+        {error && <div className="profile-alert profile-alert-error">{error}</div>}
+        {success && <div className="profile-alert profile-alert-success">{success}</div>}
 
         {isLoading ? (
-          <ProfileLoading>Loading profile...</ProfileLoading>
+          <div className="profile-loading">Loading profile...</div>
         ) : (
-          <ProfileForm onSubmit={handleSubmit}>
-          <ProfileCard>
-            <ProfileSectionTitle>Profile photo</ProfileSectionTitle>
-            <ProfilePhotoRow>
-              <ProfilePhotoPreview>
+          <form className="profile-form" onSubmit={handleSubmit}>
+          <section className="profile-card">
+            <h2 className="profile-section-title">Profile photo</h2>
+            <div className="profile-photo-row">
+              <div className="profile-photo-preview">
                 {photoPreview ? (
                   <img src={photoPreview} alt="Profile" className="profile-photo-image" />
                 ) : (
-                  <ProfilePhotoFallback>{initials}</ProfilePhotoFallback>
+                  <span className="profile-photo-fallback">{initials}</span>
                 )}
-              </ProfilePhotoPreview>
-              <ProfilePhotoActions>
+              </div>
+              <div className="profile-photo-actions">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -289,14 +271,14 @@ export function ProfileSettingsView({ onBack }: ProfileSettingsViewProps) {
                     Remove photo
                   </button>
                 )}
-              </ProfilePhotoActions>
-            </ProfilePhotoRow>
-          </ProfileCard>
+              </div>
+            </div>
+          </section>
 
-          <ProfileCard>
-            <ProfileSectionTitle>Personal information</ProfileSectionTitle>
-            <ProfileGrid>
-              <ProfileField>
+          <section className="profile-card">
+            <h2 className="profile-section-title">Personal information</h2>
+            <div className="profile-grid">
+              <label className="profile-field">
                 <span>First name</span>
                 <input
                   type="text"
@@ -304,8 +286,8 @@ export function ProfileSettingsView({ onBack }: ProfileSettingsViewProps) {
                   onChange={(event) => handleFieldChange('firstName', event.target.value)}
                   autoComplete="given-name"
                 />
-              </ProfileField>
-              <ProfileField>
+              </label>
+              <label className="profile-field">
                 <span>Last name</span>
                 <input
                   type="text"
@@ -313,8 +295,8 @@ export function ProfileSettingsView({ onBack }: ProfileSettingsViewProps) {
                   onChange={(event) => handleFieldChange('lastName', event.target.value)}
                   autoComplete="family-name"
                 />
-              </ProfileField>
-              <ProfileField>
+              </label>
+              <label className="profile-field profile-field-full">
                 <span>Email</span>
                 <input
                   type="email"
@@ -322,17 +304,17 @@ export function ProfileSettingsView({ onBack }: ProfileSettingsViewProps) {
                   onChange={(event) => handleFieldChange('email', event.target.value)}
                   autoComplete="email"
                 />
-              </ProfileField>
-            </ProfileGrid>
-          </ProfileCard>
+              </label>
+            </div>
+          </section>
 
-          <ProfileCard>
-            <ProfileSectionTitle>Change password</ProfileSectionTitle>
-            <ProfileSectionDesc>
+          <section className="profile-card">
+            <h2 className="profile-section-title">Change password</h2>
+            <p className="profile-section-desc">
               Leave blank if you do not want to change your password.
-            </ProfileSectionDesc>
-            <ProfileGrid>
-              <ProfileField>
+            </p>
+            <div className="profile-grid">
+              <label className="profile-field profile-field-full">
                 <span>Current password</span>
                 <input
                   type="password"
@@ -340,8 +322,8 @@ export function ProfileSettingsView({ onBack }: ProfileSettingsViewProps) {
                   onChange={(event) => handleFieldChange('currentPassword', event.target.value)}
                   autoComplete="current-password"
                 />
-              </ProfileField>
-              <ProfileField>
+              </label>
+              <label className="profile-field">
                 <span>New password</span>
                 <input
                   type="password"
@@ -349,8 +331,8 @@ export function ProfileSettingsView({ onBack }: ProfileSettingsViewProps) {
                   onChange={(event) => handleFieldChange('newPassword', event.target.value)}
                   autoComplete="new-password"
                 />
-              </ProfileField>
-              <ProfileField>
+              </label>
+              <label className="profile-field">
                 <span>Confirm new password</span>
                 <input
                   type="password"
@@ -358,26 +340,26 @@ export function ProfileSettingsView({ onBack }: ProfileSettingsViewProps) {
                   onChange={(event) => handleFieldChange('confirmPassword', event.target.value)}
                   autoComplete="new-password"
                 />
-              </ProfileField>
-            </ProfileGrid>
-          </ProfileCard>
+              </label>
+            </div>
+          </section>
 
-          <ProfileCard>
-            <ProfileSectionTitle>Permissions</ProfileSectionTitle>
-            <ProfileSectionDesc>
+          <section className="profile-card">
+            <h2 className="profile-section-title">Permissions</h2>
+            <p className="profile-section-desc">
               Your current role permissions. These are managed by your organization administrator.
-            </ProfileSectionDesc>
-            <ProfilePermissions>
+            </p>
+            <div className="profile-permissions">
               {permissions.map((permission) => (
                 <label key={permission} className="profile-permission-item">
                   <input type="checkbox" checked readOnly disabled />
                   <span>{PERMISSION_LABELS[permission]}</span>
                 </label>
               ))}
-            </ProfilePermissions>
-          </ProfileCard>
+            </div>
+          </section>
 
-          <ProfileActions>
+          <div className="profile-actions">
             <button
               type="button"
               className="profile-btn profile-btn-outline"
@@ -389,10 +371,10 @@ export function ProfileSettingsView({ onBack }: ProfileSettingsViewProps) {
             <button type="submit" className="profile-btn profile-btn-primary" disabled={isSaving}>
               {isSaving ? 'Updating...' : 'Update'}
             </button>
-          </ProfileActions>
-          </ProfileForm>
+          </div>
+          </form>
         )}
-      </ProfileContent>
-    </ProfilePage>
+      </div>
+    </div>
   );
 }

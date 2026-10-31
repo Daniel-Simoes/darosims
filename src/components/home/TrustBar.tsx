@@ -1,9 +1,4 @@
-import {
-  TrustBar as TrustBarRoot,
-  TrustBarItem,
-  TrustBarItems,
-  TrustBarLabel,
-} from './TrustBar.styles';
+import './TrustBar.css';
 
 const trustItems = [
   'ISO 9001 Ready',
@@ -16,15 +11,15 @@ const trustItems = [
 
 export function TrustBar() {
   return (
-    <TrustBarRoot>
+    <section className="trust-bar">
       <div className="container">
-        <TrustBarLabel>Trusted framework for modern compliance</TrustBarLabel>
-        <TrustBarItems>
+        <p className="trust-bar-label">Trusted framework for modern compliance</p>
+        <div className="trust-bar-items">
           {trustItems.map((item) => (
-            <TrustBarItem as="span" key={item}>{item}</TrustBarItem>
+            <span key={item} className="trust-bar-item">{item}</span>
           ))}
-        </TrustBarItems>
+        </div>
       </div>
-    </TrustBarRoot>
+    </section>
   );
 }

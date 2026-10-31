@@ -1,13 +1,6 @@
-import {
-  DtMenuAddActions,
-  DtMenuAddError,
-  DtMenuAddForm,
-  DtMenuList,
-  DtMenuPanel,
-  DtMenuPanelHead,
-} from './DocumentTypeMenu.styles';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { buildSelectOptions, STANDARD_OPTION } from '../utils/selectOptions';
+import './DocumentTypeMenu.css';
 
 function ChevronDown() {
   return (
@@ -133,9 +126,9 @@ export function OptionPickerMenu({
       </button>
 
       {open && (
-        <DtMenuPanel role="listbox" aria-label={panelLabel}>
-          <DtMenuPanelHead>{panelLabel}</DtMenuPanelHead>
-          <DtMenuList>
+        <div className="dt-menu-panel" role="listbox" aria-label={panelLabel}>
+          <div className="dt-menu-panel-head">{panelLabel}</div>
+          <ul className="dt-menu-list">
             {allowCustom && onAddCustomOption ? (
               <li className="dt-menu-add-wrap dt-menu-add-wrap-first">
                 {!addingCustom ? (
@@ -150,7 +143,7 @@ export function OptionPickerMenu({
                     {addCustomLabel}
                   </button>
                 ) : (
-                  <DtMenuAddForm>
+                  <div className="dt-menu-add-form">
                     <input
                       ref={customInputRef}
                       type="text"
@@ -168,8 +161,8 @@ export function OptionPickerMenu({
                         }
                       }}
                     />
-                    {customError ? <DtMenuAddError>{customError}</DtMenuAddError> : null}
-                    <DtMenuAddActions>
+                    {customError ? <p className="dt-menu-add-error">{customError}</p> : null}
+                    <div className="dt-menu-add-actions">
                       <button type="button" className="dt-menu-add-btn" onClick={commitCustomOption}>
                         Add
                       </button>
@@ -184,8 +177,8 @@ export function OptionPickerMenu({
                       >
                         Cancel
                       </button>
-                    </DtMenuAddActions>
-                  </DtMenuAddForm>
+                    </div>
+                  </div>
                 )}
               </li>
             ) : null}
@@ -221,8 +214,8 @@ export function OptionPickerMenu({
                 </button>
               </li>
             ))}
-          </DtMenuList>
-        </DtMenuPanel>
+          </ul>
+        </div>
       )}
     </div>
   );

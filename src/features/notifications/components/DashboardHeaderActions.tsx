@@ -1,25 +1,3 @@
-import {
-  DhaCompanyLogo,
-  DhaCompanyLogoFallback,
-  DhaCompanyMenuName,
-  DhaCompanyMenuSubtitle,
-  DhaDropdown,
-  DhaDropdownHead,
-  DhaMenuWrap,
-  DhaNotifBadge,
-  DhaNotificationEmpty,
-  DhaNotificationFooter,
-  DhaNotificationList,
-  DhaNotificationMessage,
-  DhaNotificationTime,
-  DhaNotificationTitle,
-  DhaRoot,
-  DhaUnreadPill,
-  DhaUserAvatar,
-  DhaUserLogoFallback,
-  DhaUserMenuEmail,
-  DhaUserMenuName,
-} from './DashboardHeaderActions.styles';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../../lib/api';
@@ -32,6 +10,7 @@ import { waitForEntryLoading } from '../../../lib/entryLoading';
 import { ConfirmDialog } from '../../../components/dialogs/ConfirmDialog';
 import { appConfig } from '../../../config/app';
 import companyLogo from '../../../assets/daros-logo-icon.png';
+import './DashboardHeaderActions.css';
 
 export type { DashboardNotification };
 
@@ -183,8 +162,9 @@ export function DashboardHeaderActions({
   }
 
   return (
-    <DhaRoot>
-      <DhaMenuWrap
+    <div className="dha-root">
+      <div
+        className="dha-menu-wrap dha-menu-wrap-notifications"
         onMouseEnter={() => setActiveMenu('notifications')}
         onMouseLeave={() => setActiveMenu(null)}
       >
@@ -193,19 +173,19 @@ export function DashboardHeaderActions({
           aria-label="Notifications"
         >
           <BellIcon />
-          {unreadCount > 0 && <DhaNotifBadge>{unreadCount}</DhaNotifBadge>}
+          {unreadCount > 0 && <span className="dha-notif-badge">{unreadCount}</span>}
         </div>
         {activeMenu === 'notifications' && (
-          <DhaDropdown>
-            <DhaDropdownHead>
+          <div className="dha-dropdown dha-dropdown-notifications">
+            <div className="dha-dropdown-head">
               <span>Notifications</span>
-              {unreadCount > 0 && <DhaUnreadPill>{unreadCount} new</DhaUnreadPill>}
-            </DhaDropdownHead>
-            <DhaNotificationList>
+              {unreadCount > 0 && <span className="dha-unread-pill">{unreadCount} new</span>}
+            </div>
+            <div className="dha-notification-list">
               {isLoadingNotifications ? (
-                <DhaNotificationEmpty>Loading notifications...</DhaNotificationEmpty>
+                <div className="dha-notification-empty">Loading notifications...</div>
               ) : unreadNotifications.length === 0 ? (
-                <DhaNotificationEmpty>No notifications</DhaNotificationEmpty>
+                <div className="dha-notification-empty">No notifications</div>
               ) : (
                 unreadNotifications.map((notification) => (
                   <div
@@ -217,9 +197,9 @@ export function DashboardHeaderActions({
                       className="dha-notification-item-body"
                       onClick={() => handleNotificationOpen(notification)}
                     >
-                      <DhaNotificationTitle>{notification.title}</DhaNotificationTitle>
-                      <DhaNotificationMessage>{notification.message}</DhaNotificationMessage>
-                      <DhaNotificationTime>{notification.time}</DhaNotificationTime>
+                      <div className="dha-notification-title">{notification.title}</div>
+                      <div className="dha-notification-message">{notification.message}</div>
+                      <div className="dha-notification-time">{notification.time}</div>
                     </button>
                     <button
                       type="button"
@@ -232,8 +212,8 @@ export function DashboardHeaderActions({
                   </div>
                 ))
               )}
-            </DhaNotificationList>
-            <DhaNotificationFooter>
+            </div>
+            <div className="dha-notification-footer">
               <button
                 type="button"
                 className="dha-notification-view-all"
@@ -244,12 +224,13 @@ export function DashboardHeaderActions({
               >
                 View all notifications
               </button>
-            </DhaNotificationFooter>
-          </DhaDropdown>
+            </div>
+          </div>
         )}
-      </DhaMenuWrap>
+      </div>
 
-      <DhaMenuWrap
+      <div
+        className="dha-menu-wrap dha-menu-wrap-company"
         onMouseEnter={() => setActiveMenu('company')}
         onMouseLeave={() => setActiveMenu(null)}
       >
@@ -264,24 +245,24 @@ export function DashboardHeaderActions({
               className="dha-company-logo-img"
             />
           ) : (
-            <DhaCompanyLogoFallback>{companyLetter}</DhaCompanyLogoFallback>
+            <span className="dha-company-logo-fallback">{companyLetter}</span>
           )}
         </div>
         {activeMenu === 'company' && (
-          <DhaDropdown>
-            <DhaDropdownHead>
-              <DhaCompanyLogo>
+          <div className="dha-dropdown dha-dropdown-company">
+            <div className="dha-dropdown-head dha-company-head">
+              <span className="dha-company-logo dha-company-logo-sm">
                 {companyLogoUrl ? (
                   <img src={companyLogoUrl} alt="" className="dha-company-logo-img" />
                 ) : (
-                  <DhaCompanyLogoFallback>{companyLetter}</DhaCompanyLogoFallback>
+                  <span className="dha-company-logo-fallback">{companyLetter}</span>
                 )}
-              </DhaCompanyLogo>
+              </span>
               <div>
-                <DhaCompanyMenuName>{companyName}</DhaCompanyMenuName>
-                <DhaCompanyMenuSubtitle>Organization</DhaCompanyMenuSubtitle>
+                <div className="dha-company-menu-name">{companyName}</div>
+                <div className="dha-company-menu-subtitle">Organization</div>
               </div>
-            </DhaDropdownHead>
+            </div>
             {COMPANY_MENU_ITEMS.map((item) => (
               <button
                 key={item.id}
@@ -292,11 +273,12 @@ export function DashboardHeaderActions({
                 {item.label}
               </button>
             ))}
-          </DhaDropdown>
+          </div>
         )}
-      </DhaMenuWrap>
+      </div>
 
-      <DhaMenuWrap
+      <div
+        className="dha-menu-wrap dha-menu-wrap-user"
         onMouseEnter={() => setActiveMenu('user')}
         onMouseLeave={() => setActiveMenu(null)}
       >
@@ -304,17 +286,17 @@ export function DashboardHeaderActions({
           className={`dha-user-logo-btn dha-menu-trigger ${activeMenu === 'user' ? 'active' : ''}`}
           aria-label={`${displayName} menu`}
         >
-          <DhaUserLogoFallback>{avatarLetter}</DhaUserLogoFallback>
+          <span className="dha-user-logo-fallback">{avatarLetter}</span>
         </div>
         {activeMenu === 'user' && (
-          <DhaDropdown>
-            <DhaDropdownHead>
-              <DhaUserAvatar>{avatarLetter}</DhaUserAvatar>
+          <div className="dha-dropdown dha-dropdown-user">
+            <div className="dha-dropdown-head dha-user-head">
+              <span className="dha-user-avatar">{avatarLetter}</span>
               <div>
-                <DhaUserMenuName>{displayName}</DhaUserMenuName>
-                <DhaUserMenuEmail>{user?.email}</DhaUserMenuEmail>
+                <div className="dha-user-menu-name">{displayName}</div>
+                <div className="dha-user-menu-email">{user?.email}</div>
               </div>
-            </DhaDropdownHead>
+            </div>
             {SETTINGS_ITEMS.map((item) => (
               <button
                 key={item.id}
@@ -337,9 +319,9 @@ export function DashboardHeaderActions({
             >
               Log Off
             </button>
-          </DhaDropdown>
+          </div>
         )}
-      </DhaMenuWrap>
+      </div>
 
       <ConfirmDialog
         open={showLogoutConfirm}
@@ -350,6 +332,6 @@ export function DashboardHeaderActions({
         onConfirm={handleConfirmLogout}
         onCancel={() => setShowLogoutConfirm(false)}
       />
-    </DhaRoot>
+    </div>
   );
 }

@@ -1,22 +1,9 @@
-import {
-  DashSidebar,
-  DashSidebarBackdrop,
-  DashSidebarFooter,
-  DashSidebarHeader,
-  DashSidebarLink,
-  DashSidebarLinkIcon,
-  DashSidebarLogoFull,
-  DashSidebarLogoIcon,
-  DashSidebarLogoWrap,
-  DashSidebarNav,
-  DashSidebarSection,
-  DashSidebarSectionLabel,
-} from './DashboardSidebar.styles';
 import { Link } from 'react-router-dom';
 import { dashboardSidebarSections } from '../../../data/sidebarNav';
 import { SidebarIcon } from './SidebarIcon';
 import logo from '../../../assets/daros-logo.png';
 import logoIcon from '../../../assets/daros-logo-icon.png';
+import './DashboardSidebar.css';
 
 interface DashboardSidebarProps {
   activeNav: string;
@@ -54,67 +41,74 @@ export function DashboardSidebar({
 
   return (
     <>
-      <DashSidebarBackdrop $visible={isOpen} onClick={onClose} aria-hidden="true" />
+      <div
+        className={`dash-sidebar-backdrop ${isOpen ? 'visible' : ''}`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
 
-      <DashSidebar
-        $open={isOpen}
-        $collapsed={isCollapsed}
+      <aside
+        className={`dash-sidebar ${isOpen ? 'open' : ''} ${isCollapsed ? 'collapsed' : ''}`}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        <DashSidebarHeader>
-          <DashSidebarLogoWrap as={Link} to="/" title="daros">
-            <DashSidebarLogoFull src={logo} alt="daros" />
-            <DashSidebarLogoIcon src={logoIcon} alt="daros" />
-          </DashSidebarLogoWrap>
-        </DashSidebarHeader>
+        <div className="dash-sidebar-header">
+          <Link to="/" className="dash-sidebar-logo-wrap" title="daros">
+            <img src={logo} alt="daros" className="dash-sidebar-logo dash-sidebar-logo-full" />
+            <img src={logoIcon} alt="daros" className="dash-sidebar-logo dash-sidebar-logo-icon" />
+          </Link>
+        </div>
 
-        <DashSidebarNav>
+        <nav className="dash-sidebar-nav">
           {dashboardSidebarSections.map((section) => (
-            <DashSidebarSection key={section.id}>
+            <div key={section.id} className="dash-sidebar-section">
               {!isCollapsed && (
-                <DashSidebarSectionLabel>
+                <div className="dash-sidebar-section-label">
                   <span>{section.label}</span>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="m6 9 6 6 6-6" />
                   </svg>
-                </DashSidebarSectionLabel>
+                </div>
               )}
               {section.items.map((item) => (
-                <DashSidebarLink
+                <button
                   key={item.id}
                   type="button"
-                  $active={activeNav === item.id}
+                  className={`dash-sidebar-link ${activeNav === item.id ? 'active' : ''}`}
                   onClick={() => handleNavClick(item.id)}
                   title={isCollapsed ? item.label : undefined}
                 >
-                  <DashSidebarLinkIcon>
+                  <span className="dash-sidebar-link-icon">
                     <SidebarIcon name={item.icon} />
-                  </DashSidebarLinkIcon>
+                  </span>
                   {!isCollapsed && item.label}
-                </DashSidebarLink>
+                </button>
               ))}
-            </DashSidebarSection>
+            </div>
           ))}
-        </DashSidebarNav>
+        </nav>
 
-        <DashSidebarFooter>
-          <DashSidebarLink type="button" title={isCollapsed ? 'Settings' : undefined}>
-            <DashSidebarLinkIcon>
+        <div className="dash-sidebar-footer">
+          <button type="button" className="dash-sidebar-link" title={isCollapsed ? 'Settings' : undefined}>
+            <span className="dash-sidebar-link-icon">
               <SidebarIcon name="settings" />
-            </DashSidebarLinkIcon>
+            </span>
             {!isCollapsed && 'Settings'}
-          </DashSidebarLink>
-          <DashSidebarLink as={Link} to="/" $back title={isCollapsed ? 'Back to website' : undefined}>
-            <DashSidebarLinkIcon>
+          </button>
+          <Link
+            to="/"
+            className="dash-sidebar-link dash-sidebar-back"
+            title={isCollapsed ? 'Back to website' : undefined}
+          >
+            <span className="dash-sidebar-link-icon">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
                 <path d="M19 12H5M12 5l-7 7 7 7" />
               </svg>
-            </DashSidebarLinkIcon>
+            </span>
             {!isCollapsed && 'Back to website'}
-          </DashSidebarLink>
-        </DashSidebarFooter>
-      </DashSidebar>
+          </Link>
+        </div>
+      </aside>
     </>
   );
 }

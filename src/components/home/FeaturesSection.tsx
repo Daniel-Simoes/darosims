@@ -1,15 +1,5 @@
-import {
-  FeatureDescription,
-  FeatureIcon,
-  FeatureTitle,
-  Features,
-  FeaturesBanner,
-  FeaturesBannerOverlay,
-  FeaturesBannerText,
-  FeaturesBannerTitle,
-  FeaturesGrid,
-} from './FeaturesSection.styles';
 import { images } from '../../data/images';
+import './FeaturesSection.css';
 
 const features = [
   {
@@ -56,23 +46,23 @@ const features = [
 
 export function FeaturesSection() {
   return (
-    <Features id="platform">
-      <FeaturesBanner>
+    <section className="features" id="platform">
+      <div className="features-banner">
         <img
           src={images.workspace}
           alt="Modern workspace using Daros platform"
           className="features-banner-image"
           loading="lazy"
         />
-        <FeaturesBannerOverlay>
+        <div className="features-banner-overlay">
           <div className="container">
-            <FeaturesBannerTitle>Replace spreadsheets with intelligence</FeaturesBannerTitle>
-            <FeaturesBannerText>
+            <h2 className="features-banner-title">Replace spreadsheets with intelligence</h2>
+            <p className="features-banner-text">
               Everything your organisation needs to manage compliance — in one connected platform.
-            </FeaturesBannerText>
+            </p>
           </div>
-        </FeaturesBannerOverlay>
-      </FeaturesBanner>
+        </div>
+      </div>
 
       <div className="container features-body">
         <div className="section-header">
@@ -83,16 +73,16 @@ export function FeaturesSection() {
           </p>
         </div>
 
-        <FeaturesGrid>
+        <div className="features-grid">
           {features.map((feature) => (
             <div key={feature.title} className="feature-card">
-              <FeatureIcon>{feature.icon}</FeatureIcon>
-              <FeatureTitle>{feature.title}</FeatureTitle>
-              <FeatureDescription>{feature.description}</FeatureDescription>
+              <div className="feature-icon">{feature.icon}</div>
+              <h3 className="feature-title">{feature.title}</h3>
+              <p className="feature-description">{feature.description}</p>
             </div>
           ))}
-        </FeaturesGrid>
+        </div>
       </div>
-    </Features>
+    </section>
   );
 }

@@ -1,29 +1,3 @@
-import {
-  DdBreadcrumbs,
-  DdBreadcrumbsCurrent,
-  DdCard,
-  DdCardTitle,
-  DdDetails,
-  DdDraftEditor,
-  DdDraftEditorNote,
-  DdDraftEditorTitle,
-  DdEditGrid,
-  DdEditLabel,
-  DdErrorState,
-  DdInfoLabel,
-  DdInfoRow,
-  DdInfoValue,
-  DdInput,
-  DdLayout,
-  DdLoading,
-  DdPage,
-  DdPageTitle,
-  DdRejectionMeta,
-  DdRejectionNotice,
-  DdTopbar,
-  DdTopbarActions,
-  DdTopbarLeft,
-} from './DocumentDetailView.styles';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { api, type DocumentRecord, type UpdateDocumentPayload } from '../../../lib/api';
 import type { DocumentType } from '../../../data/documentTypes';
@@ -39,6 +13,7 @@ import { DocumentTypeMenu } from './DocumentTypeMenu';
 import { ProcessMenu } from './ProcessMenu';
 import { ConfirmDialog } from '../../../components/dialogs/ConfirmDialog';
 import { RejectDocumentDialog } from '../../../components/dialogs/RejectDocumentDialog';
+import './DocumentDetailView.css';
 
 const STATUSES: DocumentRecord['status'][] = ['Active', 'Draft', 'Obsolete'];
 
@@ -53,10 +28,10 @@ interface DocumentDetailViewProps {
 
 function InfoRow({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <DdInfoRow>
-      <DdInfoLabel>{label}</DdInfoLabel>
-      <DdInfoValue>{value || '—'}</DdInfoValue>
-    </DdInfoRow>
+    <div className="dd-info-row">
+      <span className="dd-info-label">{label}</span>
+      <span className="dd-info-value">{value || '—'}</span>
+    </div>
   );
 }
 
@@ -71,7 +46,7 @@ function EditField({
 }) {
   return (
     <label className={`dd-edit-field ${wide ? 'wide' : ''}`}>
-      <DdEditLabel>{label}</DdEditLabel>
+      <span className="dd-edit-label">{label}</span>
       {children}
     </label>
   );
@@ -348,17 +323,17 @@ export function DocumentDetailView({
   }
 
   if (isLoading) {
-    return <DdPage><DdLoading>Loading document...</DdLoading></DdPage>;
+    return <div className="dd-page"><div className="dd-loading">Loading document...</div></div>;
   }
 
   if (!document) {
     return (
-      <DdPage>
-        <DdErrorState>
+      <div className="dd-page">
+        <div className="dd-error-state">
           <p>{error || 'Document not found.'}</p>
           <button type="button" className="dd-btn dd-btn-outline" onClick={onBack}>Back to Register</button>
-        </DdErrorState>
-      </DdPage>
+        </div>
+      </div>
     );
   }
 
@@ -377,24 +352,24 @@ export function DocumentDetailView({
     : String(document.version).padStart(2, '0');
 
   return (
-    <DdPage>
-      <DdTopbar>
-        <DdTopbarLeft>
+    <div className="dd-page">
+      <div className="dd-topbar">
+        <div className="dd-topbar-left">
           <button type="button" className="dd-back-btn" onClick={onBack} aria-label="Back">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M19 12H5M12 5l-7 7 7 7" />
             </svg>
           </button>
           <div>
-            <DdBreadcrumbs>
+            <nav className="dd-breadcrumbs">
               <button type="button" onClick={onBack}>Document Register</button>
               <span>/</span>
-              <DdBreadcrumbsCurrent>{document.title}</DdBreadcrumbsCurrent>
-            </DdBreadcrumbs>
-            <DdPageTitle>{document.title}</DdPageTitle>
+              <span className="dd-breadcrumbs-current">{document.title}</span>
+            </nav>
+            <h1 className="dd-page-title">{document.title}</h1>
           </div>
-        </DdTopbarLeft>
-        <DdTopbarActions>
+        </div>
+        <div className="dd-topbar-actions">
           {!isEditing ? (
             <>
               {canReviewPending ? (
@@ -451,8 +426,8 @@ export function DocumentDetailView({
               </button>
             </>
           )}
-        </DdTopbarActions>
-      </DdTopbar>
+        </div>
+      </div>
 
       {(error || success) && (
         <div className={`dd-alert ${error ? 'dd-alert-error' : 'dd-alert-success'}`}>
@@ -461,19 +436,19 @@ export function DocumentDetailView({
       )}
 
       {document.rejectionReason && !document.submittedAt && isCreator ? (
-        <DdRejectionNotice>
+        <div className="dd-rejection-notice">
           <strong>Not approved</strong>
           <p>{document.rejectionReason}</p>
           {document.rejectedBy ? (
-            <DdRejectionMeta>
+            <span className="dd-rejection-meta">
               By {document.rejectedBy}
               {document.rejectedAt ? ` · ${new Date(document.rejectedAt).toLocaleString()}` : ''}
-            </DdRejectionMeta>
+            </span>
           ) : null}
-        </DdRejectionNotice>
+        </div>
       ) : null}
 
-      <DdLayout>
+      <div className="dd-layout">
         <DocumentPreview
           documentId={documentId}
           title={document.title}
@@ -502,11 +477,11 @@ export function DocumentDetailView({
           }}
         />
 
-        <DdDetails>
+        <div className="dd-details">
           {!isEditing ? (
             <>
-              <DdCard>
-                <DdCardTitle>General Information</DdCardTitle>
+              <section className="dd-card">
+                <h3 className="dd-card-title">General Information</h3>
                 <InfoRow label={isExternal ? 'External Reference' : 'Document Code'} value={displayCode} />
                 <InfoRow label="Document Title" value={document.title} />
                 <InfoRow
@@ -528,10 +503,10 @@ export function DocumentDetailView({
                       : document.fileName || 'Published PDF'
                   }
                 />
-              </DdCard>
+              </section>
 
-              <DdCard>
-                <DdCardTitle>Control & Approval</DdCardTitle>
+              <section className="dd-card">
+                <h3 className="dd-card-title">Control & Approval</h3>
                 <InfoRow label="Document Owner" value={document.owner} />
                 <InfoRow
                   label="Workflow Status"
@@ -546,31 +521,31 @@ export function DocumentDetailView({
                 <InfoRow label="Effective Date" value={document.effectiveDate} />
                 <InfoRow label="Review Frequency" value={document.reviewFrequency} />
                 <InfoRow label="Next Review Date" value={document.nextReviewDate} />
-              </DdCard>
+              </section>
 
-              <DdCard>
-                <DdCardTitle>Retention & Access</DdCardTitle>
+              <section className="dd-card">
+                <h3 className="dd-card-title">Retention & Access</h3>
                 <InfoRow label="Repository / Location" value={document.repository} />
                 <InfoRow label="Distribution / Access" value={document.distribution} />
                 <InfoRow label="Retention Period" value={document.retentionPeriod} />
                 <InfoRow label="Retention Notes" value={document.retentionNotes} />
                 <InfoRow label="Disposition" value={document.disposition} />
                 <InfoRow label="Comments" value={document.comments} />
-              </DdCard>
+              </section>
 
-              <DdCard>
-                <DdCardTitle>System Information</DdCardTitle>
+              <section className="dd-card">
+                <h3 className="dd-card-title">System Information</h3>
                 <InfoRow label="Created By" value={document.createdBy} />
                 <InfoRow
                   label="Created At"
                   value={document.createdAt ? new Date(document.createdAt).toLocaleString() : '—'}
                 />
-              </DdCard>
+              </section>
             </>
           ) : (
-            <DdCard>
-              <DdCardTitle>Edit Document</DdCardTitle>
-              <DdEditGrid>
+            <section className="dd-card dd-edit-card">
+              <h3 className="dd-card-title">Edit Document</h3>
+              <div className="dd-edit-grid">
                 <EditField label="Document Title">
                   <input
                     className="dd-input"
@@ -588,7 +563,8 @@ export function DocumentDetailView({
                   <ProcessMenu value={form.process} onChange={(v) => updateField('process', v)} />
                 </EditField>
                 <EditField label="Status">
-                  <DdInput
+                  <select
+                    className="dd-input"
                     value={form.status}
                     onChange={(e) => updateField('status', e.target.value as DocumentRecord['status'])}
                   >
@@ -606,16 +582,17 @@ export function DocumentDetailView({
                         </option>
                       );
                     })}
-                  </DdInput>
+                  </select>
                 </EditField>
                 <EditField label="Document Origin">
-                  <DdInput
+                  <select
+                    className="dd-input"
                     value={form.documentOrigin}
                     onChange={(e) => updateField('documentOrigin', e.target.value)}
                   >
                     <option value="Internal">Internal</option>
                     <option value="External">External</option>
-                  </DdInput>
+                  </select>
                 </EditField>
                 {form.documentOrigin === 'External' ? (
                   <>
@@ -652,7 +629,8 @@ export function DocumentDetailView({
                 )}
                 <div ref={ownerFieldRef}>
                   <EditField label="Document Owner">
-                    <DdInput
+                    <select
+                      className="dd-input"
                       value={form.owner}
                       onChange={(e) => updateField('owner', e.target.value)}
                     >
@@ -660,7 +638,7 @@ export function DocumentDetailView({
                       {teamUsers.map((owner) => (
                         <option key={owner.email} value={owner.name}>{owner.name}</option>
                       ))}
-                    </DdInput>
+                    </select>
                   </EditField>
                 </div>
                 <EditField label="Approved By">
@@ -744,23 +722,23 @@ export function DocumentDetailView({
                     onChange={(e) => updateField('comments', e.target.value)}
                   />
                 </EditField>
-              </DdEditGrid>
+              </div>
               {isDraftInternal && form.documentOrigin !== 'External' ? (
-                <DdDraftEditor>
-                  <DdDraftEditorTitle>Word Content</DdDraftEditorTitle>
-                  <DdDraftEditorNote>
+                <div className="dd-draft-editor">
+                  <h4 className="dd-draft-editor-title">Word Content</h4>
+                  <p className="dd-draft-editor-note">
                     Edit the document below. Change status to Active to approve and publish as PDF.
-                  </DdDraftEditorNote>
+                  </p>
                   <DocumentEditor
                     content={form.sourceContent}
                     onChange={(html) => updateField('sourceContent', html)}
                   />
-                </DdDraftEditor>
+                </div>
               ) : null}
-            </DdCard>
+            </section>
           )}
-        </DdDetails>
-      </DdLayout>
+        </div>
+      </div>
 
       <ConfirmDialog
         open={showOwnerConfirmDialog}
@@ -779,6 +757,6 @@ export function DocumentDetailView({
         onCancel={() => setShowRejectDialog(false)}
         isSubmitting={isSaving}
       />
-    </DdPage>
+    </div>
   );
 }

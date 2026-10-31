@@ -1,6 +1,6 @@
-import * as S from './DocumentRegisterView.styles';
 import { useMemo } from 'react';
 import { buildSelectOptions } from '../utils/selectOptions';
+import './DocumentRegisterView.css';
 
 function ChevronDown() {
   return (
@@ -35,8 +35,9 @@ export function RegisterSelect({
   );
 
   return (
-    <S.DocSelectWrap>
-      <S.DocSelect
+    <div className="doc-select-wrap">
+      <select
+        className="doc-input doc-select"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required={required}
@@ -48,10 +49,10 @@ export function RegisterSelect({
             {opt}
           </option>
         ))}
-      </S.DocSelect>
-      <S.DocSelectChevron>
+      </select>
+      <span className="doc-select-chevron">
         <ChevronDown />
-      </S.DocSelectChevron>
-    </S.DocSelectWrap>
+      </span>
+    </div>
   );
 }

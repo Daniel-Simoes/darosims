@@ -1,18 +1,8 @@
-import {
-  DocReviewHistoryDialog,
-  DocReviewHistoryError,
-  DocReviewHistoryFooter,
-  DocReviewHistoryHeader,
-  DocReviewHistoryLoading,
-  DocReviewHistoryMeta,
-  DocReviewHistoryOverlay,
-  DocReviewHistoryTable,
-  DocReviewHistoryTableWrap,
-} from './DocumentReviewHistoryDialog.styles';
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { DocumentRecord } from '../../../types/documents';
 import type { DocumentReviewHistoryRow } from '../utils/reviewHistory';
+import './DocumentReviewHistoryDialog.css';
 
 interface DocumentReviewHistoryDialogProps {
   open: boolean;
@@ -50,34 +40,35 @@ export function DocumentReviewHistoryDialog({
       : documentRecord.code || '—';
 
   return createPortal(
-    <DocReviewHistoryOverlay onClick={onClose}>
-      <DocReviewHistoryDialog
+    <div className="doc-review-history-overlay" onClick={onClose}>
+      <div
+        className="doc-review-history-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="doc-review-history-title"
         onClick={(e) => e.stopPropagation()}
       >
-        <DocReviewHistoryHeader>
+        <div className="doc-review-history-header">
           <div>
             <h2 id="doc-review-history-title" className="doc-review-history-title">
               Document Review History
             </h2>
-            <DocReviewHistoryMeta>
+            <p className="doc-review-history-meta">
               {displayCode} · {documentRecord.title}
-            </DocReviewHistoryMeta>
+            </p>
           </div>
           <button type="button" className="doc-review-history-close" onClick={onClose} aria-label="Close">
             ×
           </button>
-        </DocReviewHistoryHeader>
+        </div>
 
-        {error ? <DocReviewHistoryError>{error}</DocReviewHistoryError> : null}
+        {error ? <p className="doc-review-history-error">{error}</p> : null}
 
         {isLoading ? (
-          <DocReviewHistoryLoading>Loading review history…</DocReviewHistoryLoading>
+          <p className="doc-review-history-loading">Loading review history…</p>
         ) : (
-          <DocReviewHistoryTableWrap>
-            <DocReviewHistoryTable>
+          <div className="doc-review-history-table-wrap">
+            <table className="doc-review-history-table">
               <thead>
                 <tr>
                   <th>Version Number</th>
@@ -100,17 +91,17 @@ export function DocumentReviewHistoryDialog({
                   </tr>
                 ))}
               </tbody>
-            </DocReviewHistoryTable>
-          </DocReviewHistoryTableWrap>
+            </table>
+          </div>
         )}
 
-        <DocReviewHistoryFooter>
+        <div className="doc-review-history-footer">
           <button type="button" className="doc-review-history-close-btn" onClick={onClose}>
             Close
           </button>
-        </DocReviewHistoryFooter>
-      </DocReviewHistoryDialog>
-    </DocReviewHistoryOverlay>,
+        </div>
+      </div>
+    </div>,
     document.body,
   );
 }
