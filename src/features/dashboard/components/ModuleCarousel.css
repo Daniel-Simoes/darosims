@@ -78,11 +78,23 @@
 .module-carousel-fade-left {
   left: 0;
   background: linear-gradient(90deg, #f8fafc 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.module-carousel-viewport.can-scroll-prev .module-carousel-fade-left {
+  opacity: 1;
 }
 
 .module-carousel-fade-right {
   right: 0;
   background: linear-gradient(270deg, #f0f9ff 0%, transparent 100%);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.module-carousel-viewport.can-scroll-next .module-carousel-fade-right {
+  opacity: 1;
 }
 
 .module-carousel-track {
@@ -108,8 +120,7 @@
   padding: 22px 20px 18px;
   border-radius: 14px;
   border: 1px solid rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(8px);
+  background: #ffffff;
   cursor: pointer;
   font-family: inherit;
   overflow: hidden;
@@ -125,6 +136,7 @@
 
 .module-carousel-card.is-preview {
   cursor: default;
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .module-carousel-card.is-preview:disabled {

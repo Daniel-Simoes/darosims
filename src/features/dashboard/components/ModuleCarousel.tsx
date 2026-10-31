@@ -105,7 +105,9 @@ export function ModuleCarousel({ modules, onModuleClick }: ModuleCarouselProps) 
         </div>
       </div>
 
-      <div className="module-carousel-viewport">
+      <div
+        className={`module-carousel-viewport${canScrollPrev ? ' can-scroll-prev' : ''}${canScrollNext ? ' can-scroll-next' : ''}`}
+      >
         <div className="module-carousel-fade module-carousel-fade-left" aria-hidden="true" />
         <div className="module-carousel-fade module-carousel-fade-right" aria-hidden="true" />
         <div ref={trackRef} className="module-carousel-track">
