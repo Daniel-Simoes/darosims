@@ -102,6 +102,31 @@ export function DashboardPage() {
     return () => window.clearTimeout(timer);
   }, [endEntryLoading]);
 
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1024px)');
+    const onChange = () => {
+      if (mq.matches) {
+        setSidebarOpen(false);
+        setSidebarHovered(false);
+      }
+    };
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  useEffect(() => {
+    const isDrawer = window.matchMedia('(max-width: 1024px)').matches;
+    if (sidebarOpen && isDrawer) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+    return undefined;
+  }, [sidebarOpen]);
+
   const isHome = activeNav === 'dashboard';
   const isNewDocument = activeNav === 'document-register';
   const isMyDrafts = activeNav === 'my-drafts';
@@ -143,6 +168,10 @@ export function DashboardPage() {
   }
 
   function handleModuleClick(moduleId: string) {
+    if (moduleId === 'documents') {
+      setActiveNav('documents');
+      return;
+    }
     setActiveNav(getModuleViewId(moduleId));
   }
 

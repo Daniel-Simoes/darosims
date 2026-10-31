@@ -23,7 +23,19 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(path, { ...options, headers });
+  let response: Response;
+  try {
+    response = await fetch(path, { ...options, headers });
+  } catch {
+    const onLocalDev =
+      typeof window !== 'undefined' &&
+      (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    throw new Error(
+      onLocalDev
+        ? 'Cannot reach the API. Run `npm run dev:all` in the project folder (backend :3000 + site :5173).'
+        : 'Network error contacting the API. Open /api/health on this site or try again later.',
+    );
+  }
   let data: Record<string, unknown> = {};
 
   try {

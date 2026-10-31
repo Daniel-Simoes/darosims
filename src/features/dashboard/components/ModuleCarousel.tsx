@@ -109,29 +109,41 @@ export function ModuleCarousel({ modules, onModuleClick }: ModuleCarouselProps) 
         <div className="module-carousel-fade module-carousel-fade-left" aria-hidden="true" />
         <div className="module-carousel-fade module-carousel-fade-right" aria-hidden="true" />
         <div ref={trackRef} className="module-carousel-track">
-          {modules.map((module) => (
+          {modules.map((module) => {
+            const isAvailable = module.available !== false;
+            return (
             <button
               key={module.id}
               type="button"
-              className={`module-carousel-card ${getCategoryAccent(module.category)}`}
-              onClick={() => onModuleClick(module.id)}
+              className={`module-carousel-card ${getCategoryAccent(module.category)} ${isAvailable ? '' : 'is-preview'}`}
+              disabled={!isAvailable}
+              aria-disabled={!isAvailable}
+              onClick={() => isAvailable && onModuleClick(module.id)}
             >
               <div className="module-carousel-card-glow" aria-hidden="true" />
-              <div className="module-carousel-card-top">
-                <span className="module-carousel-icon">{module.icon}</span>
-                {module.count !== undefined && (
-                  <span
-                    className={`module-carousel-count ${module.status === 'warning' ? 'warning' : ''}`}
-                  >
-                    {module.count}
-                  </span>
-                )}
+              {!isAvailable && (
+                <span className="module-carousel-soon-badge">Coming soon</span>
+              )}
+              <div className="module-carousel-card-content">
+                <div className="module-carousel-card-top">
+                  <span className="module-carousel-icon">{module.icon}</span>
+                  {module.count !== undefined && (
+                    <span
+                      className={`module-carousel-count ${module.status === 'warning' ? 'warning' : ''}`}
+                    >
+                      {module.count}
+                    </span>
+                  )}
+                </div>
+                <h3 className="module-carousel-card-title">{module.title}</h3>
+                <p className="module-carousel-card-desc">{module.description}</p>
+                <span className="module-carousel-card-cta">
+                  {isAvailable ? 'Open module →' : 'In development'}
+                </span>
               </div>
-              <h3 className="module-carousel-card-title">{module.title}</h3>
-              <p className="module-carousel-card-desc">{module.description}</p>
-              <span className="module-carousel-card-cta">Open module →</span>
             </button>
-          ))}
+            );
+          })}
         </div>
       </div>
 

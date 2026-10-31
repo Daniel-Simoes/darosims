@@ -10,4 +10,4 @@ insert into public.users (email, body) values
   'rodrigo@daros.com',
   '{"email":"rodrigo@daros.com","password":"1234","name":"Rodrigo","firstName":"Rodrigo","lastName":"","role":"admin","permissions":["view_documents","create_documents","edit_documents","create_versions","submit_documents","approve_documents","reject_documents","archive_documents","manage_users","manage_companies","manage_settings","view_audit_logs"]}'::jsonb
 )
-on conflict (email) do nothing;
+on conflict (email) do update set body = excluded.body;

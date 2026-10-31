@@ -28,13 +28,13 @@ export function DashboardSidebar({
   }
 
   function handleMouseEnter() {
-    if (window.matchMedia('(min-width: 901px)').matches) {
+    if (window.matchMedia('(min-width: 1025px)').matches) {
       onHoverChange?.(true);
     }
   }
 
   function handleMouseLeave() {
-    if (window.matchMedia('(min-width: 901px)').matches) {
+    if (window.matchMedia('(min-width: 1025px)').matches) {
       onHoverChange?.(false);
     }
   }

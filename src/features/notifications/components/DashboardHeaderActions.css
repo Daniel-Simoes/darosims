@@ -448,6 +448,17 @@
 }
 
 @media (max-width: 640px) {
+  .dha-root {
+    gap: 6px;
+  }
+
+  .dha-dropdown,
+  .dha-dropdown-user,
+  .dha-dropdown-company {
+    min-width: 0;
+    width: min(280px, calc(100vw - 24px));
+  }
+
   .dha-dropdown-notifications {
     width: min(280px, calc(100vw - 32px));
     right: 0;

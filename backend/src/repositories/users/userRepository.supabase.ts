@@ -5,7 +5,7 @@ import {
   getPhotoFilePath,
   normalizeUser,
   type StoredUser,
-} from '@/repositories/users/userRepository.files';
+} from '@/repositories/users/userRepository.shared';
 
 function toPublicUser(user: StoredUser): AuthUser {
   const { password: _password, ...publicUser } = user;
@@ -74,13 +74,18 @@ export async function updateUserByEmail(
   return next;
 }
 
-export { getPhotoFileName, getPhotoFilePath };
-
 export async function createUserIfMissing(
   input: Pick<StoredUser, 'email' | 'password' | 'role' | 'firstName' | 'lastName'>,
 ): Promise<void> {
   const existing = await findUserByEmail(input.email);
   if (existing) return;
+  await upsertUser(normalizeUser(input));
+}
+
+/** Ensures demo seed accounts keep expected email/password (local + Supabase). */
+export async function syncSeedUser(
+  input: Pick<StoredUser, 'email' | 'password' | 'role' | 'firstName' | 'lastName'>,
+): Promise<void> {
   await upsertUser(normalizeUser(input));
 }
 

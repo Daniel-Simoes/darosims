@@ -267,6 +267,9 @@
 /* Register list (reference table style) */
 .doc-reg-table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  max-width: 100%;
   background: white;
 }
 
@@ -879,10 +882,24 @@
   }
 }
 
+@media (max-width: 1024px) {
+  .doc-form-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .doc-form-field:last-child.wide {
+    grid-column: span 2;
+  }
+}
+
 @media (max-width: 900px) {
   .doc-register {
     padding: 12px;
     gap: 12px;
+  }
+
+  .doc-reg-table {
+    min-width: 720px;
   }
 
   .doc-form-grid {
@@ -916,5 +933,27 @@
 
   .doc-pagination {
     justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .doc-register {
+    padding: 8px;
+  }
+
+  .doc-card-header,
+  .doc-card-toolbar,
+  .doc-form-grid {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .doc-btn {
+    white-space: normal;
+    text-align: center;
+  }
+
+  .doc-reg-table {
+    min-width: 640px;
   }
 }

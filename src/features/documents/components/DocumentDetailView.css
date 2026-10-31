@@ -397,6 +397,18 @@
 }
 
 @media (max-width: 768px) {
+  .dd-page {
+    padding: 0 12px 20px;
+  }
+
+  .dd-page-title {
+    font-size: 1.25rem;
+  }
+
+  .dd-preview-card {
+    position: static;
+  }
+
   .dd-info-row {
     grid-template-columns: 1fr;
     gap: 4px;

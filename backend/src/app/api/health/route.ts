@@ -1,8 +1,10 @@
 import { getDatabaseProvider } from '@/database/provider';
 import { getSupabaseProjectHost, getSupabaseAdmin } from '@/database/supabase/client';
 import { jsonResponse } from '@/lib/auth';
+import { ensureServerBootstrap } from '@/lib/ensureServerBootstrap';
 
 export async function GET() {
+  await ensureServerBootstrap();
   const provider = getDatabaseProvider();
   const supabaseConfigured = Boolean(
     process.env.SUPABASE_URL?.trim() && process.env.SUPABASE_SERVICE_ROLE_KEY?.trim(),

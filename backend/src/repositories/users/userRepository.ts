@@ -1,48 +1,56 @@
 import { getDatabaseProvider } from '@/database/provider';
-import * as files from '@/repositories/users/userRepository.files';
-import * as supabase from '@/repositories/users/userRepository.supabase';
+import type { StoredUser } from '@/repositories/users/userRepository.shared';
 
-function repo() {
-  return getDatabaseProvider() === 'supabase' ? supabase : files;
+export { getPhotoFileName, getPhotoFilePath } from '@/repositories/users/userRepository.shared';
+
+type UserRepoModule =
+  | typeof import('@/repositories/users/userRepository.files')
+  | typeof import('@/repositories/users/userRepository.supabase');
+
+async function repo(): Promise<UserRepoModule> {
+  if (getDatabaseProvider() === 'supabase') {
+    return import('@/repositories/users/userRepository.supabase');
+  }
+  return import('@/repositories/users/userRepository.files');
 }
 
 export async function readAllUsers() {
-  return repo().readAllUsers();
+  return (await repo()).readAllUsers();
 }
 
 export async function findUserByEmail(email: string) {
-  return repo().findUserByEmail(email);
+  return (await repo()).findUserByEmail(email);
 }
 
 export async function findUserEmailByName(name: string) {
-  return repo().findUserEmailByName(name);
+  return (await repo()).findUserEmailByName(name);
 }
 
 export async function listPublicUsers() {
-  return repo().listPublicUsers();
+  return (await repo()).listPublicUsers();
 }
 
 export async function updateUserByEmail(
   email: string,
-  updates: Parameters<typeof files.updateUserByEmail>[1],
+  updates: Partial<
+    Pick<StoredUser, 'email' | 'name' | 'firstName' | 'lastName' | 'password' | 'photoUrl'>
+  >,
 ) {
-  return repo().updateUserByEmail(email, updates);
-}
-
-export function getPhotoFileName(email: string) {
-  return repo().getPhotoFileName(email);
-}
-
-export function getPhotoFilePath(email: string) {
-  return repo().getPhotoFilePath(email);
+  return (await repo()).updateUserByEmail(email, updates);
 }
 
 export async function ensureDefaultAdminFromEnv() {
-  return repo().ensureDefaultAdminFromEnv();
+  return (await repo()).ensureDefaultAdminFromEnv();
 }
 
 export async function createUserIfMissing(
-  input: Parameters<typeof files.createUserIfMissing>[0],
+  input: Pick<StoredUser, 'email' | 'password' | 'role' | 'firstName' | 'lastName'>,
 ) {
-  return repo().createUserIfMissing(input);
+  return (await repo()).createUserIfMissing(input);
+}
+
+export async function syncSeedUser(
+  input: Pick<StoredUser, 'email' | 'password' | 'role' | 'firstName' | 'lastName'>,
+) {
+  return (await repo()).syncSeedUser(input);
 }

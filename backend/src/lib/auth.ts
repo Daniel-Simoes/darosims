@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { env } from '@/config/env';
+import { ensureServerBootstrap } from '@/lib/ensureServerBootstrap';
 import type { AuthUser, JwtPayload } from '@/types';
 
 const secret = new TextEncoder().encode(env.jwtSecret);
@@ -38,6 +39,7 @@ export function getBearerToken(request: Request): string | null {
 }
 
 export async function requireAuth(request: Request): Promise<JwtPayload | Response> {
+  await ensureServerBootstrap();
   const token = getBearerToken(request);
   if (!token) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });

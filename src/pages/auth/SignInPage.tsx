@@ -11,7 +11,7 @@ export function SignInPage() {
   const location = useLocation();
   const { login, user, beginEntryLoading, endEntryLoading } = useAuth();
   const [email, setEmail] = useState('daniel@daros.com');
-  const [password, setPassword] = useState('');
+  const [password, setPassword] = useState('1234');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 

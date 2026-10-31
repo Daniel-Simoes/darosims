@@ -1,4 +1,5 @@
 import { signToken, corsHeaders, jsonResponse } from '@/lib/auth';
+import { ensureServerBootstrap } from '@/lib/ensureServerBootstrap';
 import { validateCredentials } from '@/lib/users';
 
 export async function OPTIONS() {
@@ -7,6 +8,7 @@ export async function OPTIONS() {
 
 export async function POST(request: Request) {
   try {
+    await ensureServerBootstrap();
     const body = await request.json();
     const email = String(body.email ?? '').trim();
     const password = String(body.password ?? '');

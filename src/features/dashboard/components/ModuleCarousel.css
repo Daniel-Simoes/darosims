@@ -117,10 +117,48 @@
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
 }
 
-.module-carousel-card:hover {
+.module-carousel-card:hover:not(:disabled) {
   transform: translateY(-4px);
   box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
   border-color: #cbd5e1;
+}
+
+.module-carousel-card.is-preview {
+  cursor: default;
+}
+
+.module-carousel-card.is-preview:disabled {
+  opacity: 1;
+}
+
+.module-carousel-card-content {
+  position: relative;
+  z-index: 0;
+}
+
+.module-carousel-card.is-preview .module-carousel-card-content {
+  filter: blur(2px);
+  opacity: 0.5;
+  user-select: none;
+}
+
+.module-carousel-soon-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #475569;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  pointer-events: none;
 }
 
 .module-carousel-card-glow {
@@ -218,14 +256,28 @@
 
 @media (max-width: 640px) {
   .module-carousel {
-    padding: 18px 16px;
+    padding: 16px 12px;
+    margin-bottom: 16px;
+  }
+
+  .module-carousel-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .module-carousel-nav {
+    justify-content: flex-end;
   }
 
   .module-carousel-title {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
+  }
+
+  .module-carousel-card {
+    flex: 0 0 min(280px, 88vw);
   }
 
   .module-carousel-fade {
-    width: 24px;
+    width: 20px;
   }
 }

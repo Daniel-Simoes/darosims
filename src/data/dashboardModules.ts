@@ -6,6 +6,8 @@ export interface DashboardModule {
   count?: number;
   status?: 'active' | 'warning' | 'neutral';
   category: 'core' | 'compliance' | 'analytics';
+  /** Home carousel: false = blurred “coming soon” preview */
+  available?: boolean;
 }
 
 export interface DashboardStat {
@@ -17,6 +19,16 @@ export interface DashboardStat {
 
 export const dashboardModules: DashboardModule[] = [
   {
+    id: 'documents',
+    title: 'Document Control',
+    description: 'Centralised document control with version tracking and approvals.',
+    icon: '📄',
+    count: 156,
+    status: 'active',
+    category: 'core',
+    available: true,
+  },
+  {
     id: 'processes',
     title: 'Process Management',
     description: 'Map, monitor and improve business workflows across your organisation.',
@@ -24,15 +36,7 @@ export const dashboardModules: DashboardModule[] = [
     count: 24,
     status: 'active',
     category: 'core',
-  },
-  {
-    id: 'documents',
-    title: 'Document Management',
-    description: 'Centralised document control with version tracking and approvals.',
-    icon: '📄',
-    count: 156,
-    status: 'active',
-    category: 'core',
+    available: false,
   },
   {
     id: 'risks',
@@ -42,6 +46,7 @@ export const dashboardModules: DashboardModule[] = [
     count: 12,
     status: 'warning',
     category: 'core',
+    available: false,
   },
   {
     id: 'audits',
@@ -51,6 +56,7 @@ export const dashboardModules: DashboardModule[] = [
     count: 3,
     status: 'neutral',
     category: 'compliance',
+    available: false,
   },
   {
     id: 'suppliers',
@@ -60,6 +66,7 @@ export const dashboardModules: DashboardModule[] = [
     count: 18,
     status: 'active',
     category: 'compliance',
+    available: false,
   },
   {
     id: 'nonconformities',
@@ -69,6 +76,7 @@ export const dashboardModules: DashboardModule[] = [
     count: 7,
     status: 'warning',
     category: 'compliance',
+    available: false,
   },
   {
     id: 'kpis',
@@ -78,6 +86,7 @@ export const dashboardModules: DashboardModule[] = [
     count: 32,
     status: 'active',
     category: 'analytics',
+    available: false,
   },
   {
     id: 'improvement',
@@ -87,6 +96,7 @@ export const dashboardModules: DashboardModule[] = [
     count: 9,
     status: 'active',
     category: 'analytics',
+    available: false,
   },
 ];
 

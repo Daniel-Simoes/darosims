@@ -919,7 +919,41 @@
     padding: 0 12px 20px;
   }
 
+  .nd-section {
+    padding: 16px;
+  }
+
+  .nd-page-title {
+    font-size: 1.25rem;
+  }
+
+  .nd-breadcrumbs {
+    flex-wrap: wrap;
+  }
+
   .nd-topbar-right .nd-user-chip span:not(.nd-user-avatar) {
     display: none;
+  }
+
+  .nd-section-actions {
+    flex-wrap: wrap;
+  }
+
+  .nd-split-btn-wrap {
+    width: 100%;
+  }
+
+  .nd-split-btn-wrap > .nd-btn-primary:first-child {
+    flex: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .nd-page {
+    padding: 0 8px 16px;
+  }
+
+  .nd-origin-card {
+    padding: 14px;
   }
 }
