@@ -140,6 +140,11 @@
   color: #b91c1c;
 }
 
+.notifications-card-icon.document_message {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
 .notifications-card-icon.default {
   background: #eff6ff;
   color: #2563eb;

@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { api } from '../lib/api';
 import { DOCUMENT_USERS } from '../lib/documentUsers';
 
-export type TeamUser = { name: string; email: string };
+export type TeamUser = { name: string; email: string; photoUrl?: string };
 
 const defaultTeamUsers: TeamUser[] = DOCUMENT_USERS.map((user) => ({ ...user }));
 
@@ -21,6 +21,7 @@ export function TeamUsersProvider({ children }: { children: ReactNode }) {
           fromApi.map((user) => ({
             name: user.name,
             email: user.email,
+            photoUrl: user.photoUrl,
           })),
         );
       })

@@ -23,6 +23,11 @@ import { usePaginatedSlice } from '../../../lib/pagination/usePaginatedSlice';
 import { matchesTitleOrCode } from '../../../lib/search/documentSearch';
 import { RegisterSelect } from './RegisterSelect';
 import { DocumentReviewHistoryDialog } from './DocumentReviewHistoryDialog';
+import { DocumentCommentsChat } from './DocumentCommentsChat';
+import {
+  getDocumentCommentsBlockReason,
+  type DocumentCommentsBlockReason,
+} from '../../../lib/documents/documentCommentsGate';
 import { buildDocumentReviewHistoryRows } from '../utils/reviewHistory';
 import type { DocumentEventRecord } from '../../../types/audit';
 import './DocumentRegisterView.css';
@@ -165,6 +170,32 @@ export function DocumentRegisterView({
   const [historyEvents, setHistoryEvents] = useState<DocumentEventRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState('');
+  const [commentsDocument, setCommentsDocument] = useState<DocumentRecord | null>(null);
+  const [commentsBlockReason, setCommentsBlockReason] = useState<DocumentCommentsBlockReason | null>(
+    null,
+  );
+
+  function handleCommentsClick(doc: DocumentRecord) {
+    const blockReason = getDocumentCommentsBlockReason(doc, user);
+    if (blockReason) {
+      setCommentsBlockReason(blockReason);
+      return;
+    }
+    setCommentsDocument(doc);
+  }
+
+  const commentsBlockCopy =
+    commentsBlockReason === 'self_owner_pending'
+      ? {
+          title: 'Document chat unavailable',
+          message:
+            'You submitted this document for approval, but you are also the document owner. Use document chat after you assign another person as owner, or once someone else is involved in approval.',
+        }
+      : {
+          title: 'You created and approved this document',
+          message:
+            'You created this document and approved it as document owner. Document chat is available when someone else is the owner or approver—for example, after you submit a document for another person to approve.',
+        };
 
   const loadDocuments = useCallback(async () => {
     setError('');
@@ -900,7 +931,7 @@ export function DocumentRegisterView({
                               type="button"
                               className="doc-reg-round-btn"
                               title="Comments"
-                              onClick={() => onDocumentClick?.(doc.id)}
+                              onClick={() => handleCommentsClick(doc)}
                             >
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
                                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -1026,6 +1057,25 @@ export function DocumentRegisterView({
         error={historyError}
         onClose={closeReviewHistory}
       />
+
+      <ConfirmDialog
+        open={commentsBlockReason !== null}
+        title={commentsBlockCopy.title}
+        message={commentsBlockCopy.message}
+        confirmLabel="Back"
+        cancelLabel=""
+        singleAction
+        onConfirm={() => setCommentsBlockReason(null)}
+        onCancel={() => setCommentsBlockReason(null)}
+      />
+
+      {commentsDocument ? (
+        <DocumentCommentsChat
+          open
+          documentRecord={commentsDocument}
+          onClose={() => setCommentsDocument(null)}
+        />
+      ) : null}
     </div>
   );
 }

@@ -1,0 +1,244 @@
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from 'react';
+import { createPortal } from 'react-dom';
+import { api } from '../../../lib/api';
+import {
+  buildDocumentChatParticipants,
+  getDocumentChatHeaderCode,
+} from '../../../lib/documents/documentChatParticipants';
+import type { DocumentCommentMessage } from '../../../types/documentComments';
+import type { DocumentRecord } from '../../../types/documents';
+import { useAuth } from '../../../context/AuthContext';
+import { useTeamUsers } from '../../../context/TeamUsersContext';
+import './DocumentCommentsChat.css';
+
+interface DocumentCommentsChatProps {
+  documentRecord: DocumentRecord;
+  open: boolean;
+  onClose: () => void;
+  layout?: 'modal' | 'embedded';
+  onMessageSent?: () => void;
+}
+
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+  return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+}
+
+function formatMessageTime(iso: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString(undefined, {
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+export function DocumentCommentsChat({
+  documentRecord,
+  open,
+  onClose,
+  layout = 'modal',
+  onMessageSent,
+}: DocumentCommentsChatProps) {
+  const { user } = useAuth();
+  const teamUsers = useTeamUsers();
+  const [messages, setMessages] = useState<DocumentCommentMessage[]>([]);
+  const [draft, setDraft] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const currentEmail = user?.email?.trim().toLowerCase() ?? '';
+
+  const participants = useMemo(
+    () => buildDocumentChatParticipants(documentRecord, messages, teamUsers),
+    [documentRecord, messages, teamUsers],
+  );
+
+  const headerCode = getDocumentChatHeaderCode(documentRecord);
+
+  const loadMessages = useCallback(async () => {
+    setError('');
+    setIsLoading(true);
+    try {
+      const { messages: data } = await api.getDocumentComments(documentRecord.id);
+      setMessages(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load chat');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [documentRecord.id]);
+
+  useEffect(() => {
+    if (!open) return;
+    setDraft('');
+    void loadMessages();
+  }, [open, loadMessages]);
+
+  useEffect(() => {
+    if (!open) return;
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, open]);
+
+  useEffect(() => {
+    if (!open || layout === 'embedded') return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = '';
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open, onClose, layout]);
+
+  async function handleSend() {
+    const text = draft.trim();
+    if (!text || isSending) return;
+
+    setIsSending(true);
+    setError('');
+
+    try {
+      const { message } = await api.postDocumentComment(documentRecord.id, text);
+      setMessages((prev) => [...prev, message]);
+      setDraft('');
+      onMessageSent?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send message');
+    } finally {
+      setIsSending(false);
+    }
+  }
+
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    void handleSend();
+  }
+
+  if (!open) return null;
+
+  const shell = (
+      <div
+        className={`doc-chat-shell ${layout === 'embedded' ? 'doc-chat-shell-embedded' : ''}`}
+        role={layout === 'modal' ? 'dialog' : 'region'}
+        aria-modal={layout === 'modal' ? true : undefined}
+        aria-label={`Comments for ${documentRecord.title}`}
+        onClick={layout === 'modal' ? (event) => event.stopPropagation() : undefined}
+      >
+        <aside className="doc-chat-participants" aria-label="Chat participants">
+          <div className="doc-chat-participants-head">People</div>
+          <div className="doc-chat-participants-list">
+            {participants.length === 0 ? (
+              <p className="doc-chat-participant-role" style={{ padding: '0 10px' }}>
+                No participants yet. Send a message to start the chat.
+              </p>
+            ) : (
+              participants.map((person) => (
+                <div key={person.id} className="doc-chat-participant is-active">
+                  <span className="doc-chat-participant-avatar">{getInitials(person.name)}</span>
+                  <div className="doc-chat-participant-body">
+                    <p className="doc-chat-participant-name">{person.name}</p>
+                    <p className="doc-chat-participant-role">{person.roleLabel}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </aside>
+
+        <div className="doc-chat-main">
+          <header className="doc-chat-topbar">
+            <div className="doc-chat-topbar-info">
+              <h2>{documentRecord.title}</h2>
+              <p>{headerCode}</p>
+            </div>
+            {layout === 'modal' ? (
+              <button type="button" className="doc-chat-close" aria-label="Close chat" onClick={onClose}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            ) : null}
+          </header>
+
+          {error ? <p className="doc-chat-error">{error}</p> : null}
+
+          <div className="doc-chat-messages">
+            {isLoading ? (
+              <p className="doc-chat-empty">Loading conversation...</p>
+            ) : messages.length === 0 ? (
+              <p className="doc-chat-empty">
+                Start a conversation about this document with the creator and approver.
+              </p>
+            ) : (
+              messages.map((message) => {
+                const isMine = message.senderEmail.toLowerCase() === currentEmail;
+                return (
+                  <div key={message.id} className={`doc-chat-row ${isMine ? 'is-mine' : ''}`}>
+                    <span className="doc-chat-row-avatar">{getInitials(message.senderName)}</span>
+                    <div className="doc-chat-bubble-wrap">
+                      <div className="doc-chat-bubble">{message.text}</div>
+                      <span className="doc-chat-meta">
+                        {isMine ? 'You · ' : `${message.senderName} · `}
+                        {formatMessageTime(message.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          <form className="doc-chat-compose" onSubmit={handleSubmit}>
+            <input
+              className="doc-chat-input"
+              placeholder="Message..."
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              disabled={isSending}
+            />
+            <button
+              type="submit"
+              className="doc-chat-send"
+              disabled={!draft.trim() || isSending}
+              aria-label="Send message"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 19V5M5 12l7-7 7 7" />
+              </svg>
+            </button>
+          </form>
+        </div>
+      </div>
+  );
+
+  if (layout === 'embedded') {
+    return shell;
+  }
+
+  return createPortal(
+    <div className="doc-chat-overlay" onClick={onClose}>
+      {shell}
+    </div>,
+    document.body,
+  );
+}

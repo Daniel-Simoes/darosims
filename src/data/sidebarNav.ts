@@ -20,6 +20,7 @@ export const dashboardSidebarSections: SidebarSection[] = [
       { id: 'documents', label: 'Document Control', icon: 'clipboard' },
       { id: 'acknowledgements', label: 'My Acknowledgements', icon: 'check-circle' },
       { id: 'my-drafts', label: 'My Drafts', icon: 'file' },
+      { id: 'chat', label: 'Chat', icon: 'message' },
       { id: 'notifications', label: 'Notifications', icon: 'bell' },
       { id: 'notification-history', label: 'Notification History', icon: 'clock' },
     ],
@@ -66,6 +67,7 @@ export const documentPageTitles: Record<string, string> = {
   'document-register': 'New Document',
   documents: 'Document Control',
   'my-drafts': 'My Drafts',
+  chat: 'Chat',
   notifications: 'Notifications',
   'notification-history': 'Notification History',
 };

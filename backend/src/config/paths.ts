@@ -11,6 +11,7 @@ export const DATA_DIR = resolveDataDir();
 export const DOCUMENTS_FILE = joinPath(DATA_DIR, 'documents.json');
 export const NOTIFICATIONS_FILE = joinPath(DATA_DIR, 'notifications.json');
 export const DOCUMENT_EVENTS_FILE = joinPath(DATA_DIR, 'document_events.json');
+export const DOCUMENT_COMMENTS_FILE = joinPath(DATA_DIR, 'document_comments.json');
 export const USERS_FILE = joinPath(DATA_DIR, 'users.json');
 export const UPLOAD_DIR = joinPath(DATA_DIR, 'uploads');
 export const USER_PHOTOS_DIR = joinPath(DATA_DIR, 'user-photos');

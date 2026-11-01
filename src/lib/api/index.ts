@@ -3,6 +3,7 @@ import { usersApi } from './users';
 import { documentsApi } from './documents';
 import { notificationsApi } from './notifications';
 import { auditApi } from './audit';
+import { chatsApi } from './chats';
 import {
   fetchDocumentFileBlob,
   fetchDocumentSourceBlob,
@@ -19,6 +20,7 @@ export const api = {
   ...documentsApi,
   ...notificationsApi,
   ...auditApi,
+  ...chatsApi,
   uploadDocumentFile,
   uploadDocumentSourceFile,
 };

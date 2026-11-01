@@ -1,5 +1,9 @@
 import { apiFetch } from './client';
 import type {
+  DocumentCommentsResponse,
+  PostDocumentCommentResponse,
+} from '../../types/documentComments';
+import type {
   CreateDocumentPayload,
   CreateDocumentResponse,
   DeleteDocumentResponse,
@@ -51,6 +55,17 @@ export const documentsApi = {
     return apiFetch<DocumentResponse>(`/api/documents/${id}/reject`, {
       method: 'POST',
       body: JSON.stringify({ reason }),
+    });
+  },
+
+  getDocumentComments(id: string) {
+    return apiFetch<DocumentCommentsResponse>(`/api/documents/${id}/comments`);
+  },
+
+  postDocumentComment(id: string, text: string) {
+    return apiFetch<PostDocumentCommentResponse>(`/api/documents/${id}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ text }),
     });
   },
 };

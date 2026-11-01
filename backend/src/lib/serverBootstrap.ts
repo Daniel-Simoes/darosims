@@ -11,12 +11,6 @@ export async function runServerBootstrap() {
     return;
   }
 
-  if (process.env.VERCEL !== '1' && process.env.NODE_ENV !== 'production') {
-    await ensureDefaultSeedUsers();
-    await ensureDefaultAdminFromEnv();
-    return;
-  }
-
   await bootstrapJsonFileStorage();
   await ensureDefaultSeedUsers();
   await ensureDefaultAdminFromEnv();

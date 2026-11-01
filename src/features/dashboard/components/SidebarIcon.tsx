@@ -59,6 +59,12 @@ export function SidebarIcon({ name, size = 18 }: SidebarIconProps) {
           <path d="M10 20a2 2 0 0 0 4 0" />
         </svg>
       );
+    case 'message':
+      return (
+        <svg {...props}>
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+      );
     case 'search':
       return (
         <svg {...props}>

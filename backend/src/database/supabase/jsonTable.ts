@@ -1,13 +1,15 @@
 import { getSupabaseAdmin } from '@/database/supabase/client';
 
-export async function fetchAllBodies<T>(table: 'documents' | 'notifications' | 'document_events'): Promise<T[]> {
+type JsonTableName = 'documents' | 'notifications' | 'document_events' | 'document_comments';
+
+export async function fetchAllBodies<T>(table: JsonTableName): Promise<T[]> {
   const { data, error } = await getSupabaseAdmin().from(table).select('body');
   if (error) throw new Error(error.message);
   return (data ?? []).map((row) => row.body as T);
 }
 
 export async function fetchBodyById<T>(
-  table: 'documents' | 'notifications' | 'document_events',
+  table: JsonTableName,
   id: string,
 ): Promise<T | null> {
   const { data, error } = await getSupabaseAdmin().from(table).select('body').eq('id', id).maybeSingle();
@@ -16,7 +18,7 @@ export async function fetchBodyById<T>(
 }
 
 export async function upsertBody<T extends { id: string }>(
-  table: 'documents' | 'notifications' | 'document_events',
+  table: JsonTableName,
   record: T,
 ): Promise<void> {
   const { error } = await getSupabaseAdmin()
@@ -26,7 +28,7 @@ export async function upsertBody<T extends { id: string }>(
 }
 
 export async function deleteById(
-  table: 'documents' | 'notifications' | 'document_events',
+  table: JsonTableName,
   id: string,
 ): Promise<boolean> {
   const { error, count } = await getSupabaseAdmin().from(table).delete({ count: 'exact' }).eq('id', id);
@@ -36,7 +38,7 @@ export async function deleteById(
 
 /** Mirrors JSON file rewrite: replace table contents with the given list. */
 export async function replaceAllBodies<T extends { id: string }>(
-  table: 'documents' | 'notifications' | 'document_events',
+  table: JsonTableName,
   records: T[],
 ): Promise<void> {
   const supabase = getSupabaseAdmin();

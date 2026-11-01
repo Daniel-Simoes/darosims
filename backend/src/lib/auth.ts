@@ -39,7 +39,14 @@ export function getBearerToken(request: Request): string | null {
 }
 
 export async function requireAuth(request: Request): Promise<JwtPayload | Response> {
-  await ensureServerBootstrap();
+  try {
+    await ensureServerBootstrap();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Server initialization failed';
+    console.error('[requireAuth] bootstrap failed:', err);
+    return jsonResponse({ error: message }, 503);
+  }
+
   const token = getBearerToken(request);
   if (!token) {
     return Response.json({ error: 'Authentication required' }, { status: 401 });

@@ -20,8 +20,10 @@ export async function GET(request: Request) {
 
     const documents = await listDocuments();
     return jsonResponse({ documents, total: documents.length });
-  } catch {
-    return jsonResponse({ error: 'Failed to load documents' }, 500);
+  } catch (err) {
+    console.error('GET /api/documents error:', err);
+    const message = err instanceof Error ? err.message : 'Failed to load documents';
+    return jsonResponse({ error: message }, 500);
   }
 }
 
@@ -106,7 +108,8 @@ export async function POST(request: Request) {
     });
     return jsonResponse({ document }, 201);
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Invalid request body';
+    console.error('POST /api/documents error:', err);
+    const message = err instanceof Error ? err.message : 'Failed to create document';
     return jsonResponse({ error: message }, 400);
   }
 }

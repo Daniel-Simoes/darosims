@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   dashboardModules,
   dashboardStats,
@@ -29,6 +29,7 @@ import { ModuleVisualizationView } from '../../features/dashboard/components/Mod
 import { useAuth } from '../../features/authentication/context/AuthContext';
 import { TeamUsersProvider } from '../../context/TeamUsersContext';
 import { ProfileSettingsView } from '../../features/users/components/ProfileSettingsView';
+import { DocumentChatsView } from '../../features/chat/components/DocumentChatsView';
 import './DashboardPage.css';
 
 function DashboardOverview({
@@ -104,6 +105,7 @@ export function DashboardPage() {
   const [homeDataRefreshKey, setHomeDataRefreshKey] = useState(0);
   const [historyFilterDocumentId, setHistoryFilterDocumentId] = useState<string | undefined>();
   const [profileReturnNav, setProfileReturnNav] = useState('dashboard');
+  const [chatDocumentId, setChatDocumentId] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -140,6 +142,7 @@ export function DashboardPage() {
   const isHome = activeNav === 'dashboard';
   const isNewDocument = activeNav === 'document-register';
   const isMyDrafts = activeNav === 'my-drafts';
+  const isChat = activeNav === 'chat';
   const isNotifications = activeNav === 'notifications';
   const isNotificationHistory = activeNav === 'notification-history';
   const isProfileSettings = activeNav === 'profile-settings';
@@ -155,7 +158,7 @@ export function DashboardPage() {
     ? 'Document Details'
     : isProfileSettings
       ? 'Profile Settings'
-      : isDocumentView || isNotifications || isNotificationHistory
+      : isDocumentView || isChat || isNotifications || isNotificationHistory
       ? (documentPageTitles[activeNav] ?? 'Documents')
       : isModuleView && activeModule
         ? activeModule.title
@@ -199,9 +202,16 @@ export function DashboardPage() {
     setNotificationsRefreshKey((key) => key + 1);
   }
 
+  const clearChatDeepLink = useCallback(() => {
+    setChatDocumentId(null);
+  }, []);
+
   function handleNavChange(id: string) {
     if (id === 'notification-history') {
       setHistoryFilterDocumentId(undefined);
+    }
+    if (id !== 'chat') {
+      setChatDocumentId(null);
     }
     setActiveNav(id);
   }
@@ -222,6 +232,13 @@ export function DashboardPage() {
     notification: DashboardNotification,
     returnNav: string = 'documents',
   ) {
+    if (notification.type === 'document_message' && notification.documentId) {
+      setChatDocumentId(notification.documentId);
+      setActiveNav('chat');
+      bumpNotificationsRefresh();
+      return;
+    }
+
     if (notification.documentId) {
       openDocument(notification.documentId, undefined, returnNav);
     } else if (returnNav !== 'documents') {
@@ -275,7 +292,7 @@ export function DashboardPage() {
         </header>
         )}
 
-        <main className={`dashboard-content ${isDocumentView || isDocumentDetail || isNotifications || isNotificationHistory || isProfileSettings ? 'dashboard-content-full' : ''}`}>
+        <main className={`dashboard-content ${isDocumentView || isDocumentDetail || isChat || isNotifications || isNotificationHistory || isProfileSettings ? 'dashboard-content-full' : ''}`}>
           {isProfileSettings ? (
             <ProfileSettingsView onBack={() => setActiveNav(profileReturnNav)} />
           ) : isNewDocument ? (
@@ -314,6 +331,12 @@ export function DashboardPage() {
               refreshKey={draftsRefreshKey}
               onNewDocument={() => setActiveNav('document-register')}
               onDocumentClick={(id, options) => openDocument(id, options, 'my-drafts')}
+            />
+          ) : isChat ? (
+            <DocumentChatsView
+              refreshKey={notificationsRefreshKey}
+              initialDocumentId={chatDocumentId}
+              onConversationOpened={clearChatDeepLink}
             />
           ) : isNotifications ? (
             <NotificationsView

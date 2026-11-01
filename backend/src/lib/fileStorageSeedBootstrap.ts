@@ -2,7 +2,13 @@ import { promises as fs } from 'fs';
 import { DATA_DIR } from '@/config/paths';
 import { joinPath } from '@/lib/joinPath';
 
-const SEED_FILES = ['documents.json', 'notifications.json', 'document_events.json', 'users.json'] as const;
+const SEED_FILES = [
+  'documents.json',
+  'notifications.json',
+  'document_events.json',
+  'document_comments.json',
+  'users.json',
+] as const;
 
 /** JSON file storage on Vercel — loaded dynamically so instrumentation does not bundle `fs`. */
 export async function bootstrapJsonFileStorage(): Promise<void> {

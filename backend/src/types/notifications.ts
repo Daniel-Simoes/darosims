@@ -1,4 +1,8 @@
-export type NotificationType = 'approval_request' | 'document_approved' | 'document_rejected';
+export type NotificationType =
+  | 'approval_request'
+  | 'document_approved'
+  | 'document_rejected'
+  | 'document_message';
 
 export interface NotificationRecord {
   id: string;

@@ -52,6 +52,8 @@ export function getNotificationTypeLabel(type?: NotificationRecord['type']) {
       return 'Document approved';
     case 'document_rejected':
       return 'Not approved';
+    case 'document_message':
+      return 'Document message';
     default:
       return 'Notification';
   }

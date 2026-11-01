@@ -38,6 +38,14 @@
   flex-wrap: wrap;
 }
 
+.confirm-dialog-actions-single {
+  justify-content: stretch;
+}
+
+.confirm-dialog-actions-single .confirm-dialog-btn-primary {
+  width: 100%;
+}
+
 .confirm-dialog-btn {
   display: inline-flex;
   align-items: center;

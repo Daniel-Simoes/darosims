@@ -59,12 +59,14 @@ export async function backfillDocumentEventsIfNeeded(): Promise<void> {
   const events: DocumentEventRecord[] = [];
 
   for (const document of documents) {
+    const createdBy = document.createdBy?.trim();
+    if (!createdBy) continue;
     events.push({
       id: crypto.randomUUID(),
       documentId: document.id,
       type: 'created',
-      actorEmail: document.createdBy,
-      actorName: userNames.get(document.createdBy.toLowerCase()) ?? document.createdBy,
+      actorEmail: createdBy,
+      actorName: userNames.get(createdBy.toLowerCase()) ?? createdBy,
       createdAt: document.createdAt,
     });
   }
