@@ -1,29 +1,19 @@
 import { api, type DocumentRecord } from '../api';
-import { parseDocxFile, parseTextFile } from './documentContent';
-import { getInternalFileKind, verifyInternalDocumentFile } from './documentUpload';
+import { verifyPdfFile } from './documentUpload';
 
 export async function replaceDocumentSourceFile(
   documentId: string,
   file: File,
 ): Promise<DocumentRecord> {
-  const verifyError = await verifyInternalDocumentFile(file);
+  const verifyError = await verifyPdfFile(file);
   if (verifyError) {
     throw new Error(verifyError);
   }
 
-  const kind = getInternalFileKind(file);
-  if (!kind || kind === 'pdf') {
-    throw new Error('Accepted formats: Word (.docx) or text (.txt).');
-  }
-
-  const sourceContent =
-    kind === 'docx' ? await parseDocxFile(file) : await parseTextFile(file);
-
-  await api.uploadDocumentSourceFile(documentId, file);
+  await api.uploadDocumentFile(documentId, file);
 
   const { document } = await api.updateDocument(documentId, {
-    sourceContent,
-    fileFormat: 'word',
+    fileFormat: 'pdf',
     fileName: file.name,
     sourceModified: false,
     rejectionReason: '',

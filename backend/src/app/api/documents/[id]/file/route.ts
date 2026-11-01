@@ -5,8 +5,6 @@ import {
   readDocumentFile,
   saveDocumentFile,
 } from '@/lib/documentFiles';
-import { isAuthUserDocumentOwner } from '@/lib/documentOwnership';
-import { isDocumentApprover } from '@/lib/users';
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders() });
@@ -53,9 +51,6 @@ export async function POST(
     return jsonResponse({ error: 'Document not found' }, 404);
   }
 
-  const isInternalDraft =
-    document.documentOrigin !== 'External' && document.status === 'Draft';
-
   try {
     const formData = await request.formData();
     const file = formData.get('file');
@@ -67,28 +62,7 @@ export async function POST(
     const isPdf =
       file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
 
-    if (isInternalDraft) {
-      const isApprover = await isDocumentApprover(auth.email);
-      if (
-        document.submittedAt &&
-        isApprover &&
-        !(await isAuthUserDocumentOwner(auth.email, document.owner))
-      ) {
-        return jsonResponse(
-          { error: 'Only the assigned document owner can upload the approval PDF' },
-          403,
-        );
-      }
-      if (!isApprover || !isPdf) {
-        return jsonResponse(
-          {
-            error:
-              'Unapproved internal documents must remain as Word. Approve the document to publish as PDF.',
-          },
-          400,
-        );
-      }
-    } else if (!isPdf) {
+    if (!isPdf) {
       return jsonResponse({ error: 'Only PDF files are allowed' }, 400);
     }
 

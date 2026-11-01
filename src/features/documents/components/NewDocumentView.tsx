@@ -11,16 +11,7 @@ import {
 } from 'react';
 import { api, type CreateDocumentPayload, type DocumentRecord } from '../../../lib/api';
 import { generateDocumentCode } from '../../../lib/documentCode';
-import {
-  formatFileSize,
-  getInternalFileKind,
-  verifyPdfFile,
-  verifyInternalDocumentFile,
-} from '../../../lib/documentUpload';
-import {
-  parseDocxFile,
-  parseTextFile,
-} from '../../../lib/documentContent';
+import { formatFileSize, verifyPdfFile } from '../../../lib/documentUpload';
 import { useTeamUsers } from '../../../context/TeamUsersContext';
 import { isDocumentOwnerSameAsUser } from '../../../lib/documentUsers';
 import { useAuth } from '../../../context/AuthContext';
@@ -98,25 +89,10 @@ interface NewDocumentViewProps {
   onSubmittedForApproval?: () => void;
 }
 
-function getFileCheckingMessage(file: File, origin: 'internal' | 'external') {
-  if (origin === 'external') {
-    return {
-      title: 'Checking PDF format...',
-      subtitle: 'Verifying that the file is a valid PDF document',
-    };
-  }
-
-  const kind = getInternalFileKind(file);
-  if (kind === 'txt') {
-    return {
-      title: 'Checking text file...',
-      subtitle: 'Verifying that the file is a valid text document',
-    };
-  }
-
+function getFileCheckingMessage() {
   return {
-    title: 'Checking Word document...',
-    subtitle: 'Verifying that the file is a valid Word document',
+    title: 'Checking PDF format...',
+    subtitle: 'Verifying that the file is a valid PDF document',
   };
 }
 
@@ -142,6 +118,9 @@ export function NewDocumentView({
   const [fileUploadStatus, setFileUploadStatus] = useState<'idle' | 'checking' | 'success' | 'error'>('idle');
   const [fileCheckingMessage, setFileCheckingMessage] = useState({ title: '', subtitle: '' });
   const [showOwnerConfirmDialog, setShowOwnerConfirmDialog] = useState(false);
+  const [ownerConfirmMode, setOwnerConfirmMode] = useState<'owner' | 'submit'>('owner');
+  const [pendingOwner, setPendingOwner] = useState('');
+  const [selfOwnerConfirmed, setSelfOwnerConfirmed] = useState(false);
   const [customDocumentTypes, setCustomDocumentTypes] = useState<string[]>([]);
   const [customProcesses, setCustomProcesses] = useState<string[]>([]);
   const [customOwners, setCustomOwners] = useState<string[]>([]);
@@ -195,6 +174,8 @@ export function NewDocumentView({
       type: value === 'daros' ? 'Form' : '',
     });
     resetFileState();
+    setSelfOwnerConfirmed(false);
+    setPendingOwner('');
   }
 
   const usesOrganisationStructure = documentStructure === 'organisation';
@@ -217,6 +198,8 @@ export function NewDocumentView({
     setExternalForm(emptyExternalForm);
     setOrigin('internal');
     resetFileState();
+    setSelfOwnerConfirmed(false);
+    setPendingOwner('');
     setSuccess('');
     setError('');
   }
@@ -224,15 +207,12 @@ export function NewDocumentView({
   async function handleFileSelect(file: File | undefined) {
     if (!file || !activeDetailsEnabled) return;
 
-    setFileCheckingMessage(getFileCheckingMessage(file, origin));
+    setFileCheckingMessage(getFileCheckingMessage());
     setFileUploadStatus('checking');
     setSelectedFile(null);
     setFileError('');
 
-    const validationError =
-      origin === 'external'
-        ? await verifyPdfFile(file)
-        : await verifyInternalDocumentFile(file);
+    const validationError = await verifyPdfFile(file);
 
     if (validationError) {
       setFileError(validationError);
@@ -244,8 +224,29 @@ export function NewDocumentView({
     setFileUploadStatus('success');
   }
 
+  function handleOwnerChange(value: string) {
+    if (
+      origin === 'internal' &&
+      value.trim() &&
+      isDocumentOwnerSameAsUser(user, value)
+    ) {
+      setPendingOwner(value);
+      setOwnerConfirmMode('owner');
+      setShowOwnerConfirmDialog(true);
+      return;
+    }
+
+    setSelfOwnerConfirmed(false);
+    updateInternalField('owner', value);
+  }
+
   function handleSubmitForApprovalClick() {
-    if (origin === 'internal' && isDocumentOwnerSameAsUser(user, internalForm.owner)) {
+    if (
+      origin === 'internal' &&
+      isDocumentOwnerSameAsUser(user, internalForm.owner) &&
+      !selfOwnerConfirmed
+    ) {
+      setOwnerConfirmMode('submit');
       setShowOwnerConfirmDialog(true);
       return;
     }
@@ -253,13 +254,32 @@ export function NewDocumentView({
     void handleSave(false);
   }
 
-  function handleConfirmSubmitForApproval() {
+  function handleConfirmOwnerDialog() {
     setShowOwnerConfirmDialog(false);
+
+    if (ownerConfirmMode === 'owner') {
+      updateInternalField('owner', pendingOwner);
+      setSelfOwnerConfirmed(true);
+      setPendingOwner('');
+      return;
+    }
+
+    setSelfOwnerConfirmed(true);
     void handleSave(false);
   }
 
-  function handleChangeDocumentOwner() {
+  function handleCancelOwnerDialog() {
     setShowOwnerConfirmDialog(false);
+    setPendingOwner('');
+
+    if (ownerConfirmMode === 'submit') {
+      handleChangeDocumentOwner();
+      return;
+    }
+  }
+
+  function handleChangeDocumentOwner() {
+    setSelfOwnerConfirmed(false);
     window.setTimeout(() => {
       ownerFieldRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       ownerFieldRef.current?.querySelector<HTMLElement>('.dt-menu-trigger')?.focus();
@@ -283,6 +303,14 @@ export function NewDocumentView({
 
     if (origin === 'internal' && !internalForm.owner.trim()) {
       showFormError('Document owner is required.');
+      return;
+    }
+
+    const isSelfOwner =
+      origin === 'internal' && isDocumentOwnerSameAsUser(user, internalForm.owner.trim());
+
+    if (!asDraft && isSelfOwner && !selectedFile) {
+      showFormError('Upload a PDF document before submitting for approval.');
       return;
     }
 
@@ -346,32 +374,12 @@ export function NewDocumentView({
       const { document } = await api.createDocument(payload);
       let savedDocument = document;
 
-      if (origin === 'internal' && selectedFile) {
-        const kind = getInternalFileKind(selectedFile);
-        try {
-          const sourceContent =
-            kind === 'docx'
-              ? await parseDocxFile(selectedFile)
-              : kind === 'txt'
-                ? await parseTextFile(selectedFile)
-                : '';
-
-          await api.uploadDocumentSourceFile(document.id, selectedFile);
-
-          const { document: withContent } = await api.updateDocument(document.id, {
-            sourceContent,
-            fileFormat: 'word',
-            fileName: selectedFile.name,
-            sourceModified: false,
-          });
-          savedDocument = withContent;
-        } catch {
-          showFormError('Unable to read the uploaded file. Please try another document.');
-          setIsSaving(false);
-          return;
-        }
-      } else if (origin === 'external' && selectedFile) {
-        const { document: withFile } = await api.uploadDocumentFile(document.id, selectedFile);
+      if (selectedFile) {
+        await api.uploadDocumentFile(document.id, selectedFile);
+        const { document: withFile } = await api.updateDocument(document.id, {
+          fileFormat: 'pdf',
+          fileName: selectedFile.name,
+        });
         savedDocument = withFile;
       }
 
@@ -387,7 +395,17 @@ export function NewDocumentView({
       }
 
       if (!asDraft && origin === 'internal') {
-        await api.submitDocumentForApproval(savedDocument.id);
+        if (isSelfOwner) {
+          await api.updateDocument(savedDocument.id, {
+            status: 'Active',
+            version: Math.max(Number(savedDocument.version) || 0, 1),
+            approvedBy: user?.name,
+            fileFormat: 'pdf',
+            fileName: savedDocument.fileName ?? selectedFile?.name,
+          });
+        } else {
+          await api.submitDocumentForApproval(savedDocument.id);
+        }
         onSubmittedForApproval?.();
         return;
       }
@@ -615,7 +633,7 @@ export function NewDocumentView({
                     <OptionPickerMenu
                       panelLabel="Document Owner"
                       value={internalForm.owner}
-                      onChange={(v) => updateInternalField('owner', v)}
+                      onChange={handleOwnerChange}
                       options={ownerOptions}
                       customOptions={customOwners}
                       onAddCustomOption={(label) => appendCustomOption(setCustomOwners, label)}
@@ -712,11 +730,7 @@ export function NewDocumentView({
             <div className="nd-section-num">4</div>
             <div>
               <h2 className="nd-section-title">Document File</h2>
-              <p className="nd-section-desc">
-                {origin === 'internal'
-                  ? 'Upload a Word or text file. Unapproved documents stay as Word; PDF is created on approval.'
-                  : 'Upload the controlled document file (PDF only).'}
-              </p>
+              <p className="nd-section-desc">Upload the controlled document file (PDF only).</p>
             </div>
           </div>
 
@@ -765,11 +779,7 @@ export function NewDocumentView({
                   </svg>
                 </div>
                 <p className="nd-upload-title">
-                  {selectedFile
-                    ? selectedFile.name
-                    : origin === 'internal'
-                      ? 'Drag and drop Word or text file here'
-                      : 'Drag and drop your PDF here'}
+                  {selectedFile ? selectedFile.name : 'Drag and drop your PDF here'}
                 </p>
                 <p className="nd-upload-sub">
                   {selectedFile
@@ -784,20 +794,12 @@ export function NewDocumentView({
                   !activeDetailsEnabled || fileUploadStatus === 'checking' ? 'disabled' : ''
                 }`}
               >
-                {selectedFile
-                  ? 'Replace File'
-                  : origin === 'internal'
-                    ? 'Browse Word / Text'
-                    : 'Browse PDF'}
+                {selectedFile ? 'Replace File' : 'Browse PDF'}
                 <input
                   type="file"
                   hidden
                   disabled={!activeDetailsEnabled || fileUploadStatus === 'checking'}
-                  accept={
-                    origin === 'internal'
-                      ? '.docx,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain'
-                      : '.pdf,application/pdf'
-                  }
+                  accept=".pdf,application/pdf"
                   onChange={(e) => {
                     void handleFileSelect(e.target.files?.[0]);
                     e.target.value = '';
@@ -816,11 +818,7 @@ export function NewDocumentView({
                 </button>
               )}
             </div>
-            <p className="nd-upload-formats">
-              {origin === 'internal'
-                ? 'Accepted formats: Word (.docx), text (.txt) · Max file size: 50 MB · No PDF until approved'
-                : 'Accepted format: PDF · Max file size: 50 MB'}
-            </p>
+            <p className="nd-upload-formats">Accepted format: PDF · Max file size: 50 MB</p>
             {fileError && <p className="nd-upload-error">{fileError}</p>}
           </div>
         </section>
@@ -850,12 +848,18 @@ export function NewDocumentView({
 
       <ConfirmDialog
         open={showOwnerConfirmDialog}
-        title="Confirm submission"
-        message="You are both the document creator and the document owner. Are you sure this document can be approved?"
-        confirmLabel="Yes"
-        cancelLabel="Change document owner"
-        onConfirm={handleConfirmSubmitForApproval}
-        onCancel={handleChangeDocumentOwner}
+        title={
+          ownerConfirmMode === 'owner' ? 'You are the document owner' : 'Confirm submission'
+        }
+        message={
+          ownerConfirmMode === 'owner'
+            ? 'Because you selected yourself as document owner, this document will be approved immediately when you submit it (there is no separate approval step). Are you sure you want to continue?'
+            : 'Because you are the document owner, submitting will approve this document immediately. Are you sure you want to continue?'
+        }
+        confirmLabel="Yes, I'm sure"
+        cancelLabel="Choose a different owner"
+        onConfirm={handleConfirmOwnerDialog}
+        onCancel={handleCancelOwnerDialog}
       />
     </div>
   );

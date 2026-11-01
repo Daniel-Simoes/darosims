@@ -1,26 +1,11 @@
 export const MAX_DOCUMENT_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 
-export type InternalDocumentFileKind = 'pdf' | 'docx' | 'txt';
-
-export function getInternalFileKind(file: File): InternalDocumentFileKind | null {
-  const name = file.name.toLowerCase();
-  if (file.type === 'application/pdf' || name.endsWith('.pdf')) return 'pdf';
-  if (
-    file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-    name.endsWith('.docx')
-  ) {
-    return 'docx';
-  }
-  if (file.type === 'text/plain' || name.endsWith('.txt')) return 'txt';
-  return null;
-}
-
-export function validateExternalDocumentFile(file: File): string | null {
+export function validateDocumentPdfFile(file: File): string | null {
   const isPdf =
     file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
 
   if (!isPdf) {
-    return 'Only PDF files are allowed for external documents.';
+    return 'Only PDF files are allowed.';
   }
 
   if (file.size > MAX_DOCUMENT_FILE_SIZE_BYTES) {
@@ -30,17 +15,14 @@ export function validateExternalDocumentFile(file: File): string | null {
   return null;
 }
 
+/** @deprecated Use validateDocumentPdfFile */
+export function validateExternalDocumentFile(file: File): string | null {
+  return validateDocumentPdfFile(file);
+}
+
+/** @deprecated Use validateDocumentPdfFile */
 export function validateInternalDocumentFile(file: File): string | null {
-  const kind = getInternalFileKind(file);
-  if (!kind) {
-    return 'Accepted formats: Word (.docx), text (.txt), or PDF (.pdf).';
-  }
-
-  if (file.size > MAX_DOCUMENT_FILE_SIZE_BYTES) {
-    return 'File exceeds the 50 MB limit.';
-  }
-
-  return null;
+  return validateDocumentPdfFile(file);
 }
 
 export function formatFileSize(bytes: number): string {
@@ -55,43 +37,8 @@ function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function verifyInternalDocumentFile(file: File): Promise<string | null> {
-  const basicError = validateInternalDocumentFile(file);
-  if (basicError) return basicError;
-
-  const kind = getInternalFileKind(file);
-  if (kind === 'pdf') {
-    return 'Internal documents are saved as Word until approved. PDF is generated when the document is approved.';
-  }
-
-  await delay(FILE_CHECK_MIN_MS);
-
-  try {
-    if (kind === 'txt') {
-      const text = await file.text();
-      if (!text.trim()) {
-        return 'The text file appears to be empty.';
-      }
-    } else if (kind === 'docx') {
-      const header = new Uint8Array(await file.slice(0, 4).arrayBuffer());
-      if (header[0] !== 0x50 || header[1] !== 0x4b) {
-        return 'This file is not a valid Word document.';
-      }
-
-      const mammoth = (await import('mammoth')).default;
-      await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
-    }
-  } catch {
-    return kind === 'txt'
-      ? 'Unable to read this text file.'
-      : 'Unable to read this Word document. The file may be corrupted.';
-  }
-
-  return null;
-}
-
 export async function verifyPdfFile(file: File): Promise<string | null> {
-  const basicError = validateExternalDocumentFile(file);
+  const basicError = validateDocumentPdfFile(file);
   if (basicError) return basicError;
 
   const [headerBytes] = await Promise.all([
@@ -123,4 +70,9 @@ export async function verifyPdfFile(file: File): Promise<string | null> {
   }
 
   return null;
+}
+
+/** @deprecated Use verifyPdfFile */
+export async function verifyInternalDocumentFile(file: File): Promise<string | null> {
+  return verifyPdfFile(file);
 }

@@ -2,13 +2,11 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { api, type DocumentRecord, type UpdateDocumentPayload } from '../../../lib/api';
 import type { DocumentType } from '../../../data/documentTypes';
 import { documentTypeBadgeClass } from '../../../data/documentRegister';
-import { htmlToPdfFile, isEditorContentEmpty } from '../../../lib/documentContent';
 import { isInternalDraftDocument } from '../../../lib/documentStatus';
 import { useTeamUsers } from '../../../context/TeamUsersContext';
 import { canUserApproveDocuments, canUserDeleteDocument, isDocumentOwnerSameAsUser } from '../../../lib/documentUsers';
 import { useAuth } from '../../../context/AuthContext';
 import { DocumentPreview } from './DocumentPreview';
-import { DocumentEditor } from './DocumentEditor';
 import { DocumentTypeMenu } from './DocumentTypeMenu';
 import { ProcessMenu } from './ProcessMenu';
 import { ConfirmDialog } from '../../../components/dialogs/ConfirmDialog';
@@ -74,7 +72,6 @@ function documentToForm(doc: DocumentRecord) {
     retentionNotes: doc.retentionNotes ?? '',
     disposition: doc.disposition ?? '',
     comments: doc.comments ?? '',
-    sourceContent: doc.sourceContent ?? '<p></p>',
   };
 }
 
@@ -156,19 +153,10 @@ export function DocumentDetailView({
     }
 
     try {
-      if (isApproving) {
-        const sourceHtml = form.sourceContent ?? document.sourceContent;
-        if (!sourceHtml || isEditorContentEmpty(sourceHtml)) {
-          setError('Cannot approve: document has no Word content to convert to PDF.');
-          setIsSaving(false);
-          return;
-        }
-
-        const pdfFile = await htmlToPdfFile(
-          sourceHtml,
-          `${form.title.trim() || document.title}.pdf`,
-        );
-        await api.uploadDocumentFile(documentId, pdfFile);
+      if (isApproving && !document.fileName) {
+        setError('Cannot approve: upload a PDF document first.');
+        setIsSaving(false);
+        return;
       }
 
       const payload: UpdateDocumentPayload = {
@@ -199,17 +187,10 @@ export function DocumentDetailView({
         ...(isApproving
           ? {
               fileFormat: 'pdf' as const,
-              fileName: `${form.title.trim() || document.title}.pdf`,
+              fileName: document.fileName ?? `${form.title.trim() || document.title}.pdf`,
               sourceModified: false,
             }
-          : isInternalDraftDocument({ documentOrigin: form.documentOrigin, status: nextStatus }) && !isExternal
-            ? {
-                sourceContent: form.sourceContent,
-                fileFormat: 'word' as const,
-                fileName: `${form.title.trim() || document.title}.docx`,
-                sourceModified: true,
-              }
-            : {}),
+          : {}),
       };
 
       const { document: updated } = await api.updateDocument(documentId, payload);
@@ -361,11 +342,6 @@ export function DocumentDetailView({
             </svg>
           </button>
           <div>
-            <nav className="dd-breadcrumbs">
-              <button type="button" onClick={onBack}>Document Register</button>
-              <span>/</span>
-              <span className="dd-breadcrumbs-current">{document.title}</span>
-            </nav>
             <h1 className="dd-page-title">{document.title}</h1>
           </div>
         </div>
@@ -454,27 +430,10 @@ export function DocumentDetailView({
           title={document.title}
           fileName={document.fileName}
           fileFormat={document.fileFormat}
-          sourceContent={document.sourceContent}
-          sourceModified={document.sourceModified}
           status={document.status}
           type={document.type}
           process={document.process}
           origin={document.documentOrigin}
-          editableDraft={isDraftInternal}
-          onSourceContentChange={(html) => {
-            setForm((prev) => ({ ...prev, sourceContent: html }));
-            setDocument((prev) => (prev ? { ...prev, sourceContent: html } : prev));
-          }}
-          onSaveDraftContent={async (html) => {
-            const { document: updated } = await api.updateDocument(documentId, {
-              sourceContent: html,
-              fileFormat: 'word',
-              fileName: `${document.title}.docx`,
-              sourceModified: true,
-            });
-            setDocument(updated);
-            setForm(documentToForm(updated));
-          }}
         />
 
         <div className="dd-details">
@@ -495,14 +454,7 @@ export function DocumentDetailView({
                 <InfoRow label="Process" value={document.process} />
                 <InfoRow label="Origin" value={document.documentOrigin ?? 'Internal'} />
                 <InfoRow label={isExternal ? 'Version / Edition' : 'Version'} value={displayVersion} />
-                <InfoRow
-                  label={isDraftInternal ? 'Document File' : 'PDF File'}
-                  value={
-                    isDraftInternal
-                      ? document.fileName || 'Word document (draft)'
-                      : document.fileName || 'Published PDF'
-                  }
-                />
+                <InfoRow label="PDF File" value={document.fileName || '—'} />
               </section>
 
               <section className="dd-card">
@@ -723,18 +675,6 @@ export function DocumentDetailView({
                   />
                 </EditField>
               </div>
-              {isDraftInternal && form.documentOrigin !== 'External' ? (
-                <div className="dd-draft-editor">
-                  <h4 className="dd-draft-editor-title">Word Content</h4>
-                  <p className="dd-draft-editor-note">
-                    Edit the document below. Change status to Active to approve and publish as PDF.
-                  </p>
-                  <DocumentEditor
-                    content={form.sourceContent}
-                    onChange={(html) => updateField('sourceContent', html)}
-                  />
-                </div>
-              ) : null}
             </section>
           )}
         </div>

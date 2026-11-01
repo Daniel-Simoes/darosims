@@ -49,14 +49,14 @@ export function getDocumentStatusBadgeClass(document: DocumentStatusInput): stri
   }
 }
 
-export function isPdfDocument(document: Pick<DocumentRecord, 'fileFormat' | 'status' | 'documentOrigin'>): boolean {
-  if (document.documentOrigin === 'External') return true;
-  return document.status === 'Active' || document.fileFormat === 'pdf';
+export function isPdfDocument(
+  _document: Pick<DocumentRecord, 'fileFormat' | 'status' | 'documentOrigin'>,
+): boolean {
+  return true;
 }
 
-export function getDocumentFileLabel(document: Pick<DocumentRecord, 'fileName' | 'fileFormat' | 'status' | 'documentOrigin'>): string {
-  if (isInternalDraftDocument(document)) {
-    return document.fileName || 'Word document (draft)';
-  }
+export function getDocumentFileLabel(
+  document: Pick<DocumentRecord, 'fileName' | 'fileFormat' | 'status' | 'documentOrigin'>,
+): string {
   return document.fileName || 'PDF document';
 }

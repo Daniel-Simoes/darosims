@@ -4,7 +4,7 @@
 
 - Create internal/external documents
 - Drafts, submit, approve, reject, resubmit
-- Word/text source files → PDF on approval
+- PDF upload for all documents (internal drafts and external references)
 - Document register, detail view, my drafts
 - Rejection reason + upload replacement file
 
@@ -13,7 +13,7 @@
 | Location | Responsibility |
 |----------|----------------|
 | `features/documents/components/` | UI views |
-| `lib/documents/` | Status helpers, upload, content parsing |
+| `lib/documents/` | Status helpers, PDF upload validation |
 | `lib/api/documents.ts` | API calls |
 | `types/documents.ts` | DocumentRecord, payloads |
 

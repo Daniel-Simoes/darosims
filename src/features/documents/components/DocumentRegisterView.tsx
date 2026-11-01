@@ -17,6 +17,9 @@ import { EmptyDraftsLottie } from './EmptyDraftsLottie';
 import { ConfirmDialog } from '../../../components/dialogs/ConfirmDialog';
 import { UploadRejectedDocumentDialog } from '../../../components/dialogs/UploadRejectedDocumentDialog';
 import { ListSearchBar } from '../../../components/common/ListSearchBar';
+import { ListPaginationFooter } from '../../../components/common/ListPaginationFooter';
+import { ListPageSizeSelect } from '../../../components/common/ListPageSizeSelect';
+import { usePaginatedSlice } from '../../../lib/pagination/usePaginatedSlice';
 import { matchesTitleOrCode } from '../../../lib/search/documentSearch';
 import { RegisterSelect } from './RegisterSelect';
 import { DocumentReviewHistoryDialog } from './DocumentReviewHistoryDialog';
@@ -354,23 +357,36 @@ export function DocumentRegisterView({
     [documents, searchQuery],
   );
 
-  const total = filteredDocuments.length;
-  const showingFrom = total === 0 ? 0 : 1;
-  const showingTo = Math.min(5, total);
+  const {
+    pagedItems: pagedDocuments,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    total,
+  } = usePaginatedSlice(filteredDocuments, searchQuery);
   const previewCode = useMemo(
     () => (form.type && form.process ? generateDocumentCode(form.type, form.process, documents.map((d) => d.code)) : ''),
     [form.type, form.process, documents],
   );
 
   const allSelected =
-    filteredDocuments.length > 0 && filteredDocuments.every((doc) => selectedIds.has(doc.id));
+    pagedDocuments.length > 0 && pagedDocuments.every((doc) => selectedIds.has(doc.id));
 
   function toggleSelectAll() {
     if (allSelected) {
-      setSelectedIds(new Set());
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        pagedDocuments.forEach((doc) => next.delete(doc.id));
+        return next;
+      });
       return;
     }
-    setSelectedIds(new Set(filteredDocuments.map((doc) => doc.id)));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      pagedDocuments.forEach((doc) => next.add(doc.id));
+      return next;
+    });
   }
 
   async function openReviewHistory(doc: DocumentRecord) {
@@ -682,6 +698,7 @@ export function DocumentRegisterView({
 
         <div className="doc-card-toolbar">
           <ListSearchBar value={searchQuery} onChange={setSearchQuery} />
+          <ListPageSizeSelect pageSize={pageSize} onPageSizeChange={setPageSize} />
         </div>
 
         <div className="doc-reg-table-wrap">
@@ -727,7 +744,7 @@ export function DocumentRegisterView({
                 </tr>
               </thead>
               <tbody>
-                {filteredDocuments.map((doc) => {
+                {pagedDocuments.map((doc) => {
                   const registerCode =
                     doc.documentOrigin === 'External' ? doc.externalRef || '—' : doc.code || '—';
 
@@ -948,32 +965,13 @@ export function DocumentRegisterView({
           )}
         </div>
 
-        <div className="doc-table-footer">
-          <span className="doc-table-count">
-            {total === 0
-              ? 'No entries'
-              : `Showing ${showingFrom} to ${showingTo} of ${total} entries`}
-          </span>
-          <div className="doc-pagination">
-            <button type="button" className="doc-page-btn" disabled>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="m15 18-6-6 6-6" />
-              </svg>
-            </button>
-            <button type="button" className="doc-page-btn active">1</button>
-            {total > 5 && (
-              <>
-                <button type="button" className="doc-page-btn">2</button>
-                <button type="button" className="doc-page-btn">3</button>
-              </>
-            )}
-            <button type="button" className="doc-page-btn" disabled={total <= 5}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="m9 18 6-6-6-6" />
-              </svg>
-            </button>
-          </div>
-        </div>
+        <ListPaginationFooter
+          total={total}
+          page={page}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          itemLabel="entries"
+        />
       </section>
       )}
 

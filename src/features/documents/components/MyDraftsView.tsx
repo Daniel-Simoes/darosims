@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api, type DocumentRecord } from '../../../lib/api';
 import { documentTypeBadgeClass } from '../../../data/documentRegister';
 import { ListSearchBar } from '../../../components/common/ListSearchBar';
+import { ListPaginationFooter } from '../../../components/common/ListPaginationFooter';
+import { ListPageSizeSelect } from '../../../components/common/ListPageSizeSelect';
+import { usePaginatedSlice } from '../../../lib/pagination/usePaginatedSlice';
 import { matchesTitleOrCode } from '../../../lib/search/documentSearch';
 import { EmptyDraftsLottie } from './EmptyDraftsLottie';
 import './MyDraftsView.css';
@@ -54,7 +57,14 @@ export function MyDraftsView({ onNewDocument, onDocumentClick, refreshKey = 0 }:
     [documents, searchQuery],
   );
 
-  const total = filteredDocuments.length;
+  const {
+    pagedItems: pagedDocuments,
+    page,
+    setPage,
+    pageSize,
+    setPageSize,
+    total,
+  } = usePaginatedSlice(filteredDocuments, searchQuery);
 
   return (
     <div className="my-drafts">
@@ -88,6 +98,7 @@ export function MyDraftsView({ onNewDocument, onDocumentClick, refreshKey = 0 }:
 
         <div className="doc-card-toolbar">
           <ListSearchBar value={searchQuery} onChange={setSearchQuery} />
+          <ListPageSizeSelect pageSize={pageSize} onPageSizeChange={setPageSize} />
         </div>
 
         <div className="doc-table-wrap">
@@ -122,7 +133,7 @@ export function MyDraftsView({ onNewDocument, onDocumentClick, refreshKey = 0 }:
                 </tr>
               </thead>
               <tbody>
-                {filteredDocuments.map((doc) => (
+                {pagedDocuments.map((doc) => (
                     <tr
                       key={doc.id}
                       className="doc-table-row-clickable"
@@ -174,10 +185,14 @@ export function MyDraftsView({ onNewDocument, onDocumentClick, refreshKey = 0 }:
           )}
         </div>
 
-        {!isLoading && total > 0 && (
-          <div className="doc-table-footer">
-            <span>{total} draft{total === 1 ? '' : 's'}</span>
-          </div>
+        {!isLoading && (
+          <ListPaginationFooter
+            total={total}
+            page={page}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            itemLabel="drafts"
+          />
         )}
       </section>
     </div>

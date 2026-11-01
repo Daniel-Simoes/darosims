@@ -6,13 +6,12 @@ Local filesystem storage in `backend/data/uploads/`:
 
 | Pattern | Content |
 |---------|---------|
-| `{documentId}.pdf` | Published PDF |
-| `{documentId}.source.docx` | Word source |
-| `{documentId}.source.txt` | Text source |
+| `{documentId}.pdf` | Document PDF (draft or published) |
+| `{documentId}.source.*` | Legacy Word/text sources (read-only; new uploads use PDF) |
 
 Accessed via `repositories/storage/fileStorageRepository.ts` and `services/storage/storageService.ts`.
 
-Frontend uploads use multipart FormData to `/api/documents/[id]/file` and `/source`.
+Frontend uploads use multipart FormData to `/api/documents/[id]/file`.
 
 ## Separation from document logic
 

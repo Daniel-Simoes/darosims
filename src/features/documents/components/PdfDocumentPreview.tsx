@@ -8,43 +8,76 @@ GlobalWorkerOptions.workerSrc = pdfWorker;
 
 interface PdfDocumentPreviewProps {
   pdfUrl: string;
-  title: string;
+  /** Kept for call-site compatibility; page toolbar no longer repeats the document title. */
+  title?: string;
+}
+
+const THUMB_WIDTH = 136;
+const THUMB_DPR = 2;
+
+async function renderPageToCanvas(
+  pdf: PDFDocumentProxy,
+  pageNumber: number,
+  cssWidth: number,
+  pixelRatio: number,
+  canvas: HTMLCanvasElement,
+): Promise<void> {
+  const page = await pdf.getPage(pageNumber);
+  const baseViewport = page.getViewport({ scale: 1 });
+  const scale = cssWidth / baseViewport.width;
+  const viewport = page.getViewport({ scale: scale * pixelRatio });
+
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  canvas.style.width = `${viewport.width / pixelRatio}px`;
+  canvas.style.height = `${viewport.height / pixelRatio}px`;
+
+  const context = canvas.getContext('2d');
+  if (!context) return;
+
+  await page.render({ canvasContext: context, viewport, canvas }).promise;
 }
 
 async function renderPageToDataUrl(
   pdf: PDFDocumentProxy,
   pageNumber: number,
-  targetWidth: number,
+  cssWidth: number,
 ): Promise<string> {
-  const page = await pdf.getPage(pageNumber);
-  const viewport = page.getViewport({ scale: 1 });
-  const scale = targetWidth / viewport.width;
-  const scaledViewport = page.getViewport({ scale });
-
   const canvas = document.createElement('canvas');
-  canvas.width = scaledViewport.width;
-  canvas.height = scaledViewport.height;
-
-  const context = canvas.getContext('2d');
-  if (!context) return '';
-
-  await page.render({ canvasContext: context, viewport: scaledViewport, canvas }).promise;
+  await renderPageToCanvas(pdf, pageNumber, cssWidth, THUMB_DPR, canvas);
   return canvas.toDataURL('image/png');
 }
 
-export function PdfDocumentPreview({ pdfUrl, title }: PdfDocumentPreviewProps) {
+export function PdfDocumentPreview({ pdfUrl }: PdfDocumentPreviewProps) {
   const mainCanvasRef = useRef<HTMLCanvasElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const [pageCount, setPageCount] = useState(0);
   const [thumbnails, setThumbnails] = useState<string[]>([]);
   const [activePage, setActivePage] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [viewportWidth, setViewportWidth] = useState(0);
   const pdfRef = useRef<PDFDocumentProxy | null>(null);
   const loadingTaskRef = useRef<PDFDocumentLoadingTask | null>(null);
 
   useEffect(() => {
     setActivePage(0);
   }, [pdfUrl]);
+
+  useEffect(() => {
+    const node = viewportRef.current;
+    if (!node) return;
+
+    const updateWidth = () => {
+      setViewportWidth(node.clientWidth || 680);
+    };
+
+    updateWidth();
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(node);
+
+    return () => observer.disconnect();
+  }, [pageCount, isLoading]);
 
   useEffect(() => {
     let active = true;
@@ -69,7 +102,7 @@ export function PdfDocumentPreview({ pdfUrl, title }: PdfDocumentPreviewProps) {
 
         const thumbUrls = await Promise.all(
           Array.from({ length: totalPages }, (_, index) =>
-            renderPageToDataUrl(pdf, index + 1, 136),
+            renderPageToDataUrl(pdf, index + 1, THUMB_WIDTH),
           ),
         );
 
@@ -98,31 +131,24 @@ export function PdfDocumentPreview({ pdfUrl, title }: PdfDocumentPreviewProps) {
   useEffect(() => {
     const pdf = pdfRef.current;
     const canvas = mainCanvasRef.current;
-    if (!pdf || !canvas || pageCount === 0) return;
+    if (!pdf || !canvas || pageCount === 0 || viewportWidth <= 0) return;
 
     let active = true;
 
     async function renderMainPage() {
       try {
-        const page = await pdf!.getPage(activePage + 1);
         if (!active || !mainCanvasRef.current) return;
 
-        const viewport = page.getViewport({ scale: 1 });
-        const maxWidth = mainCanvasRef.current.parentElement?.clientWidth ?? 680;
-        const scale = Math.min(maxWidth / viewport.width, 1.35);
-        const scaledViewport = page.getViewport({ scale });
+        const cssWidth = Math.max(viewportWidth - 32, 280);
+        const pixelRatio = Math.min(window.devicePixelRatio || 1, 3);
 
-        const context = mainCanvasRef.current.getContext('2d');
-        if (!context) return;
-
-        mainCanvasRef.current.width = scaledViewport.width;
-        mainCanvasRef.current.height = scaledViewport.height;
-
-        await page.render({
-          canvasContext: context,
-          viewport: scaledViewport,
-          canvas: mainCanvasRef.current,
-        }).promise;
+        await renderPageToCanvas(
+          pdf!,
+          activePage + 1,
+          cssWidth,
+          pixelRatio,
+          mainCanvasRef.current,
+        );
       } catch {
         if (active) setError('Unable to render PDF page.');
       }
@@ -133,7 +159,7 @@ export function PdfDocumentPreview({ pdfUrl, title }: PdfDocumentPreviewProps) {
     return () => {
       active = false;
     };
-  }, [activePage, pageCount, thumbnails]);
+  }, [activePage, pageCount, viewportWidth]);
 
   if (isLoading) {
     return <div className="doc-word-preview-loading">Loading PDF preview...</div>;
@@ -172,9 +198,8 @@ export function PdfDocumentPreview({ pdfUrl, title }: PdfDocumentPreviewProps) {
           <span>
             Page {activePage + 1} of {pageCount}
           </span>
-          <span className="doc-pdf-toolbar-title">{title}</span>
         </div>
-        <div className="doc-word-page-viewport doc-pdf-page-viewport">
+        <div ref={viewportRef} className="doc-word-page-viewport doc-pdf-page-viewport">
           <article className="doc-word-page-sheet doc-pdf-page-sheet">
             <canvas ref={mainCanvasRef} className="doc-pdf-main-canvas" />
           </article>

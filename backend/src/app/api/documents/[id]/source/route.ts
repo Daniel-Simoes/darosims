@@ -1,26 +1,9 @@
 import { requireAuth, jsonResponse, corsHeaders } from '@/lib/auth';
-import { getDocumentById, setDocumentFileName } from '@/lib/documents';
-import {
-  MAX_SOURCE_SIZE_BYTES,
-  readDocumentSourceFile,
-  saveDocumentSourceFile,
-} from '@/lib/documentFiles';
+import { getDocumentById } from '@/lib/documents';
+import { readDocumentSourceFile } from '@/lib/documentFiles';
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders() });
-}
-
-function getSourceExtension(file: File): string | null {
-  const name = file.name.toLowerCase();
-  if (name.endsWith('.docx')) return 'docx';
-  if (name.endsWith('.txt')) return 'txt';
-  if (
-    file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-  ) {
-    return 'docx';
-  }
-  if (file.type === 'text/plain') return 'txt';
-  return null;
 }
 
 export async function GET(
@@ -69,41 +52,11 @@ export async function POST(
     return jsonResponse({ error: 'Document not found' }, 404);
   }
 
-  if (document.documentOrigin === 'External') {
-    return jsonResponse({ error: 'External documents use PDF upload only' }, 400);
-  }
-
-  if (document.status !== 'Draft') {
-    return jsonResponse({ error: 'Source files can only be uploaded for draft documents' }, 400);
-  }
-
-  try {
-    const formData = await request.formData();
-    const file = formData.get('file');
-
-    if (!(file instanceof File)) {
-      return jsonResponse({ error: 'Document file is required' }, 400);
-    }
-
-    const extension = getSourceExtension(file);
-    if (!extension) {
-      return jsonResponse({ error: 'Only Word (.docx) or text (.txt) files are allowed' }, 400);
-    }
-
-    if (file.size > MAX_SOURCE_SIZE_BYTES) {
-      return jsonResponse({ error: 'File exceeds the 50 MB limit' }, 400);
-    }
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-    await saveDocumentSourceFile(id, buffer, extension);
-
-    const updated = await setDocumentFileName(id, file.name);
-    if (!updated) {
-      return jsonResponse({ error: 'Document not found' }, 404);
-    }
-
-    return jsonResponse({ document: updated });
-  } catch {
-    return jsonResponse({ error: 'Failed to upload source file' }, 400);
-  }
+  return jsonResponse(
+    {
+      error:
+        'Word and text source uploads are no longer supported. Upload a PDF using the document file endpoint.',
+    },
+    400,
+  );
 }

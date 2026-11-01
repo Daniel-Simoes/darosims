@@ -99,7 +99,7 @@ export const marketingPages: MarketingPageContent[] = [
       },
     ],
     highlights: [
-      'Word and PDF preview without leaving the platform',
+      'PDF preview without leaving the platform',
       'Obsolescence and review cycles you can trust',
       'Integrates with nonconformities and CAPA',
     ],

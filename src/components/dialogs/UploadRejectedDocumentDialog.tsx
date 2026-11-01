@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState } from 'react';
 import type { DocumentRecord } from '../../types/documents';
-import { formatFileSize, verifyInternalDocumentFile } from '../../lib/documentUpload';
+import { formatFileSize, verifyPdfFile } from '../../lib/documentUpload';
 import './UploadRejectedDocumentDialog.css';
 
 interface UploadRejectedDocumentDialogProps {
@@ -41,7 +41,7 @@ export function UploadRejectedDocumentDialog({
     setSelectedFile(null);
     setFileError('');
 
-    const validationError = await verifyInternalDocumentFile(file);
+    const validationError = await verifyPdfFile(file);
     if (validationError) {
       setFileError(validationError);
       setIsChecking(false);
@@ -105,7 +105,7 @@ export function UploadRejectedDocumentDialog({
           <input
             ref={fileInputRef}
             type="file"
-            accept=".docx,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+            accept=".pdf,application/pdf"
             className="upload-rejected-file-input"
             onChange={(e) => {
               void handleFileSelect(e.target.files?.[0]);
@@ -117,7 +117,7 @@ export function UploadRejectedDocumentDialog({
             <>
               <div className="upload-rejected-spinner" aria-hidden="true" />
               <p className="upload-rejected-zone-title">Checking document...</p>
-              <p className="upload-rejected-zone-sub">Verifying Word or text file format</p>
+              <p className="upload-rejected-zone-sub">Verifying PDF format</p>
             </>
           ) : selectedFile ? (
             <>
@@ -126,7 +126,7 @@ export function UploadRejectedDocumentDialog({
             </>
           ) : (
             <>
-              <p className="upload-rejected-zone-title">Drag and drop Word or text file here</p>
+              <p className="upload-rejected-zone-title">Drag and drop PDF here</p>
               <p className="upload-rejected-zone-sub">or click to browse from your computer</p>
             </>
           )}

@@ -23,7 +23,7 @@ export const dashboardModules: DashboardModule[] = [
     title: 'Document Control',
     description: 'Centralised document control with version tracking and approvals.',
     icon: '📄',
-    count: 156,
+    count: 0,
     status: 'active',
     category: 'core',
     available: true,
@@ -33,7 +33,7 @@ export const dashboardModules: DashboardModule[] = [
     title: 'Process Management',
     description: 'Map, monitor and improve business workflows across your organisation.',
     icon: '⚙️',
-    count: 24,
+    count: 0,
     status: 'active',
     category: 'core',
     available: false,
@@ -43,7 +43,7 @@ export const dashboardModules: DashboardModule[] = [
     title: 'Risk Management',
     description: 'Identify, assess and mitigate operational and compliance risks.',
     icon: '⚠️',
-    count: 12,
+    count: 0,
     status: 'warning',
     category: 'core',
     available: false,
@@ -53,7 +53,7 @@ export const dashboardModules: DashboardModule[] = [
     title: 'Audits',
     description: 'Plan, schedule and report on internal and external audits.',
     icon: '🔍',
-    count: 3,
+    count: 0,
     status: 'neutral',
     category: 'compliance',
     available: false,
@@ -63,7 +63,7 @@ export const dashboardModules: DashboardModule[] = [
     title: 'Supplier Management',
     description: 'Evaluate and monitor third-party supplier compliance.',
     icon: '🏭',
-    count: 18,
+    count: 0,
     status: 'active',
     category: 'compliance',
     available: false,
@@ -73,7 +73,7 @@ export const dashboardModules: DashboardModule[] = [
     title: 'Nonconformities',
     description: 'Track issues, root causes and corrective actions.',
     icon: '❌',
-    count: 7,
+    count: 0,
     status: 'warning',
     category: 'compliance',
     available: false,
@@ -83,7 +83,7 @@ export const dashboardModules: DashboardModule[] = [
     title: 'KPIs',
     description: 'Monitor key performance indicators and operational metrics.',
     icon: '📊',
-    count: 32,
+    count: 0,
     status: 'active',
     category: 'analytics',
     available: false,
@@ -93,12 +93,22 @@ export const dashboardModules: DashboardModule[] = [
     title: 'Continual Improvement',
     description: 'Drive ongoing enhancements and track improvement initiatives.',
     icon: '📈',
-    count: 9,
+    count: 0,
     status: 'active',
     category: 'analytics',
     available: false,
   },
 ];
+
+/** Live module counts for the home carousel (only implemented modules use real data). */
+export function buildDashboardModules(documentRegisterCount: number): DashboardModule[] {
+  return dashboardModules.map((module) => {
+    if (module.id === 'documents') {
+      return { ...module, count: documentRegisterCount };
+    }
+    return { ...module, count: 0 };
+  });
+}
 
 export const isoStandards = [
   { id: 'iso-9001', name: 'ISO 9001', label: 'Quality Management', progress: 78, status: 'In Progress' },

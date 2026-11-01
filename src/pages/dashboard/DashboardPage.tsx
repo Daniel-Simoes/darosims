@@ -24,16 +24,25 @@ import { NotificationsView } from '../../features/notifications/components/Notif
 import { NotificationHistoryView } from '../../features/notifications/components/NotificationHistoryView';
 import { HomeCharts } from '../../features/dashboard/components/HomeCharts';
 import { ModuleCarousel } from '../../features/dashboard/components/ModuleCarousel';
+import { useDashboardModules } from '../../features/dashboard/hooks/useDashboardModules';
 import { ModuleVisualizationView } from '../../features/dashboard/components/ModuleVisualizationView';
 import { useAuth } from '../../features/authentication/context/AuthContext';
 import { TeamUsersProvider } from '../../context/TeamUsersContext';
 import { ProfileSettingsView } from '../../features/users/components/ProfileSettingsView';
 import './DashboardPage.css';
 
-function DashboardOverview({ onModuleClick }: { onModuleClick: (moduleId: string) => void }) {
+function DashboardOverview({
+  onModuleClick,
+  homeDataRefreshKey,
+}: {
+  onModuleClick: (moduleId: string) => void;
+  homeDataRefreshKey: number;
+}) {
+  const { modules } = useDashboardModules(homeDataRefreshKey);
+
   return (
     <>
-      <ModuleCarousel modules={dashboardModules} onModuleClick={onModuleClick} />
+      <ModuleCarousel modules={modules} onModuleClick={onModuleClick} />
 
       <div className="stats-grid">
         {dashboardStats.map((stat) => (
@@ -92,6 +101,7 @@ export function DashboardPage() {
   const [documentReturnNav, setDocumentReturnNav] = useState('documents');
   const [draftsRefreshKey, setDraftsRefreshKey] = useState(0);
   const [notificationsRefreshKey, setNotificationsRefreshKey] = useState(0);
+  const [homeDataRefreshKey, setHomeDataRefreshKey] = useState(0);
   const [historyFilterDocumentId, setHistoryFilterDocumentId] = useState<string | undefined>();
   const [profileReturnNav, setProfileReturnNav] = useState('dashboard');
 
@@ -174,6 +184,16 @@ export function DashboardPage() {
     }
     setActiveNav(getModuleViewId(moduleId));
   }
+
+  function bumpHomeDataRefresh() {
+    setHomeDataRefreshKey((key) => key + 1);
+  }
+
+  useEffect(() => {
+    if (activeNav === 'dashboard') {
+      setHomeDataRefreshKey((key) => key + 1);
+    }
+  }, [activeNav]);
 
   function bumpNotificationsRefresh() {
     setNotificationsRefreshKey((key) => key + 1);
@@ -262,10 +282,12 @@ export function DashboardPage() {
             <NewDocumentView
               onSavedAsDraft={() => {
                 setDraftsRefreshKey((key) => key + 1);
+                bumpHomeDataRefresh();
                 setActiveNav('my-drafts');
               }}
               onSubmittedForApproval={() => {
                 setNotificationsRefreshKey((key) => key + 1);
+                bumpHomeDataRefresh();
                 setActiveNav('documents');
               }}
             />
@@ -277,8 +299,15 @@ export function DashboardPage() {
                 setDocumentDetailEdit(false);
                 setActiveNav(documentReturnNav);
               }}
-              onApproved={() => setNotificationsRefreshKey((key) => key + 1)}
-              onSubmittedForApproval={() => setNotificationsRefreshKey((key) => key + 1)}
+              onApproved={() => {
+                setNotificationsRefreshKey((key) => key + 1);
+                bumpHomeDataRefresh();
+              }}
+              onSubmittedForApproval={() => {
+                setNotificationsRefreshKey((key) => key + 1);
+                bumpHomeDataRefresh();
+              }}
+              onDeleted={bumpHomeDataRefresh}
             />
           ) : isMyDrafts ? (
             <MyDraftsView
@@ -304,13 +333,19 @@ export function DashboardPage() {
               refreshKey={notificationsRefreshKey}
               onNewDocument={() => setActiveNav('document-register')}
               onDocumentClick={(id, options) => openDocument(id, options, 'documents')}
-              onSubmittedForApproval={() => setNotificationsRefreshKey((key) => key + 1)}
+              onSubmittedForApproval={() => {
+                setNotificationsRefreshKey((key) => key + 1);
+                bumpHomeDataRefresh();
+              }}
               onOpenHistory={(documentId) => openHistory(documentId)}
             />
           ) : isModuleView && moduleId ? (
             <ModuleVisualizationView moduleId={moduleId} />
           ) : (
-            <DashboardOverview onModuleClick={handleModuleClick} />
+            <DashboardOverview
+              onModuleClick={handleModuleClick}
+              homeDataRefreshKey={homeDataRefreshKey}
+            />
           )}
         </main>
       </div>
