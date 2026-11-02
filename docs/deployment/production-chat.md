@@ -21,7 +21,7 @@ If Supabase was set up **before** the chat feature, the `document_comments` tabl
 2. **SQL Editor** → **New query**.
 3. Paste and run the file **`backend/supabase/patch-document-comments.sql`** from this repo (or the full **`backend/supabase/schema.sql`** if you prefer).
 4. Verify: open **https://darosims.vercel.app/api/health**  
-   - After the next deploy: `"ok": true`, `"chatReady": true`  
+   - After the next deploy: `"ok": true`, `"chatReady": true`, `"presenceReady": true`  
    - Until deploy: chat works as soon as the SQL ran (no redeploy required for SQL only).
 
 5. Sign in on **https://darosims.vercel.app**, open **Chat** or send a message from Document Control — all users on that site share the same threads.

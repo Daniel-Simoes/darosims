@@ -23,11 +23,11 @@ export async function GET(
 
   try {
     const presence = await listDocumentChatPresence(id, auth.email);
-    return jsonResponse({ presence });
+    return jsonResponse({ presence, available: true });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to load presence';
     if (isMissingTableError(message)) {
-      return jsonResponse({ presence: [] });
+      return jsonResponse({ presence: [], available: false });
     }
     return jsonResponse({ error: message }, 400);
   }
@@ -53,7 +53,7 @@ export async function POST(
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to update presence';
     if (isMissingTableError(message)) {
-      return jsonResponse({ ok: true });
+      return jsonResponse({ ok: false, available: false });
     }
     return jsonResponse({ error: message }, 400);
   }

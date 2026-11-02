@@ -6,6 +6,7 @@ const REQUIRED_TABLES = [
   'notifications',
   'document_events',
   'document_comments',
+  'document_chat_presence',
 ] as const;
 
 export type SupabaseSchemaCheckResult = {
@@ -42,8 +43,13 @@ export async function verifySupabaseSchema(): Promise<SupabaseSchemaCheckResult>
 }
 
 export function chatStorageHint(missingTables: string[]): string | undefined {
-  if (!missingTables.includes('document_comments')) return undefined;
-  return 'Run backend/supabase/patch-document-comments.sql (or full schema.sql) in Supabase → SQL Editor, then retry.';
+  if (missingTables.includes('document_comments')) {
+    return 'Run backend/supabase/patch-document-comments.sql (or full schema.sql) in Supabase → SQL Editor, then retry.';
+  }
+  if (missingTables.includes('document_chat_presence')) {
+    return 'Run backend/supabase/patch-document-chat-presence.sql in Supabase → SQL Editor for online/typing indicators.';
+  }
+  return undefined;
 }
 
 export function isMissingTableError(message: string): boolean {

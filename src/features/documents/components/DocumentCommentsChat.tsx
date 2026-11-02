@@ -1,21 +1,14 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type FormEvent,
-} from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '../../../lib/api';
 import {
   getChatParticipantsForViewer,
   getDocumentChatHeaderCode,
 } from '../../../lib/documents/documentChatParticipants';
-import type { DocumentCommentMessage } from '../../../types/documentComments';
 import type { DocumentRecord } from '../../../types/documents';
 import { useAuth } from '../../../context/AuthContext';
 import { useTeamUsers } from '../../../context/TeamUsersContext';
+import { useDocumentChatMessages } from '../hooks/useDocumentChatMessages';
 import { useDocumentChatPresence } from '../hooks/useDocumentChatPresence';
 import './DocumentCommentsChat.css';
 
@@ -55,12 +48,18 @@ export function DocumentCommentsChat({
 }: DocumentCommentsChatProps) {
   const { user } = useAuth();
   const teamUsers = useTeamUsers();
-  const [messages, setMessages] = useState<DocumentCommentMessage[]>([]);
   const [draft, setDraft] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const prevMessageCountRef = useRef(0);
+
+  const {
+    messages,
+    appendMessage,
+    error,
+    setError,
+    isLoading,
+  } = useDocumentChatMessages(documentRecord.id, open, onMessageSent);
 
   const currentEmail = user?.email?.trim().toLowerCase() ?? '';
 
@@ -77,7 +76,7 @@ export function DocumentCommentsChat({
 
   const headerCode = getDocumentChatHeaderCode(documentRecord);
 
-  const { typingUsers, isUserOnline } = useDocumentChatPresence(
+  const { typingUsers, isUserOnline, presenceAvailable } = useDocumentChatPresence(
     documentRecord.id,
     open,
     draft,
@@ -90,28 +89,18 @@ export function DocumentCommentsChat({
         ? `${typingUsers[0].userName} is typing…`
         : `${typingUsers.map((entry) => entry.userName).join(' and ')} are typing…`;
 
-  const loadMessages = useCallback(async () => {
-    setError('');
-    setIsLoading(true);
-    try {
-      const { messages: data } = await api.getDocumentComments(documentRecord.id);
-      setMessages(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load chat');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [documentRecord.id]);
-
   useEffect(() => {
     if (!open) return;
     setDraft('');
-    void loadMessages();
-  }, [open, loadMessages]);
+    prevMessageCountRef.current = 0;
+  }, [open, documentRecord.id]);
 
   useEffect(() => {
     if (!open) return;
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length > prevMessageCountRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+    prevMessageCountRef.current = messages.length;
   }, [messages, open]);
 
   useEffect(() => {
@@ -138,7 +127,7 @@ export function DocumentCommentsChat({
 
     try {
       const { message } = await api.postDocumentComment(documentRecord.id, text);
-      setMessages((prev) => [...prev, message]);
+      appendMessage(message);
       setDraft('');
       onMessageSent?.();
     } catch (err) {
@@ -164,7 +153,14 @@ export function DocumentCommentsChat({
         onClick={layout === 'modal' ? (event) => event.stopPropagation() : undefined}
       >
         <aside className="doc-chat-participants" aria-label="Chat participants">
-          <div className="doc-chat-participants-head">People</div>
+          <div className="doc-chat-participants-head">
+            People
+            {!presenceAvailable ? (
+              <span className="doc-chat-presence-hint" title="Online status needs document_chat_presence in Supabase">
+                · status off
+              </span>
+            ) : null}
+          </div>
           <div className="doc-chat-participants-list">
             {participants.length === 0 ? (
               <p className="doc-chat-participant-role" style={{ padding: '0 10px' }}>

@@ -75,7 +75,7 @@ export const documentsApi = {
   },
 
   postDocumentChatPresence(id: string, isTyping: boolean) {
-    return apiFetch<{ ok: boolean }>(`/api/documents/${id}/chat-presence`, {
+    return apiFetch<{ ok: boolean; available?: boolean }>(`/api/documents/${id}/chat-presence`, {
       method: 'POST',
       body: JSON.stringify({ isTyping }),
     });

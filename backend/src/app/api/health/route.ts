@@ -23,6 +23,7 @@ export async function GET() {
             supabaseConfigured,
             supabaseHost,
             chatReady: !schema.missingTables.includes('document_comments'),
+            presenceReady: !schema.missingTables.includes('document_chat_presence'),
             missingTables: schema.missingTables,
             hint:
               chatStorageHint(schema.missingTables) ??
@@ -73,5 +74,6 @@ export async function GET() {
     supabaseConfigured,
     supabaseHost,
     chatReady: provider === 'supabase' ? true : provider === 'json-files',
+    presenceReady: provider === 'supabase' ? true : provider === 'json-files',
   });
 }

@@ -1,5 +1,6 @@
 import type { DocumentRecord } from '../../types/documents';
 import type { DocumentChatParticipant, DocumentCommentMessage } from '../../types/documentComments';
+import type { DocumentChatPresenceView } from '../../types/documentChatPresence';
 
 type TeamUser = { name: string; email: string };
 
@@ -76,7 +77,59 @@ export function buildDocumentChatParticipants(
     addParticipant(document.approvedBy, document.approvedBy, 'approver', 'Approved document');
   }
 
+  enrichParticipantEmails(participants, messages, teamUsers);
+
   return participants;
+}
+
+/** Fill missing emails so presence (JWT email) can match document owner names. */
+function enrichParticipantEmails(
+  participants: DocumentChatParticipant[],
+  messages: DocumentCommentMessage[],
+  teamUsers: TeamUser[],
+) {
+  for (const person of participants) {
+    if (person.email) continue;
+
+    const nameKey = person.name.trim().toLowerCase();
+    const fromMessage = messages.find((msg) => {
+      const senderName = msg.senderName.trim().toLowerCase();
+      return senderName === nameKey || normalizeEmail(msg.senderEmail) === nameKey;
+    });
+    if (fromMessage) {
+      person.email = normalizeEmail(fromMessage.senderEmail);
+      continue;
+    }
+
+    const fromTeam = teamUsers.find((user) => user.name.trim().toLowerCase() === nameKey);
+    if (fromTeam) {
+      person.email = normalizeEmail(fromTeam.email);
+    }
+  }
+}
+
+export function chatPresenceMatchesParticipant(
+  entry: DocumentChatPresenceView,
+  person: { email: string; name: string },
+): boolean {
+  if (!entry.online) return false;
+
+  const entryEmail = normalizeEmail(entry.userEmail);
+  const entryName = entry.userName.trim().toLowerCase();
+  const personEmail = person.email ? normalizeEmail(person.email) : '';
+  const personName = person.name.trim().toLowerCase();
+
+  if (personEmail && entryEmail === personEmail) return true;
+  if (personName && entryName === personName) return true;
+
+  if (personName && entryName) {
+    if (entryName.startsWith(personName) || personName.startsWith(entryName)) return true;
+    const personFirst = personName.split(/\s+/)[0];
+    const entryFirst = entryName.split(/\s+/)[0];
+    if (personFirst.length >= 2 && personFirst === entryFirst) return true;
+  }
+
+  return false;
 }
 
 /** True when this row is the signed-in user (creator by email, approver/owner by name). */

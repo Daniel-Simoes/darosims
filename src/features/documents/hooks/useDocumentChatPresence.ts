@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../../../lib/api';
+import { chatPresenceMatchesParticipant } from '../../../lib/documents/documentChatParticipants';
 import type { DocumentChatPresenceView } from '../../../types/documentChatPresence';
 
 const POLL_MS = 3_000;
-const HEARTBEAT_MS = 20_000;
 const TYPING_DEBOUNCE_MS = 400;
 
 export function useDocumentChatPresence(
@@ -12,24 +12,33 @@ export function useDocumentChatPresence(
   draft: string,
 ) {
   const [presence, setPresence] = useState<DocumentChatPresenceView[]>([]);
+  const [presenceAvailable, setPresenceAvailable] = useState(true);
   const typingTimerRef = useRef<number | null>(null);
   const lastTypingRef = useRef(false);
 
   const refreshPresence = useCallback(async () => {
     try {
-      const { presence: data } = await api.getDocumentChatPresence(documentId);
+      const { presence: data, available } = await api.getDocumentChatPresence(documentId);
       setPresence(data);
+      if (available === false) {
+        setPresenceAvailable(false);
+      } else {
+        setPresenceAvailable(true);
+      }
     } catch {
-      /* optional until Supabase table exists */
+      setPresenceAvailable(false);
     }
   }, [documentId]);
 
   const sendPresence = useCallback(
     async (isTyping: boolean) => {
       try {
-        await api.postDocumentChatPresence(documentId, isTyping);
+        const result = await api.postDocumentChatPresence(documentId, isTyping);
+        if (result.available === false) {
+          setPresenceAvailable(false);
+        }
       } catch {
-        /* ignore */
+        setPresenceAvailable(false);
       }
     },
     [documentId],
@@ -38,20 +47,16 @@ export function useDocumentChatPresence(
   useEffect(() => {
     if (!open) return;
 
-    void refreshPresence();
     void sendPresence(false);
+    void refreshPresence();
 
     const pollId = window.setInterval(() => {
+      void sendPresence(lastTypingRef.current);
       void refreshPresence();
     }, POLL_MS);
 
-    const heartbeatId = window.setInterval(() => {
-      void sendPresence(lastTypingRef.current);
-    }, HEARTBEAT_MS);
-
     return () => {
       window.clearInterval(pollId);
-      window.clearInterval(heartbeatId);
       void sendPresence(false);
     };
   }, [open, documentId, refreshPresence, sendPresence]);
@@ -80,15 +85,9 @@ export function useDocumentChatPresence(
   const typingUsers = presence.filter((entry) => entry.isTyping);
 
   function isUserOnline(email: string, name: string): boolean {
-    const normalizedEmail = email.trim().toLowerCase();
-    const normalizedName = name.trim().toLowerCase();
-    return presence.some(
-      (entry) =>
-        entry.online &&
-        (entry.userEmail === normalizedEmail ||
-          entry.userName.trim().toLowerCase() === normalizedName),
-    );
+    const person = { email, name };
+    return presence.some((entry) => chatPresenceMatchesParticipant(entry, person));
   }
 
-  return { presence, typingUsers, isUserOnline, refreshPresence };
+  return { presence, typingUsers, isUserOnline, presenceAvailable, refreshPresence };
 }

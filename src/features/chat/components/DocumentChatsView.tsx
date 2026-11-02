@@ -49,22 +49,36 @@ export function DocumentChatsView({
   const [selectedDocument, setSelectedDocument] = useState<DocumentRecord | null>(null);
   const [peerCache, setPeerCache] = useState<Record<string, ReturnType<typeof getOtherChatPeers>>>({});
 
-  const loadChats = useCallback(async () => {
-    setError('');
-    setLoading(true);
+  const loadChats = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent ?? false;
+    if (!silent) {
+      setError('');
+      setLoading(true);
+    }
     try {
       const { chats: data } = await api.getDocumentChats();
       setChats(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load chats');
+      if (!silent) {
+        setError(err instanceof Error ? err.message : 'Failed to load chats');
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     void loadChats();
   }, [loadChats, refreshKey]);
+
+  useEffect(() => {
+    const pollId = window.setInterval(() => {
+      void loadChats({ silent: true });
+    }, 8_000);
+    return () => window.clearInterval(pollId);
+  }, [loadChats]);
 
   useEffect(() => {
     if (!initialDocumentId) return;

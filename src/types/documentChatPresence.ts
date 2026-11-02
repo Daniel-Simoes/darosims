@@ -7,4 +7,5 @@ export interface DocumentChatPresenceView {
 
 export interface DocumentChatPresenceResponse {
   presence: DocumentChatPresenceView[];
+  available?: boolean;
 }

@@ -4,7 +4,7 @@ import {
 } from '@/repositories/presence/documentChatPresenceRepository';
 import type { DocumentChatPresenceRecord, DocumentChatPresenceView } from '@/types';
 
-export const ONLINE_WINDOW_MS = 45_000;
+export const ONLINE_WINDOW_MS = 60_000;
 export const TYPING_WINDOW_MS = 5_000;
 
 function presenceId(documentId: string, userEmail: string) {

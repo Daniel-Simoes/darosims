@@ -46,6 +46,13 @@
   color: #94a3b8;
 }
 
+.doc-chat-presence-hint {
+  text-transform: none;
+  font-weight: 500;
+  font-size: 11px;
+  color: #fbbf24;
+}
+
 .doc-chat-participants-list {
   flex: 1;
   overflow-y: auto;
