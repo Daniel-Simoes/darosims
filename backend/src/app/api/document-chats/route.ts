@@ -1,4 +1,5 @@
 import { requireAuth, jsonResponse, corsHeaders } from '@/lib/auth';
+import { chatErrorResponse } from '@/lib/chatApiErrors';
 import { listDocumentChatsForUser } from '@/services/comments/documentChatListService';
 
 export async function OPTIONS() {
@@ -14,7 +15,6 @@ export async function GET(request: Request) {
     return jsonResponse({ chats });
   } catch (err) {
     console.error('GET /api/document-chats error:', err);
-    const message = err instanceof Error ? err.message : 'Failed to load chats';
-    return jsonResponse({ error: message }, 500);
+    return chatErrorResponse(err, 'Failed to load chats');
   }
 }

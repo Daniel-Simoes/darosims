@@ -1,5 +1,18 @@
 import { requireAuth, jsonResponse, corsHeaders } from '@/lib/auth';
+import { chatErrorResponse } from '@/lib/chatApiErrors';
+import { isMissingTableError } from '@/lib/supabaseSchemaCheck';
 import { listDocumentComments, postDocumentComment } from '@/lib/documentComments';
+
+function commentErrorResponse(err: unknown, fallbackMessage: string) {
+  const message = err instanceof Error ? err.message : fallbackMessage;
+  if (isMissingTableError(message)) {
+    return chatErrorResponse(err, fallbackMessage);
+  }
+  if (message.includes('not found')) {
+    return jsonResponse({ error: message }, 404);
+  }
+  return jsonResponse({ error: message }, 400);
+}
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders() });
@@ -21,8 +34,7 @@ export async function GET(
     const messages = await listDocumentComments(id);
     return jsonResponse({ messages });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Failed to load comments';
-    return jsonResponse({ error: message }, 400);
+    return commentErrorResponse(err, 'Failed to load comments');
   }
 }
 
@@ -44,8 +56,6 @@ export async function POST(
     const message = await postDocumentComment(id, auth.email, auth.name, text);
     return jsonResponse({ message });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Failed to send message';
-    const status = message.includes('not found') ? 404 : 400;
-    return jsonResponse({ error: message }, status);
+    return commentErrorResponse(err, 'Failed to send message');
   }
 }

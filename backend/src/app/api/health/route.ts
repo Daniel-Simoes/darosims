@@ -2,6 +2,7 @@ import { getDatabaseProvider } from '@/database/provider';
 import { getSupabaseProjectHost, getSupabaseAdmin } from '@/database/supabase/client';
 import { jsonResponse } from '@/lib/auth';
 import { ensureServerBootstrap } from '@/lib/ensureServerBootstrap';
+import { chatStorageHint, verifySupabaseSchema } from '@/lib/supabaseSchemaCheck';
 
 export async function GET() {
   await ensureServerBootstrap();
@@ -13,6 +14,25 @@ export async function GET() {
 
   if (provider === 'supabase') {
     try {
+      const schema = await verifySupabaseSchema();
+      if (!schema.ok) {
+        return jsonResponse(
+          {
+            ok: false,
+            provider,
+            supabaseConfigured,
+            supabaseHost,
+            chatReady: !schema.missingTables.includes('document_comments'),
+            missingTables: schema.missingTables,
+            hint:
+              chatStorageHint(schema.missingTables) ??
+              'Run backend/supabase/schema.sql in the Supabase SQL editor.',
+            errors: schema.errors,
+          },
+          503,
+        );
+      }
+
       const { error } = await getSupabaseAdmin().from('users').select('email').limit(1);
       if (error) {
         return jsonResponse(
@@ -21,6 +41,7 @@ export async function GET() {
             provider,
             supabaseConfigured,
             supabaseHost,
+            chatReady: false,
             hint: 'Run backend/supabase/schema.sql in the Supabase SQL editor.',
             error: error.message,
           },
@@ -46,5 +67,11 @@ export async function GET() {
     }
   }
 
-  return jsonResponse({ ok: true, provider, supabaseConfigured, supabaseHost });
+  return jsonResponse({
+    ok: true,
+    provider,
+    supabaseConfigured,
+    supabaseHost,
+    chatReady: provider === 'supabase' ? true : provider === 'json-files',
+  });
 }

@@ -63,9 +63,9 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   }
 
   if (!response.ok) {
-    throw new Error(
-      typeof data.error === 'string' ? data.error : `Request failed (${response.status})`,
-    );
+    const errorText = typeof data.error === 'string' ? data.error : `Request failed (${response.status})`;
+    const hint = typeof data.hint === 'string' ? data.hint : '';
+    throw new Error(hint ? `${errorText} ${hint}` : errorText);
   }
 
   return data as T;

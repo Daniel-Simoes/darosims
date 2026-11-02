@@ -15,6 +15,12 @@ Local dev keeps **JSON files** unless you set the variables below.
 
 `backend/supabase/schema.sql`
 
+If the project already existed **before chat** was added, run only:
+
+`backend/supabase/patch-document-comments.sql`
+
+See [production-chat.md](./production-chat.md).
+
 ## 3. Storage bucket
 
 If the SQL bucket insert fails, create manually:
@@ -47,11 +53,12 @@ Keep existing `JWT_SECRET`, `ADMIN_*`, `CORS_ORIGIN`. You can remove `DATA_DIR` 
 
 ## 6. Verify
 
-1. Open `https://YOUR-SITE/api/health` — should show `"ok": true` and `"provider": "supabase"`.
+1. Open `https://YOUR-SITE/api/health` — should show `"ok": true`, `"provider": "supabase"`, and `"chatReady": true`.
 2. Sign in on production.
 3. **New Document** → create a draft.
 4. Supabase **Table Editor** → `documents` → should show a row with JSON `body`.
-5. Refresh the site — draft should still appear.
+5. **Chat** → send a message; **Table Editor** → `document_comments` should show a row.
+6. Refresh the site — draft and chat should still appear.
 
 If `/api/health` shows an error about missing tables, run `schema.sql` again in the SQL editor.
 

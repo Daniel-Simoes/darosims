@@ -60,4 +60,6 @@ npm run preview
 
 Deploy from the **`backend`** folder (Next.js serves the built Vite app and `/api`). See [docs/deployment/vercel-darosims.md](docs/deployment/vercel-darosims.md) for env vars and Let's Host DNS.
 
-For **persistent documents** on Vercel, use free [Supabase](docs/deployment/supabase.md) (`DATABASE_PROVIDER=supabase`).
+For **persistent documents and chat** on Vercel, use free [Supabase](docs/deployment/supabase.md) (`DATABASE_PROVIDER=supabase`). If chat fails in production, run [patch-document-comments.sql](backend/supabase/patch-document-comments.sql) — see [docs/deployment/production-chat.md](docs/deployment/production-chat.md).
+
+**Live app:** https://darosims.vercel.app (custom domain requires DNS per [vercel-darosims.md](docs/deployment/vercel-darosims.md)).
