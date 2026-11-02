@@ -1,6 +1,9 @@
 import type { DocumentRecord } from '../../types/documents';
 import type { DocumentCommentMessage } from '../../types/documentComments';
-import { buildDocumentChatParticipants } from './documentChatParticipants';
+import {
+  buildDocumentChatParticipants,
+  isChatParticipantCurrentUser,
+} from './documentChatParticipants';
 
 export type ChatPeer = {
   name: string;
@@ -12,15 +15,6 @@ type TeamUser = { name: string; email: string; photoUrl?: string };
 
 function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
-}
-
-function isCurrentUser(
-  peer: { name: string; email: string },
-  current: { email: string; name: string },
-): boolean {
-  const currentEmail = normalizeEmail(current.email);
-  if (peer.email && normalizeEmail(peer.email) === currentEmail) return true;
-  return peer.name.trim().toLowerCase() === current.name.trim().toLowerCase();
 }
 
 function withPhoto(peer: { name: string; email: string }, teamUsers: TeamUser[]): ChatPeer {
@@ -46,9 +40,9 @@ export function getOtherChatPeers(
   const peers: ChatPeer[] = [];
   const seen = new Set<string>();
 
-  function addPeer(name: string, email: string) {
+  function addPeer(name: string, email: string, role?: Parameters<typeof isChatParticipantCurrentUser>[0]['role']) {
     const candidate = withPhoto({ name, email }, teamUsers);
-    if (isCurrentUser(candidate, currentUser)) return;
+    if (isChatParticipantCurrentUser({ ...candidate, role }, currentUser, document)) return;
     const key = candidate.email || candidate.name.trim().toLowerCase();
     if (!key || seen.has(key)) return;
     seen.add(key);
@@ -56,11 +50,11 @@ export function getOtherChatPeers(
   }
 
   for (const participant of buildDocumentChatParticipants(document, messages, teamUsers)) {
-    addPeer(participant.name, participant.email);
+    addPeer(participant.name, participant.email, participant.role);
   }
 
   for (const message of messages) {
-    addPeer(message.senderName, message.senderEmail);
+    addPeer(message.senderName, message.senderEmail, 'chat_starter');
   }
 
   return peers;

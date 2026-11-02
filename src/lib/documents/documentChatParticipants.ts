@@ -79,6 +79,47 @@ export function buildDocumentChatParticipants(
   return participants;
 }
 
+/** True when this row is the signed-in user (creator by email, approver/owner by name). */
+export function isChatParticipantCurrentUser(
+  person: { name: string; email: string; role?: DocumentChatParticipant['role'] },
+  currentUser: { email: string; name: string },
+  document: DocumentRecord,
+): boolean {
+  const userEmail = normalizeEmail(currentUser.email);
+  const userName = currentUser.name.trim().toLowerCase();
+  const personEmail = person.email ? normalizeEmail(person.email) : '';
+  const personName = person.name.trim().toLowerCase();
+
+  if (personEmail && personEmail === userEmail) return true;
+  if (personName && personName === userName) return true;
+
+  const createdBy = document.createdBy?.trim();
+  if (createdBy && normalizeEmail(createdBy) === userEmail) {
+    if (person.role === 'creator' || personEmail === userEmail) return true;
+  }
+
+  const owner = document.owner?.trim().toLowerCase();
+  const approvedBy = document.approvedBy?.trim().toLowerCase();
+  if (owner === userName && (person.role === 'approver' || personName === owner)) return true;
+  if (approvedBy === userName && (person.role === 'approver' || personName === approvedBy)) {
+    return true;
+  }
+
+  return false;
+}
+
+/** People panel: everyone in the thread except the viewer. */
+export function getChatParticipantsForViewer(
+  document: DocumentRecord,
+  messages: DocumentCommentMessage[],
+  currentUser: { email: string; name: string } | null | undefined,
+  teamUsers: TeamUser[],
+): DocumentChatParticipant[] {
+  const all = buildDocumentChatParticipants(document, messages, teamUsers);
+  if (!currentUser?.email?.trim()) return all;
+  return all.filter((person) => !isChatParticipantCurrentUser(person, currentUser, document));
+}
+
 export function getDocumentChatHeaderCode(document: DocumentRecord) {
   if (document.documentOrigin === 'External') {
     return document.externalRef?.trim() || 'External';

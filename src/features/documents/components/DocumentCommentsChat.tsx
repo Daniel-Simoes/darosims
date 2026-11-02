@@ -9,7 +9,7 @@ import {
 import { createPortal } from 'react-dom';
 import { api } from '../../../lib/api';
 import {
-  buildDocumentChatParticipants,
+  getChatParticipantsForViewer,
   getDocumentChatHeaderCode,
 } from '../../../lib/documents/documentChatParticipants';
 import type { DocumentCommentMessage } from '../../../types/documentComments';
@@ -64,8 +64,14 @@ export function DocumentCommentsChat({
   const currentEmail = user?.email?.trim().toLowerCase() ?? '';
 
   const participants = useMemo(
-    () => buildDocumentChatParticipants(documentRecord, messages, teamUsers),
-    [documentRecord, messages, teamUsers],
+    () =>
+      getChatParticipantsForViewer(
+        documentRecord,
+        messages,
+        user ? { email: user.email, name: user.name } : null,
+        teamUsers,
+      ),
+    [documentRecord, messages, teamUsers, user],
   );
 
   const headerCode = getDocumentChatHeaderCode(documentRecord);
