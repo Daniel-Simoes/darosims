@@ -1,6 +1,6 @@
 export type HandheldStorePlatform = 'ios' | 'android' | 'other';
 
-/** Phones and tablets — dashboard is desktop-only. */
+/** Phones and tablets — web dashboard/sign-in is desktop-only. */
 export function isHandheldDevice(): boolean {
   if (typeof navigator === 'undefined') return false;
 
@@ -16,6 +16,14 @@ export function isHandheldDevice(): boolean {
   if (/Android/i.test(ua) && !/Mobile/i.test(ua)) return true;
 
   if (/Tablet|PlayBook|Silk|Kindle/i.test(ua)) return true;
+
+  if (typeof window !== 'undefined') {
+    const coarse = window.matchMedia('(pointer: coarse)').matches;
+    const noHover = window.matchMedia('(hover: none)').matches;
+    const touch = navigator.maxTouchPoints > 0;
+    const narrow = window.innerWidth <= 1024;
+    if (touch && coarse && noHover && narrow) return true;
+  }
 
   return false;
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { HandheldAuthLink } from '../auth/HandheldAuthLink';
 import { mainNavigation } from '../../data/navigation';
 import logo from '../../assets/daros-logo.png';
 import { MegaMenu } from './MegaMenu';
@@ -56,9 +57,7 @@ export function Navbar() {
         </nav>
 
         <div className="navbar-actions">
-          <Link to="/signin" className="btn btn-ghost">
-            Sign In
-          </Link>
+          <HandheldAuthLink className="btn btn-ghost">Sign In</HandheldAuthLink>
           <a href="#contact" className="btn btn-outline">
             Contact Sales
           </a>

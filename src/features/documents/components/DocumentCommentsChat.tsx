@@ -16,6 +16,7 @@ import type { DocumentCommentMessage } from '../../../types/documentComments';
 import type { DocumentRecord } from '../../../types/documents';
 import { useAuth } from '../../../context/AuthContext';
 import { useTeamUsers } from '../../../context/TeamUsersContext';
+import { useDocumentChatPresence } from '../hooks/useDocumentChatPresence';
 import './DocumentCommentsChat.css';
 
 interface DocumentCommentsChatProps {
@@ -75,6 +76,19 @@ export function DocumentCommentsChat({
   );
 
   const headerCode = getDocumentChatHeaderCode(documentRecord);
+
+  const { typingUsers, isUserOnline } = useDocumentChatPresence(
+    documentRecord.id,
+    open,
+    draft,
+  );
+
+  const typingLabel =
+    typingUsers.length === 0
+      ? ''
+      : typingUsers.length === 1
+        ? `${typingUsers[0].userName} is typing…`
+        : `${typingUsers.map((entry) => entry.userName).join(' and ')} are typing…`;
 
   const loadMessages = useCallback(async () => {
     setError('');
@@ -157,15 +171,25 @@ export function DocumentCommentsChat({
                 No participants yet. Send a message to start the chat.
               </p>
             ) : (
-              participants.map((person) => (
-                <div key={person.id} className="doc-chat-participant is-active">
-                  <span className="doc-chat-participant-avatar">{getInitials(person.name)}</span>
-                  <div className="doc-chat-participant-body">
-                    <p className="doc-chat-participant-name">{person.name}</p>
-                    <p className="doc-chat-participant-role">{person.roleLabel}</p>
+              participants.map((person) => {
+                const online = isUserOnline(person.email, person.name);
+                return (
+                  <div key={person.id} className="doc-chat-participant is-active">
+                    <span className="doc-chat-participant-avatar-wrap">
+                      <span className="doc-chat-participant-avatar">{getInitials(person.name)}</span>
+                      <span
+                        className={`doc-chat-status-dot ${online ? 'is-online' : 'is-offline'}`}
+                        title={online ? 'Online' : 'Offline'}
+                        aria-hidden
+                      />
+                    </span>
+                    <div className="doc-chat-participant-body">
+                      <p className="doc-chat-participant-name">{person.name}</p>
+                      <p className="doc-chat-participant-role">{person.roleLabel}</p>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </aside>
@@ -213,6 +237,8 @@ export function DocumentCommentsChat({
             )}
             <div ref={messagesEndRef} />
           </div>
+
+          {typingLabel ? <p className="doc-chat-typing">{typingLabel}</p> : null}
 
           <form className="doc-chat-compose" onSubmit={handleSubmit}>
             <input

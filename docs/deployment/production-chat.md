@@ -26,6 +26,10 @@ If Supabase was set up **before** the chat feature, the `document_comments` tabl
 
 5. Sign in on **https://darosims.vercel.app**, open **Chat** or send a message from Document Control — all users on that site share the same threads.
 
+### Online / typing indicators
+
+Run **`backend/supabase/patch-document-chat-presence.sql`** in Supabase (in addition to `document_comments` if needed). Without it, chat works but presence dots and “is typing…” stay disabled.
+
 ## Vercel environment (required for shared data)
 
 In **Vercel → darosims → Settings → Environment Variables** (Production):

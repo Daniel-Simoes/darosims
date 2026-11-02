@@ -73,6 +73,13 @@
   background: rgba(37, 99, 235, 0.22);
 }
 
+.doc-chat-participant-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+}
+
 .doc-chat-participant-avatar {
   width: 40px;
   height: 40px;
@@ -84,7 +91,33 @@
   font-weight: 700;
   background: #334155;
   color: #f8fafc;
-  flex-shrink: 0;
+}
+
+.doc-chat-status-dot {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid #1e293b;
+  box-sizing: border-box;
+}
+
+.doc-chat-status-dot.is-online {
+  background: #22c55e;
+}
+
+.doc-chat-status-dot.is-offline {
+  background: #64748b;
+}
+
+.doc-chat-typing {
+  margin: 0;
+  padding: 6px 16px 0;
+  font-size: 12px;
+  font-style: italic;
+  color: #64748b;
 }
 
 .doc-chat-participant-body {

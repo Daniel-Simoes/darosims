@@ -1,6 +1,11 @@
 import { getSupabaseAdmin } from '@/database/supabase/client';
 
-type JsonTableName = 'documents' | 'notifications' | 'document_events' | 'document_comments';
+type JsonTableName =
+  | 'documents'
+  | 'notifications'
+  | 'document_events'
+  | 'document_comments'
+  | 'document_chat_presence';
 
 export async function fetchAllBodies<T>(table: JsonTableName): Promise<T[]> {
   const { data, error } = await getSupabaseAdmin().from(table).select('body');

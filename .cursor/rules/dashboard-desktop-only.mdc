@@ -17,8 +17,9 @@ The **Daros dashboard** (`/dashboard`) must run only on **desktop computers** (l
 
 - Detection: `src/lib/device/handheldDetection.ts` (`isHandheldDevice`, `getHandheldStorePlatform`).
 - Gate UI: `DashboardMobileGate` — mobile app in development; show **App Store** (iOS/iPadOS) or **Google Play** (Android).
-- Wrap dashboard entry: `DashboardDesktopOnly` around `DashboardPage` in `App.tsx`.
+- Wrap **`/signin`** and **`/dashboard`** with `HandheldWebGate` in `App.tsx`.
+- Marketing CTAs: `HandheldAuthLink` on Sign In buttons (Navbar, Hero, etc.) sends handheld users to `/signin` (gate).
 
-Do **not** remove the gate or add responsive “mobile dashboard” layouts without an explicit product change. Marketing pages (`/`, `/signin`, marketing routes) stay accessible on mobile.
+Do **not** remove the gate or add responsive “mobile dashboard” layouts without an explicit product change. Marketing pages (`/`, marketing routes) stay accessible on mobile; **sign-in and dashboard are not**.
 
 When adding new authenticated app shells, reuse `DashboardDesktopOnly` or the same detection helpers.

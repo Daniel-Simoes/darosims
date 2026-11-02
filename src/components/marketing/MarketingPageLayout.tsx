@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { HandheldAuthLink } from '../auth/HandheldAuthLink';
 import type { MarketingPageContent } from '../../data/marketingPages';
 import { getMarketingCategoryLabel, marketingPagePath } from '../../data/marketingPages';
 import './MarketingPageLayout.css';
@@ -28,9 +29,7 @@ export function MarketingPageLayout({ page, children }: MarketingPageLayoutProps
           <p className="marketing-tagline">{page.tagline}</p>
           <p className="marketing-intro">{page.intro}</p>
           <div className="marketing-hero-actions">
-            <Link to="/signin" className="btn btn-primary">
-              Sign in to Daros
-            </Link>
+            <HandheldAuthLink className="btn btn-primary">Sign in to Daros</HandheldAuthLink>
             <a href="/#demo" className="btn btn-outline">
               Request demo
             </a>

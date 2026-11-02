@@ -5,7 +5,7 @@ import { DarosEntryLoading } from './components/DarosEntryLoading';
 import { HomePage } from './pages/HomePage';
 import { SignInPage } from './pages/SignInPage';
 import { DashboardPage } from './pages/DashboardPage';
-import { DashboardDesktopOnly } from './features/dashboard/components/DashboardDesktopOnly';
+import { HandheldWebGate } from './features/dashboard/components/DashboardDesktopOnly';
 import { MarketingSubPage } from './pages/marketing/MarketingSubPage';
 
 function AppShell() {
@@ -16,15 +16,22 @@ function AppShell() {
       {isEntryLoading ? <DarosEntryLoading /> : null}
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/signin" element={<SignInPage />} />
+        <Route
+          path="/signin"
+          element={
+            <HandheldWebGate>
+              <SignInPage />
+            </HandheldWebGate>
+          }
+        />
         <Route path="/:category/:slug" element={<MarketingSubPage />} />
         <Route
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <DashboardDesktopOnly>
+              <HandheldWebGate>
                 <DashboardPage />
-              </DashboardDesktopOnly>
+              </HandheldWebGate>
             </ProtectedRoute>
           }
         />

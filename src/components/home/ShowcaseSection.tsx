@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { HandheldAuthLink } from '../auth/HandheldAuthLink';
 import { images } from '../../data/images';
 import './ShowcaseSection.css';
 
@@ -38,9 +38,7 @@ export function ShowcaseSection() {
             <div className="showcase-text">
               <h2 className="showcase-title">{item.title}</h2>
               <p className="showcase-description">{item.description}</p>
-              <Link to="/signin" className="showcase-link">
-                Explore the dashboard →
-              </Link>
+              <HandheldAuthLink className="showcase-link">Explore the dashboard →</HandheldAuthLink>
             </div>
             <div className="showcase-image-wrap">
               <img src={item.image} alt={item.alt} className="showcase-image" loading="lazy" />

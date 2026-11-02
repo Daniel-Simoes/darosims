@@ -7,6 +7,7 @@ const SEED_FILES = [
   'notifications.json',
   'document_events.json',
   'document_comments.json',
+  'document_chat_presence.json',
   'users.json',
 ] as const;
 

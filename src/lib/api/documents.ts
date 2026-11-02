@@ -3,6 +3,7 @@ import type {
   DocumentCommentsResponse,
   PostDocumentCommentResponse,
 } from '../../types/documentComments';
+import type { DocumentChatPresenceResponse } from '../../types/documentChatPresence';
 import type {
   CreateDocumentPayload,
   CreateDocumentResponse,
@@ -66,6 +67,17 @@ export const documentsApi = {
     return apiFetch<PostDocumentCommentResponse>(`/api/documents/${id}/comments`, {
       method: 'POST',
       body: JSON.stringify({ text }),
+    });
+  },
+
+  getDocumentChatPresence(id: string) {
+    return apiFetch<DocumentChatPresenceResponse>(`/api/documents/${id}/chat-presence`);
+  },
+
+  postDocumentChatPresence(id: string, isTyping: boolean) {
+    return apiFetch<{ ok: boolean }>(`/api/documents/${id}/chat-presence`, {
+      method: 'POST',
+      body: JSON.stringify({ isTyping }),
     });
   },
 };

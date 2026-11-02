@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { HandheldAuthLink } from '../auth/HandheldAuthLink';
 import { brand } from '../../data/brand';
 import { images } from '../../data/images';
 import './Hero.css';
@@ -24,9 +24,7 @@ export function Hero() {
             <a href="#demo" className="btn btn-primary">
               Request a Demo
             </a>
-            <Link to="/signin" className="btn btn-dark">
-              Sign In to Dashboard
-            </Link>
+            <HandheldAuthLink className="btn btn-dark">Sign In to Dashboard</HandheldAuthLink>
           </div>
 
           <div className="hero-stats">
