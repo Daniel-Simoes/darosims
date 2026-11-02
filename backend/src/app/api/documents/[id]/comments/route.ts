@@ -1,4 +1,7 @@
 import { requireAuth, jsonResponse, corsHeaders } from '@/lib/auth';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 import { chatErrorResponse } from '@/lib/chatApiErrors';
 import { isMissingTableError } from '@/lib/supabaseSchemaCheck';
 import { listDocumentComments, postDocumentComment } from '@/lib/documentComments';

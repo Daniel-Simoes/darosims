@@ -66,25 +66,35 @@ export function useDocumentChatMessages(
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setMessages([]);
+      return;
+    }
 
+    setMessages([]);
     void refreshMessages({ initial: true });
 
     const pollId = window.setInterval(() => {
       void refreshMessages({ silent: true });
     }, POLL_MS);
 
+    function handleRefresh() {
+      void refreshMessages({ silent: true });
+    }
+
     function handleVisibility() {
       if (document.visibilityState === 'visible') {
-        void refreshMessages({ silent: true });
+        handleRefresh();
       }
     }
 
     document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleRefresh);
 
     return () => {
       window.clearInterval(pollId);
       document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleRefresh);
     };
   }, [open, documentId, refreshMessages]);
 

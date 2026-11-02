@@ -2,6 +2,9 @@ import { requireAuth, jsonResponse, corsHeaders } from '@/lib/auth';
 import { chatErrorResponse } from '@/lib/chatApiErrors';
 import { listDocumentChatsForUser } from '@/services/comments/documentChatListService';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders() });
 }

@@ -25,7 +25,11 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 
   let response: Response;
   try {
-    response = await fetch(path, { ...options, headers });
+    response = await fetch(path, {
+      ...options,
+      cache: 'no-store',
+      headers,
+    });
   } catch {
     const onLocalDev =
       typeof window !== 'undefined' &&

@@ -20,7 +20,13 @@ const nextConfig: NextConfig = {
             value: 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
           },
           { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
+          { key: 'Cache-Control', value: 'no-store, max-age=0, must-revalidate' },
+          { key: 'Vary', value: 'Authorization' },
         ],
+      },
+      {
+        source: '/((?!assets/).*)',
+        headers: [{ key: 'Cache-Control', value: 'no-cache' }],
       },
     ];
   },

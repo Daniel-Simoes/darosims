@@ -197,11 +197,12 @@ export function DocumentChatsView({
       <section className="doc-chats-thread-panel">
         {selectedDocument ? (
           <DocumentCommentsChat
+            key={selectedDocument.id}
             documentRecord={selectedDocument}
             open
             layout="embedded"
             onClose={() => setSelectedId(null)}
-            onMessageSent={() => void loadChats()}
+            onMessageSent={() => void loadChats({ silent: true })}
           />
         ) : (
           <div className="doc-chats-thread-placeholder">

@@ -65,6 +65,8 @@ export function corsHeaders() {
     'Access-Control-Allow-Origin': env.corsOrigin,
     'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Cache-Control': 'no-store, max-age=0, must-revalidate',
+    Vary: 'Authorization',
   };
 }
 
