@@ -2,7 +2,10 @@
   display: grid;
   grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
   gap: 0;
-  min-height: calc(100vh - 120px);
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
   background: #f4f6f9;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
@@ -122,6 +125,8 @@
 .doc-chats-thread-panel {
   min-width: 0;
   min-height: 0;
+  height: 100%;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   background: #eceff3;
@@ -146,16 +151,16 @@
 @media (max-width: 900px) {
   .doc-chats-page {
     grid-template-columns: 1fr;
-    min-height: calc(100vh - 100px);
+    grid-template-rows: minmax(0, 38vh) minmax(0, 1fr);
   }
 
   .doc-chats-list-panel {
-    max-height: 42vh;
+    max-height: none;
     border-right: none;
     border-bottom: 1px solid #e2e8f0;
   }
 
   .doc-chats-thread-panel {
-    min-height: 50vh;
+    min-height: 0;
   }
 }

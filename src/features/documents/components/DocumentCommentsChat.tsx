@@ -50,8 +50,15 @@ export function DocumentCommentsChat({
   const teamUsers = useTeamUsers();
   const [draft, setDraft] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const prevMessageCountRef = useRef(0);
+
+  function isNearMessagesBottom(thresholdPx = 80) {
+    const el = messagesScrollRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight <= thresholdPx;
+  }
 
   const {
     messages,
@@ -97,8 +104,10 @@ export function DocumentCommentsChat({
 
   useEffect(() => {
     if (!open) return;
-    if (messages.length > prevMessageCountRef.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const hadMore = messages.length > prevMessageCountRef.current;
+    const isInitialLoad = prevMessageCountRef.current === 0 && messages.length > 0;
+    if (hadMore && (isInitialLoad || isNearMessagesBottom())) {
+      messagesEndRef.current?.scrollIntoView({ behavior: isInitialLoad ? 'auto' : 'smooth' });
     }
     prevMessageCountRef.current = messages.length;
   }, [messages, open]);
@@ -207,7 +216,7 @@ export function DocumentCommentsChat({
 
           {error ? <p className="doc-chat-error">{error}</p> : null}
 
-          <div className="doc-chat-messages">
+          <div className="doc-chat-messages" ref={messagesScrollRef}>
             {isLoading ? (
               <p className="doc-chat-empty">Loading conversation...</p>
             ) : messages.length === 0 ? (

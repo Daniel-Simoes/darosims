@@ -12,8 +12,11 @@
 .doc-chat-shell {
   display: grid;
   grid-template-columns: minmax(240px, 280px) 1fr;
+  grid-template-rows: minmax(0, 1fr);
   width: min(960px, 100%);
   height: min(640px, calc(100vh - 48px));
+  max-height: min(640px, calc(100vh - 48px));
+  min-height: 0;
   background: #eef2f7;
   border-radius: 16px;
   overflow: hidden;
@@ -23,8 +26,8 @@
 .doc-chat-shell-embedded {
   width: 100%;
   height: 100%;
-  min-height: calc(100vh - 120px);
-  max-height: none;
+  max-height: 100%;
+  min-height: 0;
   border-radius: 0;
   box-shadow: none;
 }
@@ -125,6 +128,7 @@
   font-size: 12px;
   font-style: italic;
   color: #64748b;
+  flex-shrink: 0;
 }
 
 .doc-chat-participant-body {
@@ -149,6 +153,8 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  height: 100%;
+  overflow: hidden;
   background: #dfe6ef;
 }
 
@@ -160,6 +166,7 @@
   padding: 16px 20px;
   background: white;
   border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
 }
 
 .doc-chat-topbar-info h2 {
@@ -193,12 +200,16 @@
 }
 
 .doc-chat-messages {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 20px 20px 12px;
   display: flex;
   flex-direction: column;
   gap: 14px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .doc-chat-empty {
@@ -282,6 +293,7 @@
   gap: 10px;
   padding: 14px 18px 18px;
   background: #dfe6ef;
+  flex-shrink: 0;
 }
 
 .doc-chat-input {
@@ -321,6 +333,7 @@
   padding: 8px 18px 0;
   font-size: 12px;
   color: #b91c1c;
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
@@ -331,6 +344,7 @@
   .doc-chat-shell {
     width: 100%;
     height: 100%;
+    max-height: 100%;
     border-radius: 0;
     grid-template-columns: 1fr;
   }
