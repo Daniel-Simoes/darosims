@@ -34,3 +34,10 @@ export async function upsertChatPresence(record: DocumentChatPresenceRecord): Pr
   }
   await fs.writeFile(DOCUMENT_CHAT_PRESENCE_FILE, JSON.stringify(all, null, 2), 'utf-8');
 }
+
+export async function deletePresenceByDocumentId(documentId: string): Promise<void> {
+  const all = await readAllChatPresence();
+  const remaining = all.filter((item) => item.documentId !== documentId);
+  if (remaining.length === all.length) return;
+  await fs.writeFile(DOCUMENT_CHAT_PRESENCE_FILE, JSON.stringify(remaining, null, 2), 'utf-8');
+}

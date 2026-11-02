@@ -6,7 +6,7 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-function isUserInvolvedInDocumentChat(
+export function isUserInvolvedInDocumentChat(
   document: DocumentRecord,
   messages: DocumentCommentMessage[],
   userEmail: string,

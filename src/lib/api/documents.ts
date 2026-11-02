@@ -70,6 +70,12 @@ export const documentsApi = {
     });
   },
 
+  deleteDocumentConversation(id: string) {
+    return apiFetch<{ ok: boolean }>(`/api/documents/${id}/comments`, {
+      method: 'DELETE',
+    });
+  },
+
   getDocumentChatPresence(id: string) {
     return apiFetch<DocumentChatPresenceResponse>(`/api/documents/${id}/chat-presence`);
   },

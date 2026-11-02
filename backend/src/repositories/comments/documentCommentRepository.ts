@@ -13,3 +13,7 @@ export async function readAllDocumentComments() {
 export async function appendDocumentComment(message: Parameters<typeof files.appendDocumentComment>[0]) {
   return repo().appendDocumentComment(message);
 }
+
+export async function deleteCommentsByDocumentId(documentId: string) {
+  return repo().deleteCommentsByDocumentId(documentId);
+}

@@ -13,3 +13,7 @@ export async function readAllChatPresence() {
 export async function upsertChatPresence(record: Parameters<typeof files.upsertChatPresence>[0]) {
   return repo().upsertChatPresence(record);
 }
+
+export async function deletePresenceByDocumentId(documentId: string) {
+  return repo().deletePresenceByDocumentId(documentId);
+}

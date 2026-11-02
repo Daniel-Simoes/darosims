@@ -32,3 +32,12 @@ export async function appendDocumentComment(
   await fs.writeFile(DOCUMENT_COMMENTS_FILE, JSON.stringify(comments, null, 2), 'utf-8');
   return message;
 }
+
+export async function deleteCommentsByDocumentId(documentId: string): Promise<number> {
+  const comments = await readAllDocumentComments();
+  const remaining = comments.filter((item) => item.documentId !== documentId);
+  const removed = comments.length - remaining.length;
+  if (removed === 0) return 0;
+  await fs.writeFile(DOCUMENT_COMMENTS_FILE, JSON.stringify(remaining, null, 2), 'utf-8');
+  return removed;
+}

@@ -1,4 +1,5 @@
 export {
+  deleteDocumentConversation,
   listDocumentComments,
   postDocumentComment,
 } from '@/services/comments/documentCommentService';

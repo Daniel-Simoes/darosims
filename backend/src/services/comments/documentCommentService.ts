@@ -1,6 +1,12 @@
 import { randomUUID } from 'crypto';
 import { getDocumentById } from '@/lib/documents';
-import { appendDocumentComment, readAllDocumentComments } from '@/repositories/comments/documentCommentRepository';
+import {
+  appendDocumentComment,
+  deleteCommentsByDocumentId,
+  readAllDocumentComments,
+} from '@/repositories/comments/documentCommentRepository';
+import { deletePresenceByDocumentId } from '@/repositories/presence/documentChatPresenceRepository';
+import { isUserInvolvedInDocumentChat } from '@/services/comments/documentChatListService';
 import { notifyDocumentCommentRecipients } from '@/services/comments/documentCommentNotifications';
 import type { DocumentCommentMessage } from '@/types';
 
@@ -53,4 +59,31 @@ export async function postDocumentComment(
   );
 
   return saved;
+}
+
+export async function deleteDocumentConversation(
+  documentId: string,
+  userEmail: string,
+  userName: string,
+): Promise<void> {
+  const document = await getDocumentById(documentId);
+  if (!document) {
+    throw new Error('Document not found');
+  }
+
+  const messages = await listDocumentComments(documentId);
+  if (messages.length === 0) {
+    throw new Error('Conversation is already empty');
+  }
+
+  if (!isUserInvolvedInDocumentChat(document, messages, userEmail, userName)) {
+    throw new Error('You do not have access to this conversation');
+  }
+
+  await deleteCommentsByDocumentId(documentId);
+  try {
+    await deletePresenceByDocumentId(documentId);
+  } catch {
+    /* presence table optional */
+  }
 }
