@@ -5,6 +5,7 @@ import { DarosEntryLoading } from './components/DarosEntryLoading';
 import { HomePage } from './pages/HomePage';
 import { SignInPage } from './pages/SignInPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { DashboardDesktopOnly } from './features/dashboard/components/DashboardDesktopOnly';
 import { MarketingSubPage } from './pages/marketing/MarketingSubPage';
 
 function AppShell() {
@@ -21,7 +22,9 @@ function AppShell() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <DashboardPage />
+              <DashboardDesktopOnly>
+                <DashboardPage />
+              </DashboardDesktopOnly>
             </ProtectedRoute>
           }
         />

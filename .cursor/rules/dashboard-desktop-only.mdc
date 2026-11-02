@@ -1,0 +1,24 @@
+---
+description: Dashboard is desktop-only; block phones and tablets with mobile gate UI
+globs: src/pages/dashboard/**/*,src/features/dashboard/**/*
+alwaysApply: false
+---
+
+# Dashboard — desktop only
+
+The **Daros dashboard** (`/dashboard`) must run only on **desktop computers** (laptops/desktops).
+
+## Product rule
+
+- **Allow:** desktop browsers (fine pointer, no phone/tablet UA).
+- **Block:** phones, tablets, and touch-first devices (including iPad with desktop UA).
+
+## Implementation
+
+- Detection: `src/lib/device/handheldDetection.ts` (`isHandheldDevice`, `getHandheldStorePlatform`).
+- Gate UI: `DashboardMobileGate` — mobile app in development; show **App Store** (iOS/iPadOS) or **Google Play** (Android).
+- Wrap dashboard entry: `DashboardDesktopOnly` around `DashboardPage` in `App.tsx`.
+
+Do **not** remove the gate or add responsive “mobile dashboard” layouts without an explicit product change. Marketing pages (`/`, `/signin`, marketing routes) stay accessible on mobile.
+
+When adding new authenticated app shells, reuse `DashboardDesktopOnly` or the same detection helpers.
