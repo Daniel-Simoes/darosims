@@ -73,7 +73,7 @@ export function buildDocumentChatParticipants(
     addParticipant(document.owner, document.owner, 'approver', 'Document owner');
   }
 
-  if (document.approvedBy?.trim()) {
+  if (document.status === 'Active' && document.approvedBy?.trim()) {
     addParticipant(document.approvedBy, document.approvedBy, 'approver', 'Approved document');
   }
 

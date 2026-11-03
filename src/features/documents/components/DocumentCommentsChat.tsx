@@ -6,8 +6,9 @@ import {
   getChatParticipantsForViewer,
   getDocumentChatHeaderCode,
 } from '../../../lib/documents/documentChatParticipants';
-import type { ChatPeer } from '../../../lib/documents/documentChatPeers';
 import type { DocumentRecord } from '../../../types/documents';
+import type { DocumentChatParticipant } from '../../../types/documentComments';
+import { ChatAvatarStack } from '../../chat/components/ChatAvatarStack';
 import { useAuth } from '../../../context/AuthContext';
 import { useTeamUsers } from '../../../context/TeamUsersContext';
 import {
@@ -29,7 +30,6 @@ interface DocumentCommentsChatProps {
   layout?: 'modal' | 'embedded';
   onMessageSent?: () => void;
   onConversationDeleted?: () => void;
-  headerPeers?: ChatPeer[];
 }
 
 export function DocumentCommentsChat({
@@ -39,7 +39,6 @@ export function DocumentCommentsChat({
   layout = 'modal',
   onMessageSent,
   onConversationDeleted,
-  headerPeers = [],
 }: DocumentCommentsChatProps) {
   const { user } = useAuth();
   const teamUsers = useTeamUsers();
@@ -82,13 +81,20 @@ export function DocumentCommentsChat({
 
   const headerCode = getDocumentChatHeaderCode(documentRecord);
 
-  const primaryPeer = headerPeers[0] ?? participants[0] ?? null;
-  const peerSubtitle =
-    participants.length === 1
-      ? participants[0].roleLabel
-      : participants.length > 1
-        ? `${participants.length} participants`
-        : headerCode;
+  const participantPeers = useMemo(
+    () =>
+      participants.map((person) => ({
+        name: person.name,
+        email: person.email,
+        photoUrl: teamUsers.find(
+          (member) =>
+            (person.email &&
+              member.email.trim().toLowerCase() === person.email.trim().toLowerCase()) ||
+            member.name.trim().toLowerCase() === person.name.trim().toLowerCase(),
+        )?.photoUrl,
+      })),
+    [participants, teamUsers],
+  );
 
   const { typingUsers, isUserOnline, presenceAvailable } = useDocumentChatPresence(
     documentRecord.id,
@@ -209,8 +215,33 @@ export function DocumentCommentsChat({
 
   if (!open) return null;
 
-  const peerOnline = primaryPeer ? isUserOnline(primaryPeer.email, primaryPeer.name) : false;
-  const peerTone = getAvatarTone(primaryPeer?.email || primaryPeer?.name || documentRecord.title);
+  function renderParticipantChip(person: DocumentChatParticipant) {
+    const online = isUserOnline(person.email, person.name);
+    const tone = getAvatarTone(person.email || person.name);
+    const photoUrl = teamUsers.find(
+      (member) =>
+        (person.email && member.email.trim().toLowerCase() === person.email.trim().toLowerCase()) ||
+        member.name.trim().toLowerCase() === person.name.trim().toLowerCase(),
+    )?.photoUrl;
+
+    return (
+      <div key={person.id} className="doc-chat-people-chip" title={person.roleLabel}>
+        <span className={`doc-chat-people-chip-avatar doc-chat-header-avatar--${tone}`}>
+          {photoUrl ? <img src={photoUrl} alt="" /> : getChatInitials(person.name)}
+          {presenceAvailable ? (
+            <span
+              className={`doc-chat-status-dot ${online ? 'is-online' : 'is-offline'}`}
+              aria-hidden
+            />
+          ) : null}
+        </span>
+        <span className="doc-chat-people-chip-text">
+          <span className="doc-chat-people-chip-name">{person.name}</span>
+          <span className="doc-chat-people-chip-role">{person.roleLabel}</span>
+        </span>
+      </div>
+    );
+  }
 
   const shell = (
     <div
@@ -223,22 +254,16 @@ export function DocumentCommentsChat({
       <div className="doc-chat-main">
         <header className="doc-chat-topbar">
           <div className="doc-chat-topbar-left">
-            <span className={`doc-chat-header-avatar doc-chat-header-avatar--${peerTone}`}>
-              {primaryPeer?.photoUrl ? (
-                <img src={primaryPeer.photoUrl} alt="" />
-              ) : (
-                getChatInitials(primaryPeer?.name ?? documentRecord.title)
-              )}
-              {presenceAvailable ? (
-                <span
-                  className={`doc-chat-status-dot ${peerOnline ? 'is-online' : 'is-offline'}`}
-                  aria-hidden
-                />
-              ) : null}
-            </span>
+            <ChatAvatarStack
+              peers={
+                participantPeers.length > 0
+                  ? participantPeers
+                  : [{ name: documentRecord.title }]
+              }
+              size="lg"
+            />
             <div className="doc-chat-topbar-info">
               <h2>{documentRecord.title}</h2>
-              <p>{peerSubtitle}</p>
               <span className="doc-chat-topbar-code">{headerCode}</span>
             </div>
           </div>
@@ -283,6 +308,16 @@ export function DocumentCommentsChat({
             ) : null}
           </div>
         </header>
+
+        <div className="doc-chat-people-bar" aria-label="People in this chat">
+          {participants.length === 0 ? (
+            <p className="doc-chat-people-empty">
+              No other participants yet. Messages will show who is in this document chat.
+            </p>
+          ) : (
+            participants.map((person) => renderParticipantChip(person))
+          )}
+        </div>
 
         {error ? <p className="doc-chat-error">{error}</p> : null}
 

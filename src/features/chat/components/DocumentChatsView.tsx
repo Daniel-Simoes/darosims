@@ -193,8 +193,6 @@ export function DocumentChatsView({
     return sender !== me && !sender.includes(currentEmail.split('@')[0]);
   }
 
-  const selectedPeers = selectedId ? peerCache[selectedId] ?? [] : [];
-
   return (
     <div className="doc-chats-page">
       <aside className="doc-chats-list-panel">
@@ -291,7 +289,11 @@ export function DocumentChatsView({
                 onClick={() => setSelectedId(chat.documentId)}
               >
                 <ChatAvatarStack peers={peers.length ? peers : [{ name: chat.documentTitle, email: '' }]} size="md" />
-                <span className="doc-chat-tab-label">{truncate(chat.documentTitle, 28)}</span>
+                <span className="doc-chat-tab-label">
+                  {peers.length > 0
+                    ? truncate(peers.map((peer) => peer.name).join(', '), 32)
+                    : truncate(chat.documentTitle, 28)}
+                </span>
                 <span
                   role="button"
                   tabIndex={0}
@@ -331,7 +333,6 @@ export function DocumentChatsView({
             documentRecord={selectedDocument}
             open
             layout="embedded"
-            headerPeers={selectedPeers}
             onClose={() => closeTab(selectedDocument.id)}
             onMessageSent={() => void loadChats({ silent: true })}
             onConversationDeleted={() => handleConversationDeleted(selectedDocument.id)}
