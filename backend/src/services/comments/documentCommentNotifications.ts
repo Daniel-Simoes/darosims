@@ -13,12 +13,20 @@ async function resolveRecipientEmail(value: string | undefined): Promise<string 
   return findUserEmailByName(value);
 }
 
+/**
+ * Only the first message in a thread triggers an in-app/bell notification (chat opened).
+ * Further messages are surfaced via the Chat sidebar badge on the client.
+ */
 export async function notifyDocumentCommentRecipients(
   document: DocumentRecord,
   existingMessages: DocumentCommentMessage[],
   senderEmail: string,
   senderName: string,
 ): Promise<void> {
+  if (existingMessages.length > 0) {
+    return;
+  }
+
   const sender = normalizeEmail(senderEmail);
   const recipients = new Set<string>();
 
@@ -30,17 +38,18 @@ export async function notifyDocumentCommentRecipients(
   }
 
   await addRecipient(document.createdBy);
-  await addRecipient(document.approvedBy);
-  const ownerEmail = await resolveDocumentOwnerEmail(document.owner);
-  await addRecipient(ownerEmail ?? undefined);
 
-  for (const message of existingMessages) {
-    recipients.add(normalizeEmail(message.senderEmail));
+  if (document.status === 'Active' && document.approvedBy?.trim()) {
+    await addRecipient(document.approvedBy);
+  } else if (document.owner?.trim()) {
+    await addRecipient(document.owner);
+    const ownerEmail = await resolveDocumentOwnerEmail(document.owner);
+    await addRecipient(ownerEmail ?? undefined);
   }
-  recipients.delete(sender);
 
   const subject = document.title.trim() || 'Document';
-  const body = `${senderName.trim() || senderEmail} sent you a message. Subject: ${subject}`;
+  const opener = senderName.trim() || senderEmail;
+  const body = `${opener} opened a chat for this document. Open Chat to reply.`;
 
   await Promise.all(
     [...recipients].map((recipientEmail) =>
@@ -48,9 +57,9 @@ export async function notifyDocumentCommentRecipients(
         recipientEmail,
         documentId: document.id,
         type: 'document_message',
-        title: subject,
+        title: `Chat opened — ${subject}`,
         message: body,
-        actorName: senderName.trim() || senderEmail,
+        actorName: opener,
       }),
     ),
   );

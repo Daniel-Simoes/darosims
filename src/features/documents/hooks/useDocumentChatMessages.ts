@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../../../lib/api';
 import type { DocumentCommentMessage } from '../../../types/documentComments';
+import { notifyChatActivity } from '../../chat/lib/chatUnread';
 
 const POLL_MS = 3_000;
 
@@ -42,6 +43,7 @@ export function useDocumentChatMessages(
           if (sameMessageList(prev, data)) return prev;
           if (!initial && data.length > prev.length) {
             onMessagesChangedRef.current?.();
+            notifyChatActivity();
           }
           return data;
         });

@@ -18,6 +18,7 @@ import {
   getChatInitials,
 } from '../../chat/lib/chatUiUtils';
 import { markChatRead } from '../../chat/lib/chatReadState';
+import { notifyChatActivity } from '../../chat/lib/chatUnread';
 import { useDocumentChatMessages } from '../hooks/useDocumentChatMessages';
 import { useDocumentChatPresence } from '../hooks/useDocumentChatPresence';
 import './DocumentCommentsChat.css';
@@ -169,6 +170,7 @@ export function DocumentCommentsChat({
       const { message } = await api.postDocumentComment(documentRecord.id, text);
       appendMessage(message);
       setDraft('');
+      notifyChatActivity();
       onMessageSent?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send message');

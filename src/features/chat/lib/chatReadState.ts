@@ -1,5 +1,8 @@
 const STORAGE_KEY = 'daros_chat_last_read';
 
+export const CHAT_READ_EVENT = 'daros-chat-read';
+export const CHAT_ACTIVITY_EVENT = 'daros-chat-activity';
+
 type ReadMap = Record<string, string>;
 
 function loadMap(): ReadMap {
@@ -20,6 +23,7 @@ export function markChatRead(documentId: string, atIso?: string) {
   const map = loadMap();
   map[documentId] = atIso ?? new Date().toISOString();
   saveMap(map);
+  window.dispatchEvent(new CustomEvent(CHAT_READ_EVENT, { detail: { documentId } }));
 }
 
 export function getChatLastRead(documentId: string): string | null {

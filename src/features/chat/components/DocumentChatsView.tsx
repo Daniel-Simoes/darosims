@@ -6,7 +6,9 @@ import { DocumentCommentsChat } from '../../documents/components/DocumentComment
 import { useAuth } from '../../../context/AuthContext';
 import { useTeamUsers } from '../../../context/TeamUsersContext';
 import { getOtherChatPeers } from '../../../lib/documents/documentChatPeers';
-import { clearChatRead, getChatLastRead } from '../lib/chatReadState';
+import { CHAT_ACTIVITY_EVENT, CHAT_READ_EVENT, clearChatRead } from '../lib/chatReadState';
+import { countUnreadChatMessages } from '../lib/chatUnread';
+import type { DocumentCommentMessage } from '../../../types/documentComments';
 import { formatChatListTime, getAvatarTone, getChatInitials } from '../lib/chatUiUtils';
 import { ChatAvatarStack } from './ChatAvatarStack';
 import './DocumentChatsView.css';
@@ -40,6 +42,7 @@ export function DocumentChatsView({
   const [selectedId, setSelectedId] = useState<string | null>(initialDocumentId ?? null);
   const [selectedDocument, setSelectedDocument] = useState<DocumentRecord | null>(null);
   const [peerCache, setPeerCache] = useState<Record<string, ReturnType<typeof getOtherChatPeers>>>({});
+  const [messagesCache, setMessagesCache] = useState<Record<string, DocumentCommentMessage[]>>({});
 
   const loadChats = useCallback(async (opts?: { silent?: boolean }) => {
     const silent = opts?.silent ?? false;
@@ -103,39 +106,51 @@ export function DocumentChatsView({
     };
   }, [selectedId, refreshKey]);
 
-  useEffect(() => {
+  const refreshChatMeta = useCallback(async () => {
     if (!user || chats.length === 0) return;
 
-    let cancelled = false;
+    const nextPeers: Record<string, ReturnType<typeof getOtherChatPeers>> = {};
+    const nextMessages: Record<string, DocumentCommentMessage[]> = {};
+    await Promise.all(
+      chats.map(async (chat) => {
+        try {
+          const [{ document }, { messages }] = await Promise.all([
+            api.getDocument(chat.documentId),
+            api.getDocumentComments(chat.documentId),
+          ]);
+          nextMessages[chat.documentId] = messages;
+          nextPeers[chat.documentId] = getOtherChatPeers(
+            document,
+            messages,
+            { email: user.email, name: user.name },
+            teamUsers,
+          );
+        } catch {
+          nextPeers[chat.documentId] = [];
+          nextMessages[chat.documentId] = [];
+        }
+      }),
+    );
+    setPeerCache(nextPeers);
+    setMessagesCache(nextMessages);
+  }, [chats, teamUsers, user]);
 
-    async function loadPeers() {
-      const next: Record<string, ReturnType<typeof getOtherChatPeers>> = {};
-      await Promise.all(
-        chats.map(async (chat) => {
-          try {
-            const [{ document }, { messages }] = await Promise.all([
-              api.getDocument(chat.documentId),
-              api.getDocumentComments(chat.documentId),
-            ]);
-            next[chat.documentId] = getOtherChatPeers(
-              document,
-              messages,
-              { email: user!.email, name: user!.name },
-              teamUsers,
-            );
-          } catch {
-            next[chat.documentId] = [];
-          }
-        }),
-      );
-      if (!cancelled) setPeerCache(next);
+  useEffect(() => {
+    void refreshChatMeta();
+  }, [refreshChatMeta]);
+
+  useEffect(() => {
+    function handleRefresh() {
+      void refreshChatMeta();
     }
 
-    void loadPeers();
+    window.addEventListener(CHAT_READ_EVENT, handleRefresh);
+    window.addEventListener(CHAT_ACTIVITY_EVENT, handleRefresh);
     return () => {
-      cancelled = true;
+      window.removeEventListener(CHAT_READ_EVENT, handleRefresh);
+      window.removeEventListener(CHAT_ACTIVITY_EVENT, handleRefresh);
     };
-  }, [chats, teamUsers, user]);
+  }, [refreshChatMeta]);
 
   const filteredChats = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -163,13 +178,9 @@ export function DocumentChatsView({
     void loadChats({ silent: true });
   }
 
-  function isUnread(chat: DocumentChatSummary) {
-    const lastRead = getChatLastRead(chat.documentId);
-    if (!lastRead) return true;
-    if (chat.lastMessageAt <= lastRead) return false;
-    const sender = chat.lastSenderName.trim().toLowerCase();
-    const me = user?.name?.trim().toLowerCase() ?? '';
-    return sender !== me && !sender.includes(currentEmail.split('@')[0]);
+  function unreadCountForChat(documentId: string) {
+    const messages = messagesCache[documentId] ?? [];
+    return countUnreadChatMessages(messages, documentId, currentEmail);
   }
 
   return (
@@ -190,14 +201,14 @@ export function DocumentChatsView({
             {filteredChats.map((chat) => {
               const peers = peerCache[chat.documentId] ?? [];
               const isActive = chat.documentId === selectedId;
-              const unread = isUnread(chat);
+              const unreadCount = unreadCountForChat(chat.documentId);
               const primaryPeer = peers[0];
               const tone = getAvatarTone(primaryPeer?.email || primaryPeer?.name || chat.documentTitle);
               return (
                 <li key={chat.documentId}>
                   <button
                     type="button"
-                    className={`doc-chats-list-item ${isActive ? 'is-active' : ''} ${unread ? 'is-unread' : ''}`}
+                    className={`doc-chats-list-item ${isActive ? 'is-active' : ''} ${unreadCount > 0 ? 'is-unread' : ''}`}
                     onClick={() => setSelectedId(chat.documentId)}
                   >
                     {peers.length > 1 ? (
@@ -221,7 +232,11 @@ export function DocumentChatsView({
                       </p>
                       <span className="doc-chats-list-code">{chat.documentCode}</span>
                     </div>
-                    {unread ? <span className="doc-chats-unread-dot" aria-label="Unread" /> : null}
+                    {unreadCount > 0 ? (
+                      <span className="doc-chats-unread-badge" aria-label={`${unreadCount} unread messages`}>
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    ) : null}
                   </button>
                 </li>
               );

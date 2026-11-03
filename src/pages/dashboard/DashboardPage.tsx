@@ -31,6 +31,7 @@ import { TeamUsersProvider } from '../../context/TeamUsersContext';
 import { ProfileSettingsView } from '../../features/users/components/ProfileSettingsView';
 import { DocumentChatsView } from '../../features/chat/components/DocumentChatsView';
 import { ChatHeaderSearch } from '../../features/chat/components/ChatHeaderSearch';
+import { useChatUnreadBadge } from '../../features/chat/hooks/useChatUnreadBadge';
 import './DashboardPage.css';
 
 function DashboardOverview({
@@ -109,6 +110,7 @@ export function DashboardPage() {
   const [chatDocumentId, setChatDocumentId] = useState<string | null>(null);
   const [chatSearch, setChatSearch] = useState('');
   const [chatCount, setChatCount] = useState(0);
+  const chatUnreadBadge = useChatUnreadBadge(notificationsRefreshKey);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -265,6 +267,7 @@ export function DashboardPage() {
         isCollapsed={isSidebarCollapsed}
         onClose={() => setSidebarOpen(false)}
         onHoverChange={handleSidebarHoverChange}
+        chatUnreadCount={chatUnreadBadge}
       />
 
       <div className="dashboard-main">

@@ -12,6 +12,7 @@ interface DashboardSidebarProps {
   isCollapsed: boolean;
   onClose: () => void;
   onHoverChange?: (hovered: boolean) => void;
+  chatUnreadCount?: number;
 }
 
 export function DashboardSidebar({
@@ -21,6 +22,7 @@ export function DashboardSidebar({
   isCollapsed,
   onClose,
   onHoverChange,
+  chatUnreadCount = 0,
 }: DashboardSidebarProps) {
   function handleNavClick(id: string) {
     onNavChange(id);
@@ -82,6 +84,11 @@ export function DashboardSidebar({
                     <SidebarIcon name={item.icon} />
                   </span>
                   {!isCollapsed && item.label}
+                  {item.id === 'chat' && chatUnreadCount > 0 ? (
+                    <span className="dash-sidebar-chat-badge" aria-label={`${chatUnreadCount} unread chat messages`}>
+                      {chatUnreadCount > 99 ? '99+' : chatUnreadCount}
+                    </span>
+                  ) : null}
                 </button>
               ))}
             </div>
