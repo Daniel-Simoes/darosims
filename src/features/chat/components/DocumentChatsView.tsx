@@ -37,9 +37,6 @@ export function DocumentChatsView({
   const [chats, setChats] = useState<DocumentChatSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [openTabIds, setOpenTabIds] = useState<string[]>(() =>
-    initialDocumentId ? [initialDocumentId] : [],
-  );
   const [selectedId, setSelectedId] = useState<string | null>(initialDocumentId ?? null);
   const [selectedDocument, setSelectedDocument] = useState<DocumentRecord | null>(null);
   const [peerCache, setPeerCache] = useState<Record<string, ReturnType<typeof getOtherChatPeers>>>({});
@@ -82,9 +79,6 @@ export function DocumentChatsView({
   useEffect(() => {
     if (!initialDocumentId) return;
     setSelectedId(initialDocumentId);
-    setOpenTabIds((prev) =>
-      prev.includes(initialDocumentId) ? prev : [...prev, initialDocumentId],
-    );
     onConversationOpened?.();
   }, [initialDocumentId, onConversationOpened]);
 
@@ -159,35 +153,13 @@ export function DocumentChatsView({
     });
   }, [chats, search]);
 
-  const tabSummaries = useMemo(
-    () =>
-      openTabIds
-        .map((id) => chats.find((chat) => chat.documentId === id))
-        .filter((item): item is DocumentChatSummary => Boolean(item)),
-    [chats, openTabIds],
-  );
-
   const currentEmail = user?.email?.trim().toLowerCase() ?? '';
-
-  function selectConversation(documentId: string) {
-    setSelectedId(documentId);
-    setOpenTabIds((prev) => (prev.includes(documentId) ? prev : [...prev, documentId]));
-  }
-
-  function closeTab(documentId: string) {
-    setOpenTabIds((prev) => {
-      const next = prev.filter((id) => id !== documentId);
-      if (selectedId === documentId) {
-        const fallback = next[next.length - 1] ?? null;
-        setSelectedId(fallback);
-      }
-      return next;
-    });
-  }
 
   function handleConversationDeleted(documentId: string) {
     clearChatRead(documentId);
-    closeTab(documentId);
+    if (selectedId === documentId) {
+      setSelectedId(null);
+    }
     void loadChats({ silent: true });
   }
 
@@ -226,7 +198,7 @@ export function DocumentChatsView({
                   <button
                     type="button"
                     className={`doc-chats-list-item ${isActive ? 'is-active' : ''} ${unread ? 'is-unread' : ''}`}
-                    onClick={() => selectConversation(chat.documentId)}
+                    onClick={() => setSelectedId(chat.documentId)}
                   >
                     {peers.length > 1 ? (
                       <ChatAvatarStack peers={peers} />
@@ -259,70 +231,20 @@ export function DocumentChatsView({
       </aside>
 
       <section className="doc-chats-thread-panel">
-        <div className="doc-chat-tabbar">
-          {tabSummaries.map((chat) => {
-            const peers = peerCache[chat.documentId] ?? [];
-            const isActive = chat.documentId === selectedId;
-            return (
-              <button
-                key={chat.documentId}
-                type="button"
-                className={`doc-chat-tab ${isActive ? 'is-active' : ''}`}
-                onClick={() => setSelectedId(chat.documentId)}
-              >
-                <ChatAvatarStack peers={peers.length ? peers : [{ name: chat.documentTitle, email: '' }]} size="md" />
-                <span className="doc-chat-tab-label">
-                  {peers.length > 0
-                    ? truncate(peers.map((peer) => peer.name).join(', '), 32)
-                    : truncate(chat.documentTitle, 28)}
-                </span>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  className="doc-chat-tab-close"
-                  aria-label={`Close ${chat.documentTitle}`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    closeTab(chat.documentId);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      closeTab(chat.documentId);
-                    }
-                  }}
-                >
-                  ×
-                </span>
-              </button>
-            );
-          })}
-          <button
-            type="button"
-            className="doc-chat-tab-add"
-            aria-label="Open another conversation"
-            title="Pick a conversation from the list"
-            onClick={() => setSelectedId(null)}
-          >
-            +
-          </button>
-        </div>
-
         {selectedDocument ? (
           <DocumentCommentsChat
             key={selectedDocument.id}
             documentRecord={selectedDocument}
             open
             layout="embedded"
-            onClose={() => closeTab(selectedDocument.id)}
+            onClose={() => setSelectedId(null)}
             onMessageSent={() => void loadChats({ silent: true })}
             onConversationDeleted={() => handleConversationDeleted(selectedDocument.id)}
           />
         ) : (
           <div className="doc-chats-thread-placeholder">
             <h3>Select a conversation</h3>
-            <p>Choose a document chat on the left or open a tab to read and reply.</p>
+            <p>Choose a document chat on the left to read and reply.</p>
           </div>
         )}
       </section>
