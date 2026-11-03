@@ -91,6 +91,46 @@
   flex-shrink: 0;
 }
 
+.dashboard-layout-chat {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+}
+
+.dashboard-layout-chat .dashboard-main {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dashboard-header-chat {
+  flex-wrap: nowrap;
+}
+
+.dashboard-header-chat-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
+.dashboard-content-chat {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
 .dashboard-user {
   display: flex;
   align-items: center;

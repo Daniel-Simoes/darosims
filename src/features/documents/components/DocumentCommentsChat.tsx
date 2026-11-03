@@ -8,7 +8,6 @@ import {
 } from '../../../lib/documents/documentChatParticipants';
 import type { DocumentRecord } from '../../../types/documents';
 import type { DocumentChatParticipant } from '../../../types/documentComments';
-import { ChatAvatarStack } from '../../chat/components/ChatAvatarStack';
 import { useAuth } from '../../../context/AuthContext';
 import { useTeamUsers } from '../../../context/TeamUsersContext';
 import {
@@ -80,21 +79,6 @@ export function DocumentCommentsChat({
   );
 
   const headerCode = getDocumentChatHeaderCode(documentRecord);
-
-  const participantPeers = useMemo(
-    () =>
-      participants.map((person) => ({
-        name: person.name,
-        email: person.email,
-        photoUrl: teamUsers.find(
-          (member) =>
-            (person.email &&
-              member.email.trim().toLowerCase() === person.email.trim().toLowerCase()) ||
-            member.name.trim().toLowerCase() === person.name.trim().toLowerCase(),
-        )?.photoUrl,
-      })),
-    [participants, teamUsers],
-  );
 
   const { typingUsers, isUserOnline, presenceAvailable } = useDocumentChatPresence(
     documentRecord.id,
@@ -254,14 +238,6 @@ export function DocumentCommentsChat({
       <div className="doc-chat-main">
         <header className="doc-chat-topbar">
           <div className="doc-chat-topbar-left">
-            <ChatAvatarStack
-              peers={
-                participantPeers.length > 0
-                  ? participantPeers
-                  : [{ name: documentRecord.title }]
-              }
-              size="lg"
-            />
             <div className="doc-chat-topbar-info">
               <h2>{documentRecord.title}</h2>
               <span className="doc-chat-topbar-code">{headerCode}</span>

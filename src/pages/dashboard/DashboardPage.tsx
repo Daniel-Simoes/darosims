@@ -30,6 +30,7 @@ import { useAuth } from '../../features/authentication/context/AuthContext';
 import { TeamUsersProvider } from '../../context/TeamUsersContext';
 import { ProfileSettingsView } from '../../features/users/components/ProfileSettingsView';
 import { DocumentChatsView } from '../../features/chat/components/DocumentChatsView';
+import { ChatHeaderSearch } from '../../features/chat/components/ChatHeaderSearch';
 import './DashboardPage.css';
 
 function DashboardOverview({
@@ -106,6 +107,8 @@ export function DashboardPage() {
   const [historyFilterDocumentId, setHistoryFilterDocumentId] = useState<string | undefined>();
   const [profileReturnNav, setProfileReturnNav] = useState('dashboard');
   const [chatDocumentId, setChatDocumentId] = useState<string | null>(null);
+  const [chatSearch, setChatSearch] = useState('');
+  const [chatCount, setChatCount] = useState(0);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -212,6 +215,7 @@ export function DashboardPage() {
     }
     if (id !== 'chat') {
       setChatDocumentId(null);
+      setChatSearch('');
     }
     setActiveNav(id);
   }
@@ -252,7 +256,7 @@ export function DashboardPage() {
   return (
     <TeamUsersProvider>
     <div
-      className={`dashboard-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}
+      className={`dashboard-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''} ${isChat ? 'dashboard-layout-chat' : ''}`}
     >
       <DashboardSidebar
         activeNav={sidebarActiveNav}
@@ -265,7 +269,7 @@ export function DashboardPage() {
 
       <div className="dashboard-main">
         {!isDocumentDetail && (
-        <header className="dashboard-header">
+        <header className={`dashboard-header ${isChat ? 'dashboard-header-chat' : ''}`}>
           <div className="dashboard-header-left">
             <button
               type="button"
@@ -277,8 +281,21 @@ export function DashboardPage() {
                 <path d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <h1 className="dashboard-header-title">{pageTitle}</h1>
+            <h1 className="dashboard-header-title">
+              {isChat ? (
+                <>
+                  Chat
+                  <span className="dashboard-header-chat-count" aria-label={`${chatCount} conversations`}>
+                    {chatCount}
+                  </span>
+                </>
+              ) : (
+                pageTitle
+              )}
+            </h1>
           </div>
+
+          {isChat ? <ChatHeaderSearch value={chatSearch} onChange={setChatSearch} /> : null}
 
           <div className="dashboard-header-actions">
             <DashboardHeaderActions
@@ -292,7 +309,7 @@ export function DashboardPage() {
         </header>
         )}
 
-        <main className={`dashboard-content ${isDocumentView || isDocumentDetail || isChat || isNotifications || isNotificationHistory || isProfileSettings ? 'dashboard-content-full' : ''}`}>
+        <main className={`dashboard-content ${isDocumentView || isDocumentDetail || isChat || isNotifications || isNotificationHistory || isProfileSettings ? 'dashboard-content-full' : ''} ${isChat ? 'dashboard-content-chat' : ''}`}>
           {isProfileSettings ? (
             <ProfileSettingsView onBack={() => setActiveNav(profileReturnNav)} />
           ) : isNewDocument ? (
@@ -337,6 +354,8 @@ export function DashboardPage() {
               refreshKey={notificationsRefreshKey}
               initialDocumentId={chatDocumentId}
               onConversationOpened={clearChatDeepLink}
+              search={chatSearch}
+              onChatCountChange={setChatCount}
             />
           ) : isNotifications ? (
             <NotificationsView

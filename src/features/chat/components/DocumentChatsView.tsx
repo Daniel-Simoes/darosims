@@ -21,19 +21,22 @@ interface DocumentChatsViewProps {
   refreshKey: number;
   initialDocumentId?: string | null;
   onConversationOpened?: () => void;
+  search: string;
+  onChatCountChange?: (count: number) => void;
 }
 
 export function DocumentChatsView({
   refreshKey,
   initialDocumentId,
   onConversationOpened,
+  search,
+  onChatCountChange,
 }: DocumentChatsViewProps) {
   const { user } = useAuth();
   const teamUsers = useTeamUsers();
   const [chats, setChats] = useState<DocumentChatSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
   const [openTabIds, setOpenTabIds] = useState<string[]>(() =>
     initialDocumentId ? [initialDocumentId] : [],
   );
@@ -64,6 +67,10 @@ export function DocumentChatsView({
   useEffect(() => {
     void loadChats();
   }, [loadChats, refreshKey]);
+
+  useEffect(() => {
+    onChatCountChange?.(chats.length);
+  }, [chats.length, onChatCountChange]);
 
   useEffect(() => {
     const pollId = window.setInterval(() => {
@@ -196,31 +203,6 @@ export function DocumentChatsView({
   return (
     <div className="doc-chats-page">
       <aside className="doc-chats-list-panel">
-        <div className="doc-chats-list-head">
-          <div className="doc-chats-list-head-row">
-            <h2>Conversations</h2>
-            <span className="doc-chats-count-badge">{chats.length}</span>
-          </div>
-          <div className="doc-chats-search-wrap">
-            <svg className="doc-chats-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.3-4.3" />
-            </svg>
-            <input
-              type="search"
-              className="doc-chats-search"
-              placeholder="Search conversations..."
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-            <button type="button" className="doc-chats-filter-btn" aria-label="Filter" title="Filter">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
         {error ? <p className="doc-chats-list-error">{error}</p> : null}
 
         {loading ? (
