@@ -47,7 +47,7 @@
 .doc-chats-list-item {
   width: 100%;
   display: flex;
-  gap: 12px;
+  gap: 14px;
   align-items: flex-start;
   padding: 12px 10px;
   border: none;

@@ -58,7 +58,7 @@ const NEW_DOCUMENT_FIELD_HELP = {
   documentOrigin:
     'Internal documents are created and owned by your organisation. External documents are issued by another party; here you register a reference copy for control and traceability in DAROS.',
   documentInformation:
-    'Fill in the metadata for the active origin (internal or external). Fields marked with * are required before you can upload a file and save the record.',
+    'Fill in the metadata for the active origin (internal or external). Complete every field in this section before you upload a file and submit.',
   documentFile:
     'Attach the controlled PDF that will be stored with this record. The file is checked when uploaded; only valid PDF files are accepted.',
   documentType:
@@ -122,9 +122,8 @@ function Field({
   return (
     <div className="nd-field">
       <div className="nd-label-row">
-        <label className="nd-label">
+        <label className="nd-label" aria-required={required ? true : undefined}>
           {label}
-          {required && <span className="nd-required">*</span>}
         </label>
         {helpMessage ? <FieldHelpButton title={label} message={helpMessage} /> : null}
       </div>
@@ -244,6 +243,40 @@ export function NewDocumentView({
 
   const activeDetailsEnabled =
     origin === 'internal' ? internalDetailsEnabled : externalDetailsEnabled;
+
+  const isNewDocumentReady = useMemo(() => {
+    const hasFile = Boolean(selectedFile) && fileUploadStatus === 'success';
+    if (!hasFile) return false;
+
+    if (origin === 'internal') {
+      if (!documentStructure) return false;
+      const form = internalForm;
+      if (!form.type.trim() || !form.process.trim() || !form.title.trim() || !form.owner.trim()) {
+        return false;
+      }
+      if (usesOrganisationStructure && !form.documentCode.trim()) return false;
+      return true;
+    }
+
+    const form = externalForm;
+    return Boolean(
+      form.type.trim() &&
+        form.process.trim() &&
+        form.externalRef.trim() &&
+        form.externalVersion.trim() &&
+        form.title.trim() &&
+        form.externalIssuer.trim() &&
+        form.department.trim(),
+    );
+  }, [
+    origin,
+    documentStructure,
+    internalForm,
+    externalForm,
+    selectedFile,
+    fileUploadStatus,
+    usesOrganisationStructure,
+  ]);
 
   function resetFileState() {
     setSelectedFile(null);
@@ -523,9 +556,7 @@ export function NewDocumentView({
             <div className="nd-section-num">1</div>
             <div>
               <div className="nd-section-title-row">
-                <h2 className="nd-section-title">
-                  Document Structure <span className="nd-required">*</span>
-                </h2>
+                <h2 className="nd-section-title">Document Structure</h2>
                 <FieldHelpButton title="Document Structure" message={NEW_DOCUMENT_FIELD_HELP.documentStructure} />
               </div>
               <p className="nd-section-desc">
@@ -911,25 +942,34 @@ export function NewDocumentView({
         </section>
 
         <div className="nd-form-footer">
-          <button type="button" className="nd-btn nd-btn-ghost" onClick={handleCancel} disabled={isSaving}>
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="nd-btn nd-btn-outline"
-            disabled={isSaving}
-            onClick={() => handleSave(true)}
-          >
-            {isSaving ? 'Saving...' : 'Save as Draft'}
-          </button>
-          <button
-            type="button"
-            className="nd-btn nd-btn-primary"
-            disabled={isSaving}
-            onClick={handleSubmitForReviewClick}
-          >
-            {isSaving ? 'Saving...' : 'Submit for Review'}
-          </button>
+          {!isNewDocumentReady && !isSaving ? (
+            <p className="nd-form-footer-hint" role="status">
+              Enter all source and destination details.
+            </p>
+          ) : (
+            <span className="nd-form-footer-spacer" aria-hidden="true" />
+          )}
+          <div className="nd-form-footer-actions">
+            <button type="button" className="nd-btn nd-btn-ghost" onClick={handleCancel} disabled={isSaving}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="nd-btn nd-btn-outline"
+              disabled={isSaving || !isNewDocumentReady}
+              onClick={() => handleSave(true)}
+            >
+              {isSaving ? 'Saving...' : 'Save as Draft'}
+            </button>
+            <button
+              type="button"
+              className="nd-btn nd-btn-primary"
+              disabled={isSaving || !isNewDocumentReady}
+              onClick={handleSubmitForReviewClick}
+            >
+              {isSaving ? 'Saving...' : 'Submit for Review'}
+            </button>
+          </div>
         </div>
       </form>
 

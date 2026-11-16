@@ -36,21 +36,21 @@
 }
 
 .chat-avatar-stack--group {
-  width: 48px;
+  width: 62px;
   height: 44px;
   background: transparent;
 }
 
 .chat-avatar-stack--lg.chat-avatar-stack--group {
-  width: 56px;
+  width: 70px;
   height: 52px;
 }
 
 .chat-avatar-stack-member {
   position: absolute;
   top: 50%;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
   border: 2px solid #fff;
   background: linear-gradient(135deg, #6366f1, #8b5cf6);

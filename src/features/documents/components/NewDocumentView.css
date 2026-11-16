@@ -224,13 +224,34 @@
 .nd-form-footer {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
   margin-top: 8px;
   padding: 16px 20px;
   background: white;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
+}
+
+.nd-form-footer-hint {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.nd-form-footer-spacer {
+  flex: 1;
+  min-width: 0;
+}
+
+.nd-form-footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
 }
 
 .nd-save-menu-up {

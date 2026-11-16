@@ -71,7 +71,6 @@
 .dash-sidebar-logo {
   display: block;
   object-fit: contain;
-  mix-blend-mode: screen;
 }
 
 .dash-sidebar-logo-full {
