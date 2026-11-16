@@ -10,7 +10,7 @@
 }
 
 .doc-review-history-dialog {
-  width: min(100%, 960px);
+  width: min(100%, 560px);
   max-height: min(90vh, 720px);
   display: flex;
   flex-direction: column;
@@ -74,41 +74,100 @@
   font-size: 14px;
 }
 
-.doc-review-history-table-wrap {
+.doc-review-history-body {
   overflow: auto;
-  padding: 0 16px 16px;
+  padding: 8px 24px 20px;
   flex: 1;
 }
 
-.doc-review-history-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-  min-width: 820px;
+.doc-review-history-empty {
+  margin: 0;
+  padding: 24px 0;
+  text-align: center;
+  color: #64748b;
+  font-size: 14px;
 }
 
-.doc-review-history-table thead th {
-  background: #e8e8e8;
-  border: 1px solid #cfcfcf;
-  padding: 10px 8px;
-  text-align: center;
+.doc-review-history-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.doc-review-history-timeline-item {
+  display: flex;
+  gap: 14px;
+}
+
+.doc-review-history-timeline-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 14px;
+  flex-shrink: 0;
+  padding-top: 4px;
+}
+
+.doc-review-history-timeline-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #2563eb;
+  box-shadow: 0 0 0 3px #dbeafe;
+}
+
+.doc-review-history-timeline-line {
+  flex: 1;
+  width: 2px;
+  min-height: 24px;
+  margin-top: 6px;
+  background: #e2e8f0;
+  border-radius: 1px;
+}
+
+.doc-review-history-timeline-content {
+  flex: 1;
+  padding-bottom: 22px;
+}
+
+.doc-review-history-timeline-item:last-child .doc-review-history-timeline-content {
+  padding-bottom: 4px;
+}
+
+.doc-review-history-timeline-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 4px;
+}
+
+.doc-review-history-step-title {
+  margin: 0;
+  font-size: 15px;
   font-weight: 700;
-  color: #1a1a1a;
-  vertical-align: middle;
+  color: #0f172a;
 }
 
-.doc-review-history-table tbody td {
-  border: 1px solid #cfcfcf;
-  padding: 10px 8px;
-  text-align: center;
-  vertical-align: middle;
-  color: #1a1a1a;
-  line-height: 1.45;
+.doc-review-history-step-date {
+  font-size: 12px;
+  color: #64748b;
+  white-space: nowrap;
 }
 
-.doc-review-history-table tbody td:nth-child(4),
-.doc-review-history-table tbody td:nth-child(5) {
-  text-align: left;
+.doc-review-history-step-desc {
+  margin: 0 0 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #475569;
+}
+
+.doc-review-history-step-actor {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
 }
 
 .doc-review-history-footer {

@@ -32,7 +32,7 @@ import {
   getDocumentCommentsBlockReason,
   type DocumentCommentsBlockReason,
 } from '../../../lib/documents/documentCommentsGate';
-import { buildDocumentReviewHistoryRows } from '../utils/reviewHistory';
+import { buildDocumentReviewTimeline } from '../utils/reviewHistory';
 import type { DocumentEventRecord } from '../../../types/audit';
 import './DocumentRegisterView.css';
 
@@ -141,14 +141,12 @@ export function DocumentRegisterView({
   onNewDocument,
   onDocumentClick,
   onSubmittedForApproval,
-  onOpenHistory,
   refreshKey = 0,
 }: {
   mode?: 'new' | 'register';
   onNewDocument?: () => void;
   onDocumentClick?: (documentId: string, options?: { edit?: boolean }) => void;
   onSubmittedForApproval?: () => void;
-  onOpenHistory?: (documentId: string) => void;
   refreshKey?: number;
 }) {
   const { user } = useAuth();
@@ -475,10 +473,10 @@ export function DocumentRegisterView({
     setHistoryLoading(false);
   }
 
-  const reviewHistoryRows = useMemo(
+  const reviewHistorySteps = useMemo(
     () =>
       historyDocument
-        ? buildDocumentReviewHistoryRows(historyDocument, historyEvents)
+        ? buildDocumentReviewTimeline(historyDocument, historyEvents)
         : [],
     [historyDocument, historyEvents],
   );
@@ -797,7 +795,6 @@ export function DocumentRegisterView({
                   </th>
                   <th>Origin <SortIcon /></th>
                   <th>Status <SortIcon /></th>
-                  <th className="doc-reg-col-info">Info</th>
                   <th>Document Code <SortIcon /></th>
                   <th>Document Title <SortIcon /></th>
                   <th>Document Type <SortIcon /></th>
@@ -857,20 +854,6 @@ export function DocumentRegisterView({
                         >
                           {getRegisterStatusLabel(doc)}
                         </span>
-                      </td>
-                      <td className="doc-reg-col-info">
-                        <button
-                          type="button"
-                          className="doc-reg-info-btn"
-                          title="Document Review History"
-                          aria-label="Open document review history"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void openReviewHistory(doc);
-                          }}
-                        >
-                          ?
-                        </button>
                       </td>
                       <td>
                         <div className="doc-reg-code-cell">
@@ -951,8 +934,8 @@ export function DocumentRegisterView({
                             <button
                               type="button"
                               className="doc-reg-round-btn"
-                              title="History"
-                              onClick={() => onOpenHistory?.(doc.id)}
+                              title="Document review history"
+                              onClick={() => void openReviewHistory(doc)}
                             >
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
                                 <circle cx="12" cy="12" r="9" />
@@ -980,9 +963,7 @@ export function DocumentRegisterView({
                                   <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
                                 </svg>
                               </button>
-                            ) : (
-                              <span className="doc-reg-round-spacer" />
-                            )}
+                            ) : null}
                             {canUserDeleteDocument(user, doc) ? (
                               <button
                                 type="button"
@@ -996,9 +977,7 @@ export function DocumentRegisterView({
                                   <path d="M10 11v6M14 11v6" />
                                 </svg>
                               </button>
-                            ) : (
-                              <span className="doc-reg-round-spacer" />
-                            )}
+                            ) : null}
                             <button
                               type="button"
                               className="doc-reg-round-btn"
@@ -1093,7 +1072,7 @@ export function DocumentRegisterView({
       <DocumentReviewHistoryDialog
         open={Boolean(historyDocument)}
         documentRecord={historyDocument}
-        rows={reviewHistoryRows}
+        steps={reviewHistorySteps}
         isLoading={historyLoading}
         error={historyError}
         onClose={closeReviewHistory}

@@ -327,13 +327,9 @@
   width: 56px;
 }
 
-.doc-reg-col-info {
-  width: 44px;
-  text-align: center;
-}
-
 .doc-reg-col-actions {
   width: 132px;
+  text-align: center;
 }
 
 .doc-reg-check-cell {
@@ -525,10 +521,13 @@
 }
 
 .doc-reg-action-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 36px);
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  justify-content: end;
+  justify-content: center;
+  max-width: calc(36px * 3 + 6px * 2);
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .doc-reg-round-btn {
@@ -576,11 +575,6 @@
 
 .doc-reg-round-btn-danger:hover {
   background: #fda4af;
-}
-
-.doc-reg-round-spacer {
-  width: 36px;
-  height: 36px;
 }
 
 /* Legacy table (form areas) */

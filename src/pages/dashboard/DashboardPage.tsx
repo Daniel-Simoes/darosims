@@ -222,11 +222,6 @@ export function DashboardPage() {
     setActiveNav(id);
   }
 
-  function openHistory(documentId?: string) {
-    setHistoryFilterDocumentId(documentId);
-    setActiveNav('notification-history');
-  }
-
   function handleSettingsClick(settingId: string) {
     if (settingId === 'profile') {
       setProfileReturnNav(activeNav);
@@ -382,7 +377,6 @@ export function DashboardPage() {
                 setNotificationsRefreshKey((key) => key + 1);
                 bumpHomeDataRefresh();
               }}
-              onOpenHistory={(documentId) => openHistory(documentId)}
             />
           ) : isModuleView && moduleId ? (
             <ModuleVisualizationView moduleId={moduleId} />

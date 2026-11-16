@@ -1,13 +1,13 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { DocumentRecord } from '../../../types/documents';
-import type { DocumentReviewHistoryRow } from '../utils/reviewHistory';
+import type { DocumentReviewTimelineStep } from '../utils/reviewHistory';
 import './DocumentReviewHistoryDialog.css';
 
 interface DocumentReviewHistoryDialogProps {
   open: boolean;
   documentRecord: DocumentRecord | null;
-  rows: DocumentReviewHistoryRow[];
+  steps: DocumentReviewTimelineStep[];
   isLoading?: boolean;
   error?: string;
   onClose: () => void;
@@ -16,7 +16,7 @@ interface DocumentReviewHistoryDialogProps {
 export function DocumentReviewHistoryDialog({
   open,
   documentRecord,
-  rows,
+  steps,
   isLoading = false,
   error = '',
   onClose,
@@ -67,31 +67,33 @@ export function DocumentReviewHistoryDialog({
         {isLoading ? (
           <p className="doc-review-history-loading">Loading review history…</p>
         ) : (
-          <div className="doc-review-history-table-wrap">
-            <table className="doc-review-history-table">
-              <thead>
-                <tr>
-                  <th>Version Number</th>
-                  <th>Date</th>
-                  <th>Section</th>
-                  <th>Description of Change</th>
-                  <th>Justification for Change</th>
-                  <th>Approved by</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={`${row.versionNumber}-${row.date}`}>
-                    <td>{row.versionNumber}</td>
-                    <td>{row.date}</td>
-                    <td>{row.section || '—'}</td>
-                    <td>{row.descriptionOfChange}</td>
-                    <td>{row.justificationForChange || '—'}</td>
-                    <td>{row.approvedBy}</td>
-                  </tr>
+          <div className="doc-review-history-body">
+            {steps.length === 0 ? (
+              <p className="doc-review-history-empty">No review history recorded yet.</p>
+            ) : (
+              <ol className="doc-review-history-timeline">
+                {steps.map((step, index) => (
+                  <li key={step.id} className="doc-review-history-timeline-item">
+                    <div className="doc-review-history-timeline-marker" aria-hidden="true">
+                      <span className="doc-review-history-timeline-dot" />
+                      {index < steps.length - 1 ? (
+                        <span className="doc-review-history-timeline-line" />
+                      ) : null}
+                    </div>
+                    <div className="doc-review-history-timeline-content">
+                      <div className="doc-review-history-timeline-head">
+                        <h3 className="doc-review-history-step-title">{step.title}</h3>
+                        <span className="doc-review-history-step-date">{step.date}</span>
+                      </div>
+                      <p className="doc-review-history-step-desc">{step.description}</p>
+                      {step.actor ? (
+                        <p className="doc-review-history-step-actor">By {step.actor}</p>
+                      ) : null}
+                    </div>
+                  </li>
                 ))}
-              </tbody>
-            </table>
+              </ol>
+            )}
           </div>
         )}
 

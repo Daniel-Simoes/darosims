@@ -11,6 +11,15 @@ export interface DocumentReviewHistoryRow {
   approvedBy: string;
 }
 
+export interface DocumentReviewTimelineStep {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  actor?: string;
+  version?: number;
+}
+
 function formatReviewDate(iso?: string): string {
   if (!iso) return '—';
   const date = new Date(iso);
@@ -20,6 +29,35 @@ function formatReviewDate(iso?: string): string {
     month: '2-digit',
     year: 'numeric',
   });
+}
+
+function formatReviewDateTime(iso?: string): string {
+  if (!iso) return '—';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function daysBetween(fromIso: string, toIso: string): number | null {
+  const from = new Date(fromIso);
+  const to = new Date(toIso);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) return null;
+  const diffMs = to.getTime() - from.getTime();
+  if (diffMs < 0) return 0;
+  return Math.round(diffMs / (1000 * 60 * 60 * 24));
+}
+
+function dayLabel(days: number | null): string {
+  if (days === null) return '';
+  if (days === 0) return 'same day';
+  if (days === 1) return '1 day later';
+  return `${days} days later`;
 }
 
 function eventSection(event: DocumentEventRecord): string {
@@ -128,4 +166,161 @@ export function buildDocumentReviewHistoryRows(
     justificationForChange: eventJustification(event, doc),
     approvedBy: eventApprovedBy(event, doc),
   }));
+}
+
+const TIMELINE_EVENT_TYPES = new Set<DocumentEventRecord['type']>([
+  'created',
+  'submitted',
+  'resubmitted',
+  'approved',
+  'rejected',
+]);
+
+export function buildDocumentReviewTimeline(
+  doc: DocumentRecord,
+  events: DocumentEventRecord[],
+): DocumentReviewTimelineStep[] {
+  const sorted = [...events]
+    .filter((event) => TIMELINE_EVENT_TYPES.has(event.type))
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+  const createdAtIso =
+    sorted.find((event) => event.type === 'created')?.createdAt ?? doc.createdAt ?? doc.effectiveDate;
+  const createdAtLabel = formatReviewDate(createdAtIso);
+  const steps: DocumentReviewTimelineStep[] = [];
+
+  const pushUniqueCreated = () => {
+    const createdEvent = sorted.find((event) => event.type === 'created');
+    const creator = doc.createdBy?.trim() || createdEvent?.actorName || '—';
+    const version = Math.max(doc.version, 1);
+    steps.push({
+      id: 'created',
+      title: 'Document created',
+      description: `Version ${version} · Created on ${createdAtLabel}`,
+      date: formatReviewDateTime(createdEvent?.createdAt ?? createdAtIso),
+      actor: creator,
+      version,
+    });
+  };
+
+  if (sorted.length === 0) {
+    pushUniqueCreated();
+    if (doc.submittedAt) {
+      steps.push({
+        id: 'submitted-fallback',
+        title: 'Submitted for review',
+        description: `Sent to ${doc.owner?.trim() || 'document owner'} for review`,
+        date: formatReviewDateTime(doc.submittedAt),
+        actor: doc.createdBy?.trim() || '—',
+      });
+    }
+    if (doc.approvedBy?.trim() && doc.status === 'Active') {
+      const days = createdAtIso ? daysBetween(createdAtIso, doc.effectiveDate || createdAtIso) : null;
+      const reviewer = doc.owner?.trim() || doc.approvedBy;
+      const approver = doc.approvedBy.trim();
+      if (reviewer && reviewer !== approver) {
+        steps.push({
+          id: 'reviewed-fallback',
+          title: 'Document reviewed',
+          description: `Created on ${createdAtLabel} · Reviewed ${dayLabel(days)}`,
+          date: formatReviewDateTime(doc.effectiveDate),
+          actor: reviewer,
+        });
+        steps.push({
+          id: 'approved-fallback',
+          title: 'Document approved',
+          description: `Approved for controlled use`,
+          date: formatReviewDateTime(doc.effectiveDate),
+          actor: approver,
+        });
+      } else {
+        steps.push({
+          id: 'approved-fallback',
+          title: 'Document reviewed and approved',
+          description: `Created on ${createdAtLabel} · ${dayLabel(days) ? dayLabel(days).charAt(0).toUpperCase() + dayLabel(days).slice(1) : 'Approved'}`,
+          date: formatReviewDateTime(doc.effectiveDate),
+          actor: approver,
+        });
+      }
+    }
+    return steps;
+  }
+
+  pushUniqueCreated();
+
+  let lastSubmitAt: string | undefined;
+
+  for (const event of sorted) {
+    if (event.type === 'created') continue;
+
+    if (event.type === 'submitted' || event.type === 'resubmitted') {
+      lastSubmitAt = event.createdAt;
+      const reviewer = doc.owner?.trim() || 'document owner';
+      steps.push({
+        id: `${event.type}-${event.id}`,
+        title: event.type === 'resubmitted' ? 'Resubmitted for review' : 'Submitted for review',
+        description: `Sent to ${reviewer} for review`,
+        date: formatReviewDateTime(event.createdAt),
+        actor: event.actorName,
+      });
+      continue;
+    }
+
+    if (event.type === 'rejected') {
+      const reason = event.metadata?.reason?.trim();
+      steps.push({
+        id: `rejected-${event.id}`,
+        title: 'Document not approved',
+        description: reason || 'Returned to creator for revision',
+        date: formatReviewDateTime(event.createdAt),
+        actor: event.actorName,
+      });
+      continue;
+    }
+
+    if (event.type === 'approved') {
+      const approver = doc.approvedBy?.trim() || event.actorName || '—';
+      const reviewer = doc.owner?.trim();
+      const daysFromCreate = createdAtIso ? daysBetween(createdAtIso, event.createdAt) : null;
+      const daysFromSubmit = lastSubmitAt ? daysBetween(lastSubmitAt, event.createdAt) : null;
+
+      if (reviewer && reviewer !== approver) {
+        steps.push({
+          id: `reviewed-${event.id}`,
+          title: 'Document reviewed',
+          description: [
+            `Created on ${createdAtLabel}`,
+            dayLabel(daysFromCreate) ? `· Reviewed ${dayLabel(daysFromCreate)}` : '',
+            dayLabel(daysFromSubmit) && lastSubmitAt ? `· ${dayLabel(daysFromSubmit)} after submission` : '',
+          ]
+            .filter(Boolean)
+            .join(' '),
+          date: formatReviewDateTime(event.createdAt),
+          actor: reviewer,
+        });
+        steps.push({
+          id: `approved-${event.id}`,
+          title: 'Document approved',
+          description: 'Approved for controlled use',
+          date: formatReviewDateTime(event.createdAt),
+          actor: approver,
+        });
+      } else {
+        steps.push({
+          id: `approved-${event.id}`,
+          title: 'Document reviewed and approved',
+          description: [
+            `Created on ${createdAtLabel}`,
+            dayLabel(daysFromCreate) ? `· ${dayLabel(daysFromCreate).charAt(0).toUpperCase() + dayLabel(daysFromCreate).slice(1)}` : '',
+          ]
+            .filter(Boolean)
+            .join(' '),
+          date: formatReviewDateTime(event.createdAt),
+          actor: approver,
+        });
+      }
+    }
+  }
+
+  return steps;
 }
