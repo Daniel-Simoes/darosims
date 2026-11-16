@@ -197,6 +197,17 @@
   margin-bottom: 2px;
 }
 
+.nd-section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.nd-section-title-row .nd-section-title {
+  margin-bottom: 0;
+}
+
 .nd-section-desc {
   font-size: 13px;
   color: #64748b;
@@ -462,12 +473,53 @@
 
 .nd-field {}
 
+.nd-label-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
 .nd-label {
   display: block;
   font-size: 12px;
   font-weight: 600;
   color: #334155;
   margin-bottom: 6px;
+}
+
+.nd-label-row .nd-label {
+  margin-bottom: 0;
+}
+
+.nd-field-help {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 50%;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-family: inherit;
+}
+
+.nd-field-help:hover {
+  background: #e2e8f0;
+  color: #334155;
+  border-color: #94a3b8;
+}
+
+.nd-field-help:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }
 
 .nd-required {

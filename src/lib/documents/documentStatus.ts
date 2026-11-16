@@ -7,9 +7,12 @@ export function isInternalDraftDocument(document: DocumentStatusInput): boolean 
   return document.documentOrigin !== 'External' && document.status === 'Draft';
 }
 
+/** Draft submitted and waiting for document owner (reviewer) action. */
 export function isPendingApprovalDocument(document: DocumentStatusInput): boolean {
   return document.status === 'Draft' && Boolean(document.submittedAt);
 }
+
+export const isPendingReviewDocument = isPendingApprovalDocument;
 
 export function isRejectedDocument(document: DocumentStatusInput): boolean {
   return (
@@ -21,7 +24,7 @@ export function isRejectedDocument(document: DocumentStatusInput): boolean {
 
 export function getDocumentStatusLabel(document: DocumentStatusInput): string {
   if (isPendingApprovalDocument(document)) {
-    return 'Pending Approval';
+    return 'Pending Review';
   }
   if (isRejectedDocument(document)) {
     return 'Not Approved';

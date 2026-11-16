@@ -1,8 +1,12 @@
 import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
-import { api, type CreateDocumentPayload, type DocumentRecord } from '../../../lib/api';
+import { api, fetchDocumentFileBlob, type CreateDocumentPayload, type DocumentRecord } from '../../../lib/api';
 import { documentTypeBadgeClass } from '../../../data/documentRegister';
 import { useTeamUsers } from '../../../context/TeamUsersContext';
-import { canUserDeleteDocument, isDocumentOwnerSameAsUser } from '../../../lib/documentUsers';
+import {
+  canUserDeleteDocument,
+  canUserEditDocument,
+  isDocumentOwnerSameAsUser,
+} from '../../../lib/documentUsers';
 import { useAuth } from '../../../context/AuthContext';
 import { generateDocumentCode } from '../../../lib/documentCode';
 import {
@@ -87,7 +91,7 @@ function getOwnerInitials(name?: string) {
 
 function getRegisterStatusLabel(doc: DocumentRecord) {
   const label = getDocumentStatusLabel(doc);
-  if (label === 'Pending Approval') return 'PENDING';
+  if (label === 'Pending Review' || label === 'Pending Approval') return 'PENDING';
   if (label === 'Not Approved') return 'REJECTED';
   return label.toUpperCase();
 }
@@ -159,6 +163,7 @@ export function DocumentRegisterView({
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [viewingPdfId, setViewingPdfId] = useState<string | null>(null);
   const [changingFileId, setChangingFileId] = useState<string | null>(null);
   const [resubmittingId, setResubmittingId] = useState<string | null>(null);
   const [pendingResubmit, setPendingResubmit] = useState<DocumentRecord | null>(null);
@@ -324,6 +329,33 @@ export function DocumentRegisterView({
   function getDocumentLabel(doc: DocumentRecord) {
     if (doc.documentOrigin === 'External') return doc.externalRef || doc.title;
     return doc.code || doc.title;
+  }
+
+  async function handleViewDocumentPdf(doc: DocumentRecord) {
+    if (!doc.fileName) {
+      setSuccess('');
+      setError('This document has no PDF file attached yet.');
+      return;
+    }
+
+    setSuccess('');
+    setError('');
+    setViewingPdfId(doc.id);
+
+    try {
+      const blob = await fetchDocumentFileBlob(doc.id);
+      const objectUrl = URL.createObjectURL(blob);
+      const opened = window.open(objectUrl, '_blank', 'noopener,noreferrer');
+      if (!opened) {
+        URL.revokeObjectURL(objectUrl);
+        setError('Allow pop-ups in your browser to view the PDF.');
+        return;
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to open the document PDF.');
+    } finally {
+      setViewingPdfId(null);
+    }
   }
 
   async function handleDelete(doc: DocumentRecord) {
@@ -937,16 +969,20 @@ export function DocumentRegisterView({
                                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                               </svg>
                             </button>
-                            <button
-                              type="button"
-                              className="doc-reg-round-btn doc-reg-round-btn-primary"
-                              title="Edit"
-                              onClick={() => onDocumentClick?.(doc.id, { edit: true })}
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                                <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
-                              </svg>
-                            </button>
+                            {canUserEditDocument(user, doc) ? (
+                              <button
+                                type="button"
+                                className="doc-reg-round-btn doc-reg-round-btn-primary"
+                                title="Edit"
+                                onClick={() => onDocumentClick?.(doc.id, { edit: true })}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                                  <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
+                                </svg>
+                              </button>
+                            ) : (
+                              <span className="doc-reg-round-spacer" />
+                            )}
                             {canUserDeleteDocument(user, doc) ? (
                               <button
                                 type="button"
@@ -966,8 +1002,13 @@ export function DocumentRegisterView({
                             <button
                               type="button"
                               className="doc-reg-round-btn"
-                              title="View document"
-                              onClick={() => onDocumentClick?.(doc.id)}
+                              title={
+                                doc.fileName
+                                  ? 'View document — open the uploaded PDF only'
+                                  : 'No PDF file attached'
+                              }
+                              disabled={!doc.fileName || viewingPdfId === doc.id}
+                              onClick={() => void handleViewDocumentPdf(doc)}
                             >
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -977,7 +1018,7 @@ export function DocumentRegisterView({
                             <button
                               type="button"
                               className="doc-reg-round-btn"
-                              title="Open"
+                              title="Open — document details and preview"
                               onClick={() => onDocumentClick?.(doc.id)}
                             >
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">

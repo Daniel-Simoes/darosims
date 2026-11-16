@@ -4,7 +4,7 @@ import { deleteDocumentSourceFile } from '@/lib/documentFiles';
 import { createDocumentEvent } from '@/lib/documentEvents';
 import { createNotification } from '@/lib/notifications';
 import type { UpdateDocumentInput } from '@/lib/types';
-import { isAuthUserDocumentOwner } from '@/lib/documentOwnership';
+import { canAuthUserEditDocument, isAuthUserDocumentOwner } from '@/lib/documentOwnership';
 import { isDocumentApprover, isDocumentOwnerSameAsEmail } from '@/lib/users';
 
 export async function OPTIONS() {
@@ -61,6 +61,10 @@ export async function PUT(
 
     const nextStatus = body.status ?? existing.status;
     const isApproving = existing.status === 'Draft' && nextStatus === 'Active';
+
+    if (!(await canAuthUserEditDocument(auth, existing))) {
+      return jsonResponse({ error: 'You are not allowed to edit this document' }, 403);
+    }
 
     if (isApproving && !(await isDocumentApprover(auth.email))) {
       return jsonResponse({ error: 'You are not authorized to approve documents' }, 403);

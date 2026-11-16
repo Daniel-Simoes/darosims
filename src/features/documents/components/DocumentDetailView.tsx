@@ -4,7 +4,12 @@ import type { DocumentType } from '../../../data/documentTypes';
 import { documentTypeBadgeClass } from '../../../data/documentRegister';
 import { isInternalDraftDocument } from '../../../lib/documentStatus';
 import { useTeamUsers } from '../../../context/TeamUsersContext';
-import { canUserApproveDocuments, canUserDeleteDocument, isDocumentOwnerSameAsUser } from '../../../lib/documentUsers';
+import {
+  canUserApproveDocuments,
+  canUserDeleteDocument,
+  canUserEditDocument,
+  isDocumentOwnerSameAsUser,
+} from '../../../lib/documentUsers';
 import { useAuth } from '../../../context/AuthContext';
 import { DocumentPreview } from './DocumentPreview';
 import { DocumentTypeMenu } from './DocumentTypeMenu';
@@ -105,13 +110,14 @@ export function DocumentDetailView({
       const { document: data } = await api.getDocument(documentId);
       setDocument(data);
       setForm(documentToForm(data));
-      setIsEditing(initialEdit);
+      const mayEdit = user ? canUserEditDocument(user, data) : false;
+      setIsEditing(initialEdit && mayEdit);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load document');
     } finally {
       setIsLoading(false);
     }
-  }, [documentId, initialEdit]);
+  }, [documentId, initialEdit, user]);
 
   useEffect(() => {
     loadDocument();
@@ -129,6 +135,10 @@ export function DocumentDetailView({
 
   async function handleSave(overrides?: { status?: DocumentRecord['status'] }) {
     if (!document) return;
+    if (!canUserEditDocument(user, document)) {
+      setError('You are not allowed to edit this document.');
+      return;
+    }
     setError('');
     setSuccess('');
     setIsSaving(true);
@@ -237,7 +247,7 @@ export function DocumentDetailView({
     }
   }
 
-  async function submitForApproval() {
+  async function submitForReview() {
     if (!document || document.status !== 'Draft' || document.submittedAt) return;
 
     setError('');
@@ -245,19 +255,35 @@ export function DocumentDetailView({
     setIsSaving(true);
 
     try {
-      const { document: updated } = await api.submitDocumentForApproval(documentId);
-      setDocument(updated);
-      setForm(documentToForm(updated));
-      setSuccess('Document submitted for approval.');
-      onSubmittedForApproval?.();
+      const isSelfReviewer = isDocumentOwnerSameAsUser(user, document.owner);
+
+      if (isSelfReviewer) {
+        const { document: updated } = await api.updateDocument(documentId, {
+          status: 'Active',
+          version: Math.max(Number(document.version) || 0, 1),
+          approvedBy: user?.name,
+          fileFormat: 'pdf',
+          fileName: document.fileName ?? `${document.title}.pdf`,
+        });
+        setDocument(updated);
+        setForm(documentToForm(updated));
+        setSuccess('Document reviewed and approved.');
+        onApproved?.();
+      } else {
+        const { document: updated } = await api.submitDocumentForApproval(documentId);
+        setDocument(updated);
+        setForm(documentToForm(updated));
+        setSuccess('Document submitted for review.');
+        onSubmittedForApproval?.();
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit document for approval');
+      setError(err instanceof Error ? err.message : 'Failed to submit document for review');
     } finally {
       setIsSaving(false);
     }
   }
 
-  function handleSubmitForApproval() {
+  function handleSubmitForReview() {
     if (!document || document.status !== 'Draft' || document.submittedAt) return;
 
     if (isDocumentOwnerSameAsUser(user, document.owner)) {
@@ -265,12 +291,12 @@ export function DocumentDetailView({
       return;
     }
 
-    void submitForApproval();
+    void submitForReview();
   }
 
-  function handleConfirmSubmitForApproval() {
+  function handleConfirmSubmitForReview() {
     setShowOwnerConfirmDialog(false);
-    void submitForApproval();
+    void submitForReview();
   }
 
   function handleChangeDocumentOwner() {
@@ -325,8 +351,9 @@ export function DocumentDetailView({
   const canReviewPending = isPendingApproval && canApprove && isAssignedOwner;
   const isCreator =
     (user?.email?.toLowerCase() ?? '') === (document.createdBy?.toLowerCase() ?? '');
-  const canSubmitForApproval = isDraftInternal && !document.submittedAt && isCreator;
+  const canSubmitForReview = isDraftInternal && !document.submittedAt && isCreator;
   const canDelete = canUserDeleteDocument(user, document);
+  const canEditDocument = canUserEditDocument(user, document);
   const displayCode = isExternal ? document.externalRef || '—' : document.code || '—';
   const displayVersion = isExternal
     ? document.externalVersion || '—'
@@ -368,19 +395,21 @@ export function DocumentDetailView({
                   </button>
                 </>
               ) : null}
-              {canSubmitForApproval ? (
+              {canSubmitForReview ? (
                 <button
                   type="button"
                   className="dd-btn dd-btn-primary"
-                  onClick={handleSubmitForApproval}
+                  onClick={handleSubmitForReview}
                   disabled={isSaving}
                 >
-                  {isSaving ? 'Submitting...' : 'Submit for Approval'}
+                  {isSaving ? 'Submitting...' : 'Submit for Review'}
                 </button>
               ) : null}
-              <button type="button" className="dd-btn dd-btn-outline" onClick={() => setIsEditing(true)}>
-                Edit Document
-              </button>
+              {canEditDocument ? (
+                <button type="button" className="dd-btn dd-btn-outline" onClick={() => setIsEditing(true)}>
+                  Edit Document
+                </button>
+              ) : null}
               {canDelete ? (
                 <button
                   type="button"
@@ -464,7 +493,7 @@ export function DocumentDetailView({
                   label="Workflow Status"
                   value={
                     isPendingApproval ? (
-                      <span className="doc-badge badge-draft">Pending Approval</span>
+                      <span className="doc-badge badge-draft">Pending Review</span>
                     ) : document.status
                   }
                 />
@@ -682,11 +711,11 @@ export function DocumentDetailView({
 
       <ConfirmDialog
         open={showOwnerConfirmDialog}
-        title="Confirm submission"
-        message="You are both the document creator and the document owner. Are you sure this document can be approved?"
-        confirmLabel="Yes"
-        cancelLabel="Change document owner"
-        onConfirm={handleConfirmSubmitForApproval}
+        title="Submit for review and approve"
+        message="You selected yourself as the reviewer for this document. Submitting will review and approve it immediately—the document becomes active with no extra step. Continue?"
+        confirmLabel="Yes, submit"
+        cancelLabel="Choose a different reviewer"
+        onConfirm={handleConfirmSubmitForReview}
         onCancel={handleChangeDocumentOwner}
       />
 

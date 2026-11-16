@@ -1,4 +1,5 @@
 import type { AuthUser } from '../../types/auth';
+import type { DocumentRecord } from '../../types/documents';
 
 export const DOCUMENT_USERS = [
   { name: 'Daniel', email: 'daniel@daros.com' },
@@ -34,4 +35,24 @@ export function isDocumentOwnerSameAsUser(
 ): boolean {
   if (!user || !ownerName?.trim()) return false;
   return user.name.trim().toLowerCase() === ownerName.trim().toLowerCase();
+}
+
+/** Creator, assigned reviewer (document owner), or approver (approvedBy) may edit. */
+export function canUserEditDocument(
+  user: AuthUser | null,
+  document: Pick<DocumentRecord, 'createdBy' | 'owner' | 'approvedBy'>,
+): boolean {
+  if (!user) return false;
+
+  const userEmail = user.email.trim().toLowerCase();
+  const userName = user.name.trim().toLowerCase();
+  const createdBy = document.createdBy?.trim().toLowerCase() ?? '';
+
+  if (createdBy && userEmail === createdBy) return true;
+  if (isDocumentOwnerSameAsUser(user, document.owner)) return true;
+
+  const approvedBy = document.approvedBy?.trim().toLowerCase();
+  if (approvedBy && userName === approvedBy) return true;
+
+  return false;
 }

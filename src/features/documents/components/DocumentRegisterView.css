@@ -550,6 +550,16 @@
   color: #334155;
 }
 
+.doc-reg-round-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.doc-reg-round-btn:disabled:hover {
+  background: white;
+  color: #64748b;
+}
+
 .doc-reg-round-btn-primary {
   background: #bfdbfe;
   color: #1d4ed8;

@@ -10,8 +10,8 @@ export function SignInPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, user, beginEntryLoading, endEntryLoading } = useAuth();
-  const [email, setEmail] = useState('daniel@daros.com');
-  const [password, setPassword] = useState('1234');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -88,7 +88,7 @@ export function SignInPage() {
               <input
                 id="email"
                 type="email"
-                placeholder="daniel@daros.com"
+                placeholder="you@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -113,10 +113,6 @@ export function SignInPage() {
               {isSubmitting ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
-
-          <p className="signin-hint">
-            Accounts: <code>daniel@daros.com</code> or <code>rodrigo@daros.com</code> (password <code>1234</code>)
-          </p>
 
           <Link to="/" className="signin-back">
             ← Back to website

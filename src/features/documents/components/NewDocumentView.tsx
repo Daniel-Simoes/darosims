@@ -52,23 +52,82 @@ function LockIcon() {
   );
 }
 
+const NEW_DOCUMENT_FIELD_HELP = {
+  documentStructure:
+    'Choose how document codes and titles are managed for internal documents. Select your organisation’s existing structure if you already use your own codes and naming. Choose DAROS to have codes generated automatically from document type and process.',
+  documentOrigin:
+    'Internal documents are created and owned by your organisation. External documents are issued by another party; here you register a reference copy for control and traceability in DAROS.',
+  documentInformation:
+    'Fill in the metadata for the active origin (internal or external). Fields marked with * are required before you can upload a file and save the record.',
+  documentFile:
+    'Attach the controlled PDF that will be stored with this record. The file is checked when uploaded; only valid PDF files are accepted.',
+  documentType:
+    'The kind of document you are registering (for example Form, Procedure, or Policy). It classifies the record and, when using the DAROS structure, is used to build the document code.',
+  process:
+    'The process or area this document applies to (for example Quality or Production). It shows where the document is used in the organisation and helps route review to the right person.',
+  documentTitle:
+    'The name shown in Document Control and across the system. Use a clear title so others can find and recognise the document.',
+  documentOwner:
+    'The person who will review this document after you submit it. They can approve it or send it back for changes. If you select yourself, you review and approve in one step when you submit.',
+  externalReference:
+    'The reference or identifier from the external source (for example the supplier’s document number).',
+  externalVersion:
+    'The version or edition number from the external source, as printed on the original document.',
+  externalIssuer:
+    'The organisation or party that issued the external document.',
+  externalDepartment:
+    'The department or function in your organisation that uses or owns this external reference.',
+} as const;
+
+function FieldHelpButton({ title, message }: { title: string; message: string }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        type="button"
+        className="nd-field-help"
+        aria-label={`What is ${title}?`}
+        onClick={() => setOpen(true)}
+      >
+        ?
+      </button>
+      <ConfirmDialog
+        open={open}
+        title={title}
+        message={message}
+        confirmLabel="Got it"
+        cancelLabel=""
+        singleAction
+        onConfirm={() => setOpen(false)}
+        onCancel={() => setOpen(false)}
+      />
+    </>
+  );
+}
+
 function Field({
   label,
   required,
   children,
   hint,
+  helpMessage,
 }: {
   label: string;
   required?: boolean;
   children: ReactNode;
   hint?: string;
+  helpMessage?: string;
 }) {
   return (
     <div className="nd-field">
-      <label className="nd-label">
-        {label}
-        {required && <span className="nd-required">*</span>}
-      </label>
+      <div className="nd-label-row">
+        <label className="nd-label">
+          {label}
+          {required && <span className="nd-required">*</span>}
+        </label>
+        {helpMessage ? <FieldHelpButton title={label} message={helpMessage} /> : null}
+      </div>
       {children}
       {hint && <span className="nd-hint">{hint}</span>}
     </div>
@@ -240,7 +299,7 @@ export function NewDocumentView({
     updateInternalField('owner', value);
   }
 
-  function handleSubmitForApprovalClick() {
+  function handleSubmitForReviewClick() {
     if (
       origin === 'internal' &&
       isDocumentOwnerSameAsUser(user, internalForm.owner) &&
@@ -310,7 +369,7 @@ export function NewDocumentView({
       origin === 'internal' && isDocumentOwnerSameAsUser(user, internalForm.owner.trim());
 
     if (!asDraft && isSelfOwner && !selectedFile) {
-      showFormError('Upload a PDF document before submitting for approval.');
+      showFormError('Upload a PDF document before submitting for review.');
       return;
     }
 
@@ -395,6 +454,7 @@ export function NewDocumentView({
       }
 
       if (!asDraft && origin === 'internal') {
+        const savedLabel = savedDocument.code || savedDocument.title;
         if (isSelfOwner) {
           await api.updateDocument(savedDocument.id, {
             status: 'Active',
@@ -403,8 +463,10 @@ export function NewDocumentView({
             fileFormat: 'pdf',
             fileName: savedDocument.fileName ?? selectedFile?.name,
           });
+          setSuccess(`Document "${savedLabel}" reviewed and approved.`);
         } else {
           await api.submitDocumentForApproval(savedDocument.id);
+          setSuccess(`Document "${savedLabel}" submitted for review.`);
         }
         onSubmittedForApproval?.();
         return;
@@ -417,7 +479,7 @@ export function NewDocumentView({
       setSuccess(
         asDraft
           ? `Document "${savedLabel}" saved as draft.`
-          : `Document "${savedLabel}" submitted for approval.`,
+          : `Document "${savedLabel}" submitted for review.`,
       );
     } catch (err) {
       showFormError(err instanceof Error ? err.message : 'Failed to save document');
@@ -460,11 +522,15 @@ export function NewDocumentView({
           <div className="nd-section-head">
             <div className="nd-section-num">1</div>
             <div>
-              <h2 className="nd-section-title">
-                Document Structure <span className="nd-required">*</span>
-              </h2>
+              <div className="nd-section-title-row">
+                <h2 className="nd-section-title">
+                  Document Structure <span className="nd-required">*</span>
+                </h2>
+                <FieldHelpButton title="Document Structure" message={NEW_DOCUMENT_FIELD_HELP.documentStructure} />
+              </div>
               <p className="nd-section-desc">
-                Choose how document codes and naming are managed for internal documents.
+                Required first step for internal documents: choose who defines document codes and names—your
+                organisation’s rules or automatic DAROS codes from type and process.
               </p>
             </div>
           </div>
@@ -500,8 +566,13 @@ export function NewDocumentView({
           <div className="nd-section-head">
             <div className="nd-section-num">2</div>
             <div>
-              <h2 className="nd-section-title">Document Origin</h2>
-              <p className="nd-section-desc">Choose whether the document is created internally or comes from an external source.</p>
+              <div className="nd-section-title-row">
+                <h2 className="nd-section-title">Document Origin</h2>
+                <FieldHelpButton title="Document Origin" message={NEW_DOCUMENT_FIELD_HELP.documentOrigin} />
+              </div>
+              <p className="nd-section-desc">
+                Internal = your organisation creates and owns the document. External = another organisation issues it; you keep a controlled reference here.
+              </p>
             </div>
           </div>
 
@@ -542,8 +613,13 @@ export function NewDocumentView({
           <div className="nd-section-head">
             <div className="nd-section-num">3</div>
             <div>
-              <h2 className="nd-section-title">Document Information</h2>
-              <p className="nd-section-desc">Provide the document details based on the selected origin.</p>
+              <div className="nd-section-title-row">
+                <h2 className="nd-section-title">Document Information</h2>
+                <FieldHelpButton title="Document Information" message={NEW_DOCUMENT_FIELD_HELP.documentInformation} />
+              </div>
+              <p className="nd-section-desc">
+                Complete the form for the origin selected in step 2. Use the ? next to each field if you are unsure what to enter.
+              </p>
             </div>
           </div>
 
@@ -569,7 +645,7 @@ export function NewDocumentView({
                 </span>
               </div>
               <div className="nd-fields">
-                <Field label="Document Type" required>
+                <Field label="Document Type" required helpMessage={NEW_DOCUMENT_FIELD_HELP.documentType}>
                   <DocumentTypeMenu
                     value={internalForm.type}
                     onChange={(v) => updateInternalField('type', v)}
@@ -578,7 +654,7 @@ export function NewDocumentView({
                     onAddCustomOption={(label) => appendCustomOption(setCustomDocumentTypes, label)}
                   />
                 </Field>
-                <Field label="Process" required>
+                <Field label="Process" required helpMessage={NEW_DOCUMENT_FIELD_HELP.process}>
                   <ProcessMenu
                     value={internalForm.process}
                     onChange={(v) => updateInternalField('process', v)}
@@ -614,7 +690,7 @@ export function NewDocumentView({
                     )}
                   </Field>
                 ) : null}
-                <Field label="Document Title" required>
+                <Field label="Document Title" required helpMessage={NEW_DOCUMENT_FIELD_HELP.documentTitle}>
                   <input
                     className="nd-input"
                     placeholder="Enter document title"
@@ -628,16 +704,16 @@ export function NewDocumentView({
                   <Field
                     label="Document Owner"
                     required
-                    hint="Person responsible for approving this document"
+                    helpMessage={NEW_DOCUMENT_FIELD_HELP.documentOwner}
                   >
                     <OptionPickerMenu
-                      panelLabel="Document Owner"
+                      panelLabel="Document Owner (Reviewer)"
                       value={internalForm.owner}
                       onChange={handleOwnerChange}
                       options={ownerOptions}
                       customOptions={customOwners}
                       onAddCustomOption={(label) => appendCustomOption(setCustomOwners, label)}
-                      placeholder="Select document owner..."
+                      placeholder="Select reviewer..."
                       disabled={origin !== 'internal' || !internalDetailsEnabled}
                     />
                   </Field>
@@ -652,7 +728,7 @@ export function NewDocumentView({
                 <span className="nd-badge nd-badge-blue">Control reference only</span>
               </div>
               <div className="nd-fields">
-                <Field label="Document Type" required>
+                <Field label="Document Type" required helpMessage={NEW_DOCUMENT_FIELD_HELP.documentType}>
                   <DocumentTypeMenu
                     value={externalForm.type}
                     onChange={(v) => updateExternalField('type', v)}
@@ -661,7 +737,7 @@ export function NewDocumentView({
                     onAddCustomOption={(label) => appendCustomOption(setCustomDocumentTypes, label)}
                   />
                 </Field>
-                <Field label="Process" required>
+                <Field label="Process" required helpMessage={NEW_DOCUMENT_FIELD_HELP.process}>
                   <ProcessMenu
                     value={externalForm.process}
                     onChange={(v) => updateExternalField('process', v)}
@@ -670,7 +746,11 @@ export function NewDocumentView({
                     onAddCustomOption={(label) => appendCustomOption(setCustomProcesses, label)}
                   />
                 </Field>
-                <Field label="External Document Reference" required>
+                <Field
+                  label="External Document Reference"
+                  required
+                  helpMessage={NEW_DOCUMENT_FIELD_HELP.externalReference}
+                >
                   <input
                     className="nd-input"
                     placeholder="Enter external reference"
@@ -679,7 +759,11 @@ export function NewDocumentView({
                     disabled={origin !== 'external' || !externalDetailsEnabled}
                   />
                 </Field>
-                <Field label="Version / Edition" required hint="Enter the version or edition from the external source">
+                <Field
+                  label="Version / Edition"
+                  required
+                  helpMessage={NEW_DOCUMENT_FIELD_HELP.externalVersion}
+                >
                   <input
                     className="nd-input"
                     placeholder="e.g. 1.0, Rev 2"
@@ -689,7 +773,7 @@ export function NewDocumentView({
                     required={origin === 'external'}
                   />
                 </Field>
-                <Field label="Document Title" required>
+                <Field label="Document Title" required helpMessage={NEW_DOCUMENT_FIELD_HELP.documentTitle}>
                   <input
                     className="nd-input"
                     placeholder="Enter document title"
@@ -698,7 +782,7 @@ export function NewDocumentView({
                     disabled={origin !== 'external' || !externalDetailsEnabled}
                   />
                 </Field>
-                <Field label="External Issuer" required>
+                <Field label="External Issuer" required helpMessage={NEW_DOCUMENT_FIELD_HELP.externalIssuer}>
                   <input
                     className="nd-input"
                     placeholder="Organisation name"
@@ -707,7 +791,7 @@ export function NewDocumentView({
                     disabled={origin !== 'external' || !externalDetailsEnabled}
                   />
                 </Field>
-                <Field label="Department" required>
+                <Field label="Department" required helpMessage={NEW_DOCUMENT_FIELD_HELP.externalDepartment}>
                   <OptionPickerMenu
                     panelLabel="Department"
                     value={externalForm.department}
@@ -729,8 +813,11 @@ export function NewDocumentView({
           <div className="nd-section-head">
             <div className="nd-section-num">4</div>
             <div>
-              <h2 className="nd-section-title">Document File</h2>
-              <p className="nd-section-desc">Upload the controlled document file (PDF only).</p>
+              <div className="nd-section-title-row">
+                <h2 className="nd-section-title">Document File</h2>
+                <FieldHelpButton title="Document File" message={NEW_DOCUMENT_FIELD_HELP.documentFile} />
+              </div>
+              <p className="nd-section-desc">Upload the controlled document file (PDF only) once the information above is complete.</p>
             </div>
           </div>
 
@@ -839,9 +926,9 @@ export function NewDocumentView({
             type="button"
             className="nd-btn nd-btn-primary"
             disabled={isSaving}
-            onClick={handleSubmitForApprovalClick}
+            onClick={handleSubmitForReviewClick}
           >
-            {isSaving ? 'Saving...' : 'Submit for Approval'}
+            {isSaving ? 'Saving...' : 'Submit for Review'}
           </button>
         </div>
       </form>
@@ -849,15 +936,17 @@ export function NewDocumentView({
       <ConfirmDialog
         open={showOwnerConfirmDialog}
         title={
-          ownerConfirmMode === 'owner' ? 'You are the document owner' : 'Confirm submission'
+          ownerConfirmMode === 'owner'
+            ? 'You are the reviewer'
+            : 'Submit for review and approve'
         }
         message={
           ownerConfirmMode === 'owner'
-            ? 'Because you selected yourself as document owner, this document will be approved immediately when you submit it (there is no separate approval step). Are you sure you want to continue?'
-            : 'Because you are the document owner, submitting will approve this document immediately. Are you sure you want to continue?'
+            ? 'You selected yourself as the person who will review this document. When you submit, you will review and approve it in one step—the document becomes active immediately. Continue?'
+            : 'You are the document owner and reviewer for this draft. Submitting will review and approve this document immediately with no separate approval step. Continue?'
         }
-        confirmLabel="Yes, I'm sure"
-        cancelLabel="Choose a different owner"
+        confirmLabel="Yes, continue"
+        cancelLabel="Choose a different reviewer"
         onConfirm={handleConfirmOwnerDialog}
         onCancel={handleCancelOwnerDialog}
       />
