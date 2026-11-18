@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '../../../lib/api';
 import { ConfirmDialog } from '../../../components/dialogs/ConfirmDialog';
@@ -21,6 +21,7 @@ import { markChatRead } from '../../chat/lib/chatReadState';
 import { notifyChatActivity } from '../../chat/lib/chatUnread';
 import { useDocumentChatMessages } from '../hooks/useDocumentChatMessages';
 import { useDocumentChatPresence } from '../hooks/useDocumentChatPresence';
+import chatPatternTileUrl from '../../../assets/daros-chat-pattern-tile.png?url';
 import './DocumentCommentsChat.css';
 
 interface DocumentCommentsChatProps {
@@ -299,7 +300,11 @@ export function DocumentCommentsChat({
 
         {error ? <p className="doc-chat-error">{error}</p> : null}
 
-        <div className="doc-chat-messages" ref={messagesScrollRef}>
+        <div
+          className="doc-chat-messages"
+          ref={messagesScrollRef}
+          style={{ '--doc-chat-watermark': `url("${chatPatternTileUrl}")` } as CSSProperties}
+        >
           {isLoading ? (
             <p className="doc-chat-empty">Loading conversation…</p>
           ) : messages.length === 0 ? (

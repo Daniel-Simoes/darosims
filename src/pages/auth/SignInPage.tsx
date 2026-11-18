@@ -3,7 +3,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../features/authentication/context/AuthContext';
 import { waitForEntryLoading } from '../../lib/entryLoading';
 import { images } from '../../data/images';
-import logo from '../../assets/daros-logo.png';
+import logoOnDark from '../../assets/daros-logo-on-dark.png';
+import logoVertical from '../../assets/daros-logo-vertical.png';
 import './SignInPage.css';
 
 export function SignInPage() {
@@ -57,7 +58,7 @@ export function SignInPage() {
         />
         <div className="signin-visual-overlay">
           <div className="signin-visual-content">
-            <img src={logo} alt="daros" className="signin-visual-logo" />
+            <img src={logoOnDark} alt="daros" className="signin-visual-logo" />
             <h2 className="signin-visual-title">Your compliance hub</h2>
             <p className="signin-visual-text">
               Manage processes, documents, risks, audits and KPIs — all in one integrated platform.
@@ -74,7 +75,7 @@ export function SignInPage() {
       <div className="signin-form-panel">
         <div className="signin-card">
           <div className="signin-logo">
-            <img src={logo} alt="daros" />
+            <img src={logoVertical} alt="daros" className="signin-logo-vertical" />
           </div>
 
           <h1 className="signin-title">Welcome back</h1>

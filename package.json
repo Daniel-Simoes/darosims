@@ -8,6 +8,7 @@
     "dev:backend": "npm run dev --prefix backend",
     "dev:all": "concurrently -n backend,web -c blue,green \"npm run dev:backend\" \"npm run dev\"",
     "build": "tsc -b && vite build",
+    "build:chat-pattern": "node scripts/build-chat-pattern-tile.mjs",
     "build:backend": "npm run build --prefix backend",
     "lint": "oxlint",
     "preview": "vite preview"
@@ -28,6 +29,7 @@
     "@vitejs/plugin-react": "^6.0.3",
     "concurrently": "^10.0.6",
     "oxlint": "^1.71.0",
+    "sharp": "^0.35.5",
     "typescript": "~6.0.2",
     "vite": "^8.1.1"
   }

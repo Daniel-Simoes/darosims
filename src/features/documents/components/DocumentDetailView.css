@@ -355,6 +355,12 @@
   color: #475569;
 }
 
+.dd-edit-hint {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
 .dd-input {
   width: 100%;
   min-height: 40px;

@@ -53,30 +53,12 @@ function LockIcon() {
 }
 
 const NEW_DOCUMENT_FIELD_HELP = {
-  documentStructure:
-    'Choose how document codes and titles are managed for internal documents. Select your organisation’s existing structure if you already use your own codes and naming. Choose DAROS to have codes generated automatically from document type and process.',
-  documentOrigin:
-    'Internal documents are created and owned by your organisation. External documents are issued by another party; here you register a reference copy for control and traceability in DAROS.',
-  documentInformation:
-    'Fill in the metadata for the active origin (internal or external). Complete every field in this section before you upload a file and submit.',
-  documentFile:
-    'Attach the controlled PDF that will be stored with this record. The file is checked when uploaded; only valid PDF files are accepted.',
   documentType:
     'The kind of document you are registering (for example Form, Procedure, or Policy). It classifies the record and, when using the DAROS structure, is used to build the document code.',
   process:
     'The process or area this document applies to (for example Quality or Production). It shows where the document is used in the organisation and helps route review to the right person.',
-  documentTitle:
-    'The name shown in Document Control and across the system. Use a clear title so others can find and recognise the document.',
   documentOwner:
     'The person who will review this document after you submit it. They can approve it or send it back for changes. If you select yourself, you review and approve in one step when you submit.',
-  externalReference:
-    'The reference or identifier from the external source (for example the supplier’s document number).',
-  externalVersion:
-    'The version or edition number from the external source, as printed on the original document.',
-  externalIssuer:
-    'The organisation or party that issued the external document.',
-  externalDepartment:
-    'The department or function in your organisation that uses or owns this external reference.',
 } as const;
 
 function FieldHelpButton({ title, message }: { title: string; message: string }) {
@@ -555,10 +537,7 @@ export function NewDocumentView({
           <div className="nd-section-head">
             <div className="nd-section-num">1</div>
             <div>
-              <div className="nd-section-title-row">
-                <h2 className="nd-section-title">Document Structure</h2>
-                <FieldHelpButton title="Document Structure" message={NEW_DOCUMENT_FIELD_HELP.documentStructure} />
-              </div>
+              <h2 className="nd-section-title">Document Structure</h2>
               <p className="nd-section-desc">
                 Required first step for internal documents: choose who defines document codes and names—your
                 organisation’s rules or automatic DAROS codes from type and process.
@@ -597,10 +576,7 @@ export function NewDocumentView({
           <div className="nd-section-head">
             <div className="nd-section-num">2</div>
             <div>
-              <div className="nd-section-title-row">
-                <h2 className="nd-section-title">Document Origin</h2>
-                <FieldHelpButton title="Document Origin" message={NEW_DOCUMENT_FIELD_HELP.documentOrigin} />
-              </div>
+              <h2 className="nd-section-title">Document Origin</h2>
               <p className="nd-section-desc">
                 Internal = your organisation creates and owns the document. External = another organisation issues it; you keep a controlled reference here.
               </p>
@@ -644,12 +620,9 @@ export function NewDocumentView({
           <div className="nd-section-head">
             <div className="nd-section-num">3</div>
             <div>
-              <div className="nd-section-title-row">
-                <h2 className="nd-section-title">Document Information</h2>
-                <FieldHelpButton title="Document Information" message={NEW_DOCUMENT_FIELD_HELP.documentInformation} />
-              </div>
+              <h2 className="nd-section-title">Document Information</h2>
               <p className="nd-section-desc">
-                Complete the form for the origin selected in step 2. Use the ? next to each field if you are unsure what to enter.
+                Complete the form for the origin selected in step 2.
               </p>
             </div>
           </div>
@@ -721,7 +694,7 @@ export function NewDocumentView({
                     )}
                   </Field>
                 ) : null}
-                <Field label="Document Title" required helpMessage={NEW_DOCUMENT_FIELD_HELP.documentTitle}>
+                <Field label="Document Title" required>
                   <input
                     className="nd-input"
                     placeholder="Enter document title"
@@ -777,11 +750,7 @@ export function NewDocumentView({
                     onAddCustomOption={(label) => appendCustomOption(setCustomProcesses, label)}
                   />
                 </Field>
-                <Field
-                  label="External Document Reference"
-                  required
-                  helpMessage={NEW_DOCUMENT_FIELD_HELP.externalReference}
-                >
+                <Field label="External Document Reference" required>
                   <input
                     className="nd-input"
                     placeholder="Enter external reference"
@@ -790,11 +759,7 @@ export function NewDocumentView({
                     disabled={origin !== 'external' || !externalDetailsEnabled}
                   />
                 </Field>
-                <Field
-                  label="Version / Edition"
-                  required
-                  helpMessage={NEW_DOCUMENT_FIELD_HELP.externalVersion}
-                >
+                <Field label="Version / Edition" required>
                   <input
                     className="nd-input"
                     placeholder="e.g. 1.0, Rev 2"
@@ -804,7 +769,7 @@ export function NewDocumentView({
                     required={origin === 'external'}
                   />
                 </Field>
-                <Field label="Document Title" required helpMessage={NEW_DOCUMENT_FIELD_HELP.documentTitle}>
+                <Field label="Document Title" required>
                   <input
                     className="nd-input"
                     placeholder="Enter document title"
@@ -813,7 +778,7 @@ export function NewDocumentView({
                     disabled={origin !== 'external' || !externalDetailsEnabled}
                   />
                 </Field>
-                <Field label="External Issuer" required helpMessage={NEW_DOCUMENT_FIELD_HELP.externalIssuer}>
+                <Field label="External Issuer" required>
                   <input
                     className="nd-input"
                     placeholder="Organisation name"
@@ -822,7 +787,7 @@ export function NewDocumentView({
                     disabled={origin !== 'external' || !externalDetailsEnabled}
                   />
                 </Field>
-                <Field label="Department" required helpMessage={NEW_DOCUMENT_FIELD_HELP.externalDepartment}>
+                <Field label="Department" required>
                   <OptionPickerMenu
                     panelLabel="Department"
                     value={externalForm.department}
@@ -844,10 +809,7 @@ export function NewDocumentView({
           <div className="nd-section-head">
             <div className="nd-section-num">4</div>
             <div>
-              <div className="nd-section-title-row">
-                <h2 className="nd-section-title">Document File</h2>
-                <FieldHelpButton title="Document File" message={NEW_DOCUMENT_FIELD_HELP.documentFile} />
-              </div>
+              <h2 className="nd-section-title">Document File</h2>
               <p className="nd-section-desc">Upload the controlled document file (PDF only) once the information above is complete.</p>
             </div>
           </div>

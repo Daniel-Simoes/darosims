@@ -74,9 +74,9 @@
 }
 
 .dash-sidebar-logo-full {
-  height: 40px;
+  height: 44px;
   width: auto;
-  max-width: calc(100% - 8px);
+  max-width: calc(100% - 4px);
 }
 
 .dash-sidebar-logo-icon {

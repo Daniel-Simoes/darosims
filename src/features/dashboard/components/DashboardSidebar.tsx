@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { dashboardSidebarSections } from '../../../data/sidebarNav';
 import { SidebarIcon } from './SidebarIcon';
-import logo from '../../../assets/daros-logo.png';
+import logo from '../../../assets/daros-logo-on-dark.png';
 import logoIcon from '../../../assets/daros-logo-icon.png';
 import './DashboardSidebar.css';
 

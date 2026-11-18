@@ -1,4 +1,7 @@
-import { generateDocumentCode } from '@/lib/documentCode';
+import {
+  generateDocumentCode,
+  recalculateDocumentCodeForTypeProcessChange,
+} from '@/lib/documentCode';
 import {
   findDocumentById,
   readAllDocuments,
@@ -48,6 +51,24 @@ export async function updateDocument(
 
   const existing = documents[index];
   const isExternal = (input.documentOrigin ?? existing.documentOrigin) === 'External';
+  const nextType = input.type ?? existing.type;
+  const nextProcess = input.process ?? existing.process;
+  const typeOrProcessChanged =
+    nextType !== existing.type || nextProcess !== existing.process;
+
+  let nextCode = isExternal ? '' : existing.code;
+  if (!isExternal && !existing.hasIso && typeOrProcessChanged && nextType && nextProcess) {
+    const otherCodes = documents
+      .filter((doc) => doc.id !== id && doc.documentOrigin !== 'External')
+      .map((doc) => doc.code)
+      .filter(Boolean);
+    nextCode = recalculateDocumentCodeForTypeProcessChange(
+      nextType,
+      nextProcess,
+      existing.code,
+      otherCodes,
+    );
+  }
 
   const updated: DocumentRecord = {
     ...existing,
@@ -80,7 +101,7 @@ export async function updateDocument(
       'rejectionReason' in input ? input.rejectionReason || undefined : existing.rejectionReason,
     rejectedAt: 'rejectedAt' in input ? input.rejectedAt || undefined : existing.rejectedAt,
     rejectedBy: 'rejectedBy' in input ? input.rejectedBy || undefined : existing.rejectedBy,
-    code: isExternal ? '' : existing.code,
+    code: nextCode,
     version: isExternal ? 0 : (input.version ?? existing.version),
   };
 

@@ -521,11 +521,11 @@
 }
 
 .doc-reg-action-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, 36px);
   gap: 6px;
   justify-content: center;
-  max-width: calc(36px * 3 + 6px * 2);
+  width: fit-content;
   margin-left: auto;
   margin-right: auto;
 }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api, type DocumentRecord, type UpdateDocumentPayload } from '../../../lib/api';
 import type { DocumentType } from '../../../data/documentTypes';
 import { documentTypeBadgeClass } from '../../../data/documentRegister';
@@ -16,6 +16,7 @@ import { DocumentTypeMenu } from './DocumentTypeMenu';
 import { ProcessMenu } from './ProcessMenu';
 import { ConfirmDialog } from '../../../components/dialogs/ConfirmDialog';
 import { RejectDocumentDialog } from '../../../components/dialogs/RejectDocumentDialog';
+import { recalculateDocumentCodeForTypeProcessChange } from '../../../lib/documentCode';
 import './DocumentDetailView.css';
 
 const STATUSES: DocumentRecord['status'][] = ['Active', 'Draft', 'Obsolete'];
@@ -102,6 +103,7 @@ export function DocumentDetailView({
   const [showOwnerConfirmDialog, setShowOwnerConfirmDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const ownerFieldRef = useRef<HTMLDivElement>(null);
+  const [registerCodes, setRegisterCodes] = useState<string[]>([]);
 
   const loadDocument = useCallback(async () => {
     setError('');
@@ -122,6 +124,46 @@ export function DocumentDetailView({
   useEffect(() => {
     loadDocument();
   }, [loadDocument]);
+
+  useEffect(() => {
+    if (!isEditing || !document) {
+      setRegisterCodes([]);
+      return;
+    }
+
+    let active = true;
+    void api.getDocuments().then(({ documents }) => {
+      if (!active) return;
+      setRegisterCodes(
+        documents
+          .filter((item) => item.id !== documentId && item.documentOrigin !== 'External')
+          .map((item) => item.code)
+          .filter(Boolean),
+      );
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [isEditing, document, documentId]);
+
+  const usesDarosCode = Boolean(
+    document && document.documentOrigin !== 'External' && !document.hasIso,
+  );
+
+  const editDocumentCode = useMemo(() => {
+    if (!document || !usesDarosCode) return document?.code || '—';
+    if (!form.type.trim() || !form.process.trim()) return document.code || '—';
+    if (form.type === document.type && form.process === document.process) {
+      return document.code || '—';
+    }
+    return recalculateDocumentCodeForTypeProcessChange(
+      form.type,
+      form.process,
+      document.code,
+      registerCodes,
+    );
+  }, [document, usesDarosCode, form.type, form.process, registerCodes]);
 
   function updateField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -524,187 +566,229 @@ export function DocumentDetailView({
               </section>
             </>
           ) : (
-            <section className="dd-card dd-edit-card">
-              <h3 className="dd-card-title">Edit Document</h3>
-              <div className="dd-edit-grid">
-                <EditField label="Document Title">
-                  <input
-                    className="dd-input"
-                    value={form.title}
-                    onChange={(e) => updateField('title', e.target.value)}
-                  />
-                </EditField>
-                <EditField label="Document Type">
-                  <DocumentTypeMenu
-                    value={form.type}
-                    onChange={(v) => updateField('type', v as DocumentType)}
-                  />
-                </EditField>
-                <EditField label="Process">
-                  <ProcessMenu value={form.process} onChange={(v) => updateField('process', v)} />
-                </EditField>
-                <EditField label="Status">
-                  <select
-                    className="dd-input"
-                    value={form.status}
-                    onChange={(e) => updateField('status', e.target.value as DocumentRecord['status'])}
-                  >
-                    {STATUSES.map((s) => {
-                      const isActiveOption = s === 'Active';
-                      const disableActive =
-                        isActiveOption &&
-                        document.status === 'Draft' &&
-                        !canApprove;
-
-                      return (
-                        <option key={s} value={s} disabled={disableActive}>
-                          {s}
-                          {disableActive ? ' (approvers only)' : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </EditField>
-                <EditField label="Document Origin">
-                  <select
-                    className="dd-input"
-                    value={form.documentOrigin}
-                    onChange={(e) => updateField('documentOrigin', e.target.value)}
-                  >
-                    <option value="Internal">Internal</option>
-                    <option value="External">External</option>
-                  </select>
-                </EditField>
-                {form.documentOrigin === 'External' ? (
-                  <>
-                    <EditField label="External Reference">
-                      <input
-                        className="dd-input"
-                        value={form.externalRef}
-                        onChange={(e) => updateField('externalRef', e.target.value)}
-                      />
-                    </EditField>
-                    <EditField label="Version / Edition">
-                      <input
-                        className="dd-input"
-                        value={form.externalVersion}
-                        onChange={(e) => updateField('externalVersion', e.target.value)}
-                      />
-                    </EditField>
-                  </>
-                ) : (
-                  <>
-                    <EditField label="Document Code">
-                      <input className="dd-input" value={document.code || '—'} readOnly />
-                    </EditField>
-                    <EditField label="Version">
-                      <input
-                        className="dd-input"
-                        type="number"
-                        min="0"
-                        value={form.version}
-                        onChange={(e) => updateField('version', e.target.value)}
-                      />
-                    </EditField>
-                  </>
-                )}
-                <div ref={ownerFieldRef}>
-                  <EditField label="Document Owner">
+            <>
+              <section className="dd-card">
+                <h3 className="dd-card-title">General Information</h3>
+                <div className="dd-edit-grid">
+                  <EditField label="Document Title">
+                    <input
+                      className="dd-input"
+                      value={form.title}
+                      onChange={(e) => updateField('title', e.target.value)}
+                    />
+                  </EditField>
+                  <EditField label="Document Type">
+                    <DocumentTypeMenu
+                      value={form.type}
+                      onChange={(v) => updateField('type', v as DocumentType)}
+                    />
+                  </EditField>
+                  <EditField label="Process">
+                    <ProcessMenu value={form.process} onChange={(v) => updateField('process', v)} />
+                  </EditField>
+                  <EditField label="Document Origin">
                     <select
                       className="dd-input"
-                      value={form.owner}
-                      onChange={(e) => updateField('owner', e.target.value)}
+                      value={form.documentOrigin}
+                      onChange={(e) => updateField('documentOrigin', e.target.value)}
                     >
-                      <option value="">Select document owner...</option>
-                      {teamUsers.map((owner) => (
-                        <option key={owner.email} value={owner.name}>{owner.name}</option>
-                      ))}
+                      <option value="Internal">Internal</option>
+                      <option value="External">External</option>
                     </select>
                   </EditField>
+                  {form.documentOrigin === 'External' ? (
+                    <>
+                      <EditField label="External Reference">
+                        <input
+                          className="dd-input"
+                          value={form.externalRef}
+                          onChange={(e) => updateField('externalRef', e.target.value)}
+                        />
+                      </EditField>
+                      <EditField label="Version / Edition">
+                        <input
+                          className="dd-input"
+                          value={form.externalVersion}
+                          onChange={(e) => updateField('externalVersion', e.target.value)}
+                        />
+                      </EditField>
+                    </>
+                  ) : (
+                    <>
+                      <EditField label="Document Code">
+                        <input
+                          className="dd-input"
+                          value={usesDarosCode ? editDocumentCode : document.code || '—'}
+                          readOnly
+                        />
+                        {usesDarosCode && editDocumentCode !== (document.code || '—') ? (
+                          <span className="dd-edit-hint">
+                            Updates automatically when you change type or process (DAROS structure).
+                          </span>
+                        ) : null}
+                      </EditField>
+                      <EditField label="Version">
+                        <input
+                          className="dd-input"
+                          type="number"
+                          min="0"
+                          value={form.version}
+                          onChange={(e) => updateField('version', e.target.value)}
+                        />
+                      </EditField>
+                    </>
+                  )}
+                  <EditField label="PDF File">
+                    <input className="dd-input" value={document.fileName || '—'} readOnly />
+                  </EditField>
                 </div>
-                <EditField label="Approved By">
-                  <input
-                    className="dd-input"
-                    value={form.approvedBy}
-                    readOnly
-                    placeholder="Set automatically on approval"
-                  />
-                </EditField>
-                <EditField label="Department">
-                  <input
-                    className="dd-input"
-                    value={form.department}
-                    onChange={(e) => updateField('department', e.target.value)}
-                  />
-                </EditField>
-                <EditField label="Effective Date">
-                  <input
-                    className="dd-input"
-                    type="date"
-                    value={form.effectiveDate}
-                    onChange={(e) => updateField('effectiveDate', e.target.value)}
-                  />
-                </EditField>
-                <EditField label="Review Frequency">
-                  <input
-                    className="dd-input"
-                    value={form.reviewFrequency}
-                    onChange={(e) => updateField('reviewFrequency', e.target.value)}
-                  />
-                </EditField>
-                <EditField label="Next Review Date">
-                  <input
-                    className="dd-input"
-                    type="date"
-                    value={form.nextReviewDate}
-                    onChange={(e) => updateField('nextReviewDate', e.target.value)}
-                  />
-                </EditField>
-                <EditField label="Repository / Location">
-                  <input
-                    className="dd-input"
-                    value={form.repository}
-                    onChange={(e) => updateField('repository', e.target.value)}
-                  />
-                </EditField>
-                <EditField label="Distribution / Access">
-                  <input
-                    className="dd-input"
-                    value={form.distribution}
-                    onChange={(e) => updateField('distribution', e.target.value)}
-                  />
-                </EditField>
-                <EditField label="Retention Period">
-                  <input
-                    className="dd-input"
-                    value={form.retentionPeriod}
-                    onChange={(e) => updateField('retentionPeriod', e.target.value)}
-                  />
-                </EditField>
-                <EditField label="Disposition">
-                  <input
-                    className="dd-input"
-                    value={form.disposition}
-                    onChange={(e) => updateField('disposition', e.target.value)}
-                  />
-                </EditField>
-                <EditField label="Retention Notes" wide>
-                  <input
-                    className="dd-input"
-                    value={form.retentionNotes}
-                    onChange={(e) => updateField('retentionNotes', e.target.value)}
-                  />
-                </EditField>
-                <EditField label="Comments" wide>
-                  <textarea
-                    className="dd-input dd-textarea"
-                    rows={3}
-                    value={form.comments}
-                    onChange={(e) => updateField('comments', e.target.value)}
-                  />
-                </EditField>
-              </div>
-            </section>
+              </section>
+
+              <section className="dd-card">
+                <h3 className="dd-card-title">Control & Approval</h3>
+                <div className="dd-edit-grid">
+                  <div ref={ownerFieldRef}>
+                    <EditField label="Document Owner">
+                      <select
+                        className="dd-input"
+                        value={form.owner}
+                        onChange={(e) => updateField('owner', e.target.value)}
+                      >
+                        <option value="">Select document owner...</option>
+                        {teamUsers.map((owner) => (
+                          <option key={owner.email} value={owner.name}>{owner.name}</option>
+                        ))}
+                      </select>
+                    </EditField>
+                  </div>
+                  <EditField label="Workflow Status">
+                    <select
+                      className="dd-input"
+                      value={form.status}
+                      onChange={(e) => updateField('status', e.target.value as DocumentRecord['status'])}
+                    >
+                      {STATUSES.map((s) => {
+                        const isActiveOption = s === 'Active';
+                        const disableActive =
+                          isActiveOption &&
+                          document.status === 'Draft' &&
+                          !canApprove;
+
+                        return (
+                          <option key={s} value={s} disabled={disableActive}>
+                            {s}
+                            {disableActive ? ' (approvers only)' : ''}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </EditField>
+                  <EditField label="Approved By">
+                    <input
+                      className="dd-input"
+                      value={form.approvedBy}
+                      readOnly
+                      placeholder="Set automatically on approval"
+                    />
+                  </EditField>
+                  <EditField label="Department">
+                    <input
+                      className="dd-input"
+                      value={form.department}
+                      onChange={(e) => updateField('department', e.target.value)}
+                    />
+                  </EditField>
+                  <EditField label="Effective Date">
+                    <input
+                      className="dd-input"
+                      type="date"
+                      value={form.effectiveDate}
+                      onChange={(e) => updateField('effectiveDate', e.target.value)}
+                    />
+                  </EditField>
+                  <EditField label="Review Frequency">
+                    <input
+                      className="dd-input"
+                      value={form.reviewFrequency}
+                      onChange={(e) => updateField('reviewFrequency', e.target.value)}
+                    />
+                  </EditField>
+                  <EditField label="Next Review Date">
+                    <input
+                      className="dd-input"
+                      type="date"
+                      value={form.nextReviewDate}
+                      onChange={(e) => updateField('nextReviewDate', e.target.value)}
+                    />
+                  </EditField>
+                </div>
+              </section>
+
+              <section className="dd-card">
+                <h3 className="dd-card-title">Retention & Access</h3>
+                <div className="dd-edit-grid">
+                  <EditField label="Repository / Location">
+                    <input
+                      className="dd-input"
+                      value={form.repository}
+                      onChange={(e) => updateField('repository', e.target.value)}
+                    />
+                  </EditField>
+                  <EditField label="Distribution / Access">
+                    <input
+                      className="dd-input"
+                      value={form.distribution}
+                      onChange={(e) => updateField('distribution', e.target.value)}
+                    />
+                  </EditField>
+                  <EditField label="Retention Period">
+                    <input
+                      className="dd-input"
+                      value={form.retentionPeriod}
+                      onChange={(e) => updateField('retentionPeriod', e.target.value)}
+                    />
+                  </EditField>
+                  <EditField label="Disposition">
+                    <input
+                      className="dd-input"
+                      value={form.disposition}
+                      onChange={(e) => updateField('disposition', e.target.value)}
+                    />
+                  </EditField>
+                  <EditField label="Retention Notes" wide>
+                    <input
+                      className="dd-input"
+                      value={form.retentionNotes}
+                      onChange={(e) => updateField('retentionNotes', e.target.value)}
+                    />
+                  </EditField>
+                  <EditField label="Comments" wide>
+                    <textarea
+                      className="dd-input dd-textarea"
+                      rows={3}
+                      value={form.comments}
+                      onChange={(e) => updateField('comments', e.target.value)}
+                    />
+                  </EditField>
+                </div>
+              </section>
+
+              <section className="dd-card">
+                <h3 className="dd-card-title">System Information</h3>
+                <div className="dd-edit-grid">
+                  <EditField label="Created By">
+                    <input className="dd-input" value={document.createdBy || '—'} readOnly />
+                  </EditField>
+                  <EditField label="Created At">
+                    <input
+                      className="dd-input"
+                      value={document.createdAt ? new Date(document.createdAt).toLocaleString() : '—'}
+                      readOnly
+                    />
+                  </EditField>
+                </div>
+              </section>
+            </>
           )}
         </div>
       </div>
