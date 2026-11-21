@@ -7,6 +7,7 @@ export type DocumentEventType =
   | 'reviewed'
   | 'rejected'
   | 'edited'
+  | 'revision_started'
   | 'approved';
 
 export interface DocumentEventRecord {
@@ -20,6 +21,7 @@ export interface DocumentEventRecord {
     reason?: string;
     fileName?: string;
     action?: string;
+    version?: string;
     recipientEmail?: string;
     /** Set on reject: owner declined at review vs approver declined at final approval. */
     rejectionStage?: 'review' | 'approval';

@@ -1,0 +1,20 @@
+.flash-alert-success.flash-alert-fade-out {
+  animation: flash-alert-fade-out 0.45s ease forwards;
+}
+
+@keyframes flash-alert-fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-color: transparent;
+    max-height: 0;
+    overflow: hidden;
+  }
+}

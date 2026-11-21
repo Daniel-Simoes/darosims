@@ -1,13 +1,19 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { DocumentRecord } from '../../../types/documents';
-import type { DocumentReviewTimelineStep } from '../utils/reviewHistory';
+import type {
+  DocumentReviewHistoryRow,
+  DocumentReviewTimelineStep,
+} from '../utils/reviewHistory';
+import { downloadReviewHistorySpreadsheet } from '../utils/reviewHistoryExport';
+import { ReviewHistorySkeleton } from '../../../components/common/skeletons/DashboardSkeletons';
 import './DocumentReviewHistoryDialog.css';
 
 interface DocumentReviewHistoryDialogProps {
   open: boolean;
   documentRecord: DocumentRecord | null;
   steps: DocumentReviewTimelineStep[];
+  tableRows?: DocumentReviewHistoryRow[];
   isLoading?: boolean;
   error?: string;
   onClose: () => void;
@@ -17,6 +23,7 @@ export function DocumentReviewHistoryDialog({
   open,
   documentRecord,
   steps,
+  tableRows = [],
   isLoading = false,
   error = '',
   onClose,
@@ -65,7 +72,7 @@ export function DocumentReviewHistoryDialog({
         {error ? <p className="doc-review-history-error">{error}</p> : null}
 
         {isLoading ? (
-          <p className="doc-review-history-loading">Loading review history…</p>
+          <ReviewHistorySkeleton />
         ) : (
           <div className="doc-review-history-body">
             {steps.length === 0 ? (
@@ -123,6 +130,14 @@ export function DocumentReviewHistoryDialog({
         )}
 
         <div className="doc-review-history-footer">
+          <button
+            type="button"
+            className="doc-review-history-export-btn"
+            disabled={isLoading || steps.length === 0}
+            onClick={() => downloadReviewHistorySpreadsheet(documentRecord, steps, tableRows)}
+          >
+            Export CSV
+          </button>
           <button type="button" className="doc-review-history-close-btn" onClick={onClose}>
             Close
           </button>

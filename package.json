@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:backend": "npm run dev --prefix backend",
     "dev:all": "concurrently -n backend,web -c blue,green \"npm run dev:backend\" \"npm run dev\"",
-    "dev:clean": "rm -rf backend/.next && npm run dev:all",
+    "dev:clean": "pkill -f \"next dev -p 3000\" 2>/dev/null; pkill -f \"vite\" 2>/dev/null; pkill -f \"concurrently\" 2>/dev/null; sleep 1; rm -rf backend/.next && npm run dev:all",
     "build": "tsc -b && vite build",
     "build:chat-pattern": "node scripts/build-chat-pattern-tile.mjs",
     "build:backend": "npm run build --prefix backend",
@@ -20,6 +20,7 @@
     "pdfjs-dist": "^6.3.289",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-loading-skeleton": "^3.5.0",
     "react-router-dom": "^7.18.1",
     "styled-components": "^6.6.0"
   },

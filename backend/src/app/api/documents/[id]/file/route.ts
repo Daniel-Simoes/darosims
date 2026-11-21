@@ -9,6 +9,11 @@ import {
 import { readDocumentFile, saveDocumentFile } from '@/lib/documentFiles';
 import { requirePermission } from '@/lib/security/authz';
 import { canAuthUserEditDocument } from '@/lib/documentOwnership';
+import {
+  isAuthUserInvolvedInOpenRevision,
+  resolveDocumentFileNameForAuthUser,
+} from '@/lib/documentPublishedBaseline';
+import { canAuthUserViewDocument } from '@/lib/documentVisibility';
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders() });
@@ -23,23 +28,40 @@ export async function GET(
 
   const { id } = await params;
   const document = await getDocumentById(id);
-  if (!document?.fileName) {
+  if (!document) {
+    return jsonResponse({ error: 'Document not found' }, 404);
+  }
+  if (!(await canAuthUserViewDocument(auth, document))) {
+    return jsonResponse({ error: 'Document not found' }, 404);
+  }
+
+  const involvedInOpenRevision = document
+    ? await isAuthUserInvolvedInOpenRevision(auth, document)
+    : false;
+  const fileName = document
+    ? resolveDocumentFileNameForAuthUser(auth, document, involvedInOpenRevision)
+    : undefined;
+  if (!fileName) {
     return jsonResponse({ error: 'Document file not found' }, 404);
   }
 
-  const file = await readDocumentFile(id, document.fileName);
+  const file = await readDocumentFile(id, fileName);
   if (!file) {
     return jsonResponse({ error: 'Document file not found' }, 404);
   }
 
-  const contentType = getContentTypeForFile(document.fileName, document.fileFormat === 'pdf' ? 'application/pdf' : undefined);
+  const fileFormat =
+    document.publishedBaseline && !involvedInOpenRevision
+      ? document.publishedBaseline.fileFormat
+      : document.fileFormat;
+  const contentType = getContentTypeForFile(fileName, fileFormat === 'pdf' ? 'application/pdf' : undefined);
 
   return new Response(new Uint8Array(file), {
     status: 200,
     headers: {
       ...corsHeaders(),
       'Content-Type': contentType,
-      'Content-Disposition': `inline; filename="${document.fileName.replace(/"/g, '')}"`,
+      'Content-Disposition': `inline; filename="${fileName.replace(/"/g, '')}"`,
     },
   });
 }
@@ -57,6 +79,9 @@ export async function POST(
   const { id } = await params;
   const document = await getDocumentById(id);
   if (!document) {
+    return jsonResponse({ error: 'Document not found' }, 404);
+  }
+  if (!(await canAuthUserViewDocument(auth, document))) {
     return jsonResponse({ error: 'Document not found' }, 404);
   }
 

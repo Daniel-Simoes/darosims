@@ -3,7 +3,12 @@ import { getDocumentById, submitDocumentForApproval } from '@/lib/documents';
 import { createDocumentEvent, getLatestSubmissionType } from '@/lib/documentEvents';
 import { createNotification } from '@/lib/notifications';
 import { resolveDocumentOwnerEmail } from '@/lib/documentOwnership';
-import { isDocumentOwnerSameAsEmail } from '@/lib/users';
+import { canAuthUserViewDocument } from '@/lib/documentVisibility';
+import { normalizeTeamEmail } from '@/lib/legacyEmails';
+import {
+  isSelfServiceDocumentWorkflow,
+  shouldNotifyUser,
+} from '@/lib/documentWorkflowNotifications';
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders() });
@@ -26,30 +31,38 @@ export async function POST(
     if (!existing) {
       return jsonResponse({ error: 'Document not found' }, 404);
     }
+    if (!(await canAuthUserViewDocument(auth, existing))) {
+      return jsonResponse({ error: 'Document not found' }, 404);
+    }
 
     const document = await submitDocumentForApproval(id, auth.email);
     const submissionType = await getLatestSubmissionType(id);
-    const approverEmail = await resolveDocumentOwnerEmail(document.owner);
+    const reviewerEmail = normalizeTeamEmail(await resolveDocumentOwnerEmail(document.owner));
 
     await createDocumentEvent({
       documentId: document.id,
       type: submissionType,
       actorEmail: auth.email,
       actorName: auth.name,
-      metadata: approverEmail ? { recipientEmail: approverEmail } : undefined,
+      metadata: reviewerEmail ? { recipientEmail: reviewerEmail } : undefined,
     });
-    const isCreatorAlsoOwner = await isDocumentOwnerSameAsEmail(document.owner, auth.email);
+    const selfService = await isSelfServiceDocumentWorkflow(document);
 
-    if (approverEmail) {
+    if (
+      reviewerEmail &&
+      !selfService &&
+      shouldNotifyUser(reviewerEmail, auth.email)
+    ) {
+      const isResubmit = submissionType === 'resubmitted';
       await createNotification({
-        recipientEmail: approverEmail,
+        recipientEmail: reviewerEmail,
         documentId: document.id,
-        type: 'approval_request',
-        title: 'Document pending approval',
+        type: 'review_request',
+        title: isResubmit ? 'Document resubmitted for review' : 'Document pending review',
         actorName: auth.name,
-        message: isCreatorAlsoOwner
-          ? `You submitted "${document.title}" for approval. It is pending your approval.`
-          : `${auth.name} sent "${document.title}" for your approval.`,
+        message: isResubmit
+          ? `${auth.name} resubmitted "${document.title}" for your review.`
+          : `${auth.name} sent "${document.title}" for your review.`,
       });
     }
 

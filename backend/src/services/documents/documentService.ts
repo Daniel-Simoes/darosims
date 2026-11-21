@@ -9,6 +9,9 @@ import {
   writeAllDocuments,
 } from '@/repositories/documents/documentRepository';
 import { deleteAllDocumentFiles } from '@/repositories/storage/fileStorageRepository';
+import { filterDocumentsForViewer } from '@/lib/documentVisibility';
+import { isAuthUserInvolvedInOpenRevision } from '@/lib/documentPublishedBaseline';
+import { findUserByEmail } from '@/repositories/users/userRepository';
 import type { CreateDocumentInput, DocumentRecord, UpdateDocumentInput } from '@/types';
 
 function normalizeExternalDocument(doc: DocumentRecord): DocumentRecord {
@@ -20,6 +23,14 @@ export async function listDocuments(): Promise<DocumentRecord[]> {
   return documents
     .map(normalizeExternalDocument)
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export async function listDocumentsForUser(auth: {
+  email: string;
+  name: string;
+}): Promise<DocumentRecord[]> {
+  const all = await listDocuments();
+  return filterDocumentsForViewer(auth, all);
 }
 
 export async function listUserDrafts(createdBy: string): Promise<DocumentRecord[]> {
@@ -104,6 +115,11 @@ export async function updateDocument(
       'rejectionReason' in input ? input.rejectionReason || undefined : existing.rejectionReason,
     rejectedAt: 'rejectedAt' in input ? input.rejectedAt || undefined : existing.rejectedAt,
     rejectedBy: 'rejectedBy' in input ? input.rejectedBy || undefined : existing.rejectedBy,
+    publishedBaseline:
+      'publishedBaseline' in input ? input.publishedBaseline : existing.publishedBaseline,
+    revisionStartedBy:
+      'revisionStartedBy' in input ? input.revisionStartedBy : existing.revisionStartedBy,
+    lastSubmittedBy: 'lastSubmittedBy' in input ? input.lastSubmittedBy : existing.lastSubmittedBy,
     code: nextCode,
     version: isExternal ? 0 : (input.version ?? existing.version),
   };
@@ -214,13 +230,30 @@ export async function submitDocumentForApproval(
   if (existing.submittedAt) {
     throw new Error('Document is already submitted for approval');
   }
-  if ((existing.createdBy?.toLowerCase() ?? '') !== submittedByEmail.trim().toLowerCase()) {
+  const isOpenRevision = Boolean(existing.publishedBaseline);
+  const isCreator =
+    (existing.createdBy?.toLowerCase() ?? '') === submittedByEmail.trim().toLowerCase();
+
+  if (!isOpenRevision && !isCreator) {
     throw new Error('You can only submit documents you created');
+  }
+
+  if (isOpenRevision) {
+    const submitter = submittedByEmail.trim().toLowerCase();
+    const submitterUser = await findUserByEmail(submitter);
+    const auth = {
+      email: submitter,
+      name: submitterUser?.name ?? submitter,
+    };
+    if (!(await isAuthUserInvolvedInOpenRevision(auth, existing))) {
+      throw new Error('You are not allowed to submit this revision');
+    }
   }
 
   const updated: DocumentRecord = {
     ...existing,
     submittedAt: new Date().toISOString(),
+    lastSubmittedBy: submittedByEmail.trim().toLowerCase(),
     reviewedAt: undefined,
     reviewedBy: undefined,
     rejectionReason: undefined,

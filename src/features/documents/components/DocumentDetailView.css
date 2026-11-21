@@ -154,6 +154,27 @@
   border: 1px solid #bbf7d0;
 }
 
+.dd-alert-success.dd-alert-fade-out {
+  animation: dd-alert-fade-out 0.45s ease forwards;
+}
+
+@keyframes dd-alert-fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+    margin-bottom: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-color: transparent;
+    max-height: 0;
+    overflow: hidden;
+  }
+}
+
 .dd-rejection-notice {
   margin-bottom: 16px;
   padding: 14px 16px;

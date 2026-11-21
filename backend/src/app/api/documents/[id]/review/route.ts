@@ -4,6 +4,13 @@ import { resolveDesignatedApproverEmail } from '@/lib/documentApproval';
 import { createDocumentEvent } from '@/lib/documentEvents';
 import { createNotification } from '@/lib/notifications';
 import { isAuthUserDocumentOwner } from '@/lib/documentOwnership';
+import { canAuthUserViewDocument } from '@/lib/documentVisibility';
+import { normalizeTeamEmail } from '@/lib/legacyEmails';
+import {
+  isSelfServiceDocumentWorkflow,
+  normalizedUserEmail,
+  shouldNotifyUser,
+} from '@/lib/documentWorkflowNotifications';
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders() });
@@ -26,13 +33,16 @@ export async function POST(
     if (!existing) {
       return jsonResponse({ error: 'Document not found' }, 404);
     }
+    if (!(await canAuthUserViewDocument(auth, existing))) {
+      return jsonResponse({ error: 'Document not found' }, 404);
+    }
 
     if (!(await isAuthUserDocumentOwner(auth.email, existing.owner))) {
       return jsonResponse({ error: 'Only the assigned document owner can review this submission' }, 403);
     }
 
     const document = await markDocumentReviewed(id, auth.email);
-    const approverEmail = await resolveDesignatedApproverEmail(document);
+    const approverEmail = normalizeTeamEmail(await resolveDesignatedApproverEmail(document));
 
     await createDocumentEvent({
       documentId: document.id,
@@ -42,7 +52,13 @@ export async function POST(
       metadata: approverEmail ? { recipientEmail: approverEmail } : undefined,
     });
 
-    if (approverEmail && approverEmail.toLowerCase() !== auth.email.trim().toLowerCase()) {
+    const selfService = await isSelfServiceDocumentWorkflow(document);
+
+    if (
+      approverEmail &&
+      !selfService &&
+      shouldNotifyUser(approverEmail, auth.email)
+    ) {
       await createNotification({
         recipientEmail: approverEmail,
         documentId: document.id,
@@ -50,6 +66,22 @@ export async function POST(
         title: 'Document ready for approval',
         actorName: auth.name,
         message: `${auth.name} reviewed "${document.title}" and sent it to you for final approval.`,
+      });
+    }
+
+    const creatorEmail = normalizedUserEmail(document.createdBy);
+    if (
+      creatorEmail &&
+      !selfService &&
+      shouldNotifyUser(creatorEmail, auth.email)
+    ) {
+      await createNotification({
+        recipientEmail: creatorEmail,
+        documentId: document.id,
+        type: 'document_reviewed',
+        title: 'Document reviewed',
+        actorName: auth.name,
+        message: `${auth.name} reviewed your document "${document.title}" and sent it for final approval.`,
       });
     }
 

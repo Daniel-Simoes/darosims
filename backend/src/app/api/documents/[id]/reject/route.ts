@@ -4,7 +4,9 @@ import { createDocumentEvent } from '@/lib/documentEvents';
 import { createNotification } from '@/lib/notifications';
 import { isAuthUserDesignatedApprover, isPendingDocumentApproval } from '@/lib/documentApproval';
 import { isAuthUserDocumentOwner } from '@/lib/documentOwnership';
-import { isDocumentApprover, isDocumentOwnerSameAsEmail } from '@/lib/users';
+import { canAuthUserViewDocument } from '@/lib/documentVisibility';
+import { isDocumentApprover } from '@/lib/users';
+import { shouldNotifyUser } from '@/lib/documentWorkflowNotifications';
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders() });
@@ -37,6 +39,9 @@ export async function POST(
     if (!existing) {
       return jsonResponse({ error: 'Document not found' }, 404);
     }
+    if (!(await canAuthUserViewDocument(auth, existing))) {
+      return jsonResponse({ error: 'Document not found' }, 404);
+    }
 
     const pendingFinalApproval = isPendingDocumentApproval(existing);
     const canRejectAsReviewer = await isAuthUserDocumentOwner(auth.email, existing.owner);
@@ -65,9 +70,7 @@ export async function POST(
       metadata: { reason, rejectionStage },
     });
 
-    if (existing.createdBy) {
-      const isCreatorAlsoOwner = await isDocumentOwnerSameAsEmail(document.owner, existing.createdBy);
-
+    if (existing.createdBy && shouldNotifyUser(existing.createdBy, auth.email)) {
       await createNotification({
         recipientEmail: existing.createdBy,
         documentId: document.id,
@@ -75,9 +78,7 @@ export async function POST(
         title:
           rejectionStage === 'approval' ? 'Document approval rejected' : 'Document review rejected',
         actorName: auth.name,
-        message: isCreatorAlsoOwner
-          ? `You rejected "${document.title}" at the ${rejectionStage} stage. Reason: ${reason}`
-          : `${auth.name} rejected "${document.title}" at the ${rejectionStage} stage. Reason: ${reason}`,
+        message: `${auth.name} rejected "${document.title}" at the ${rejectionStage} stage. Reason: ${reason}`,
       });
     }
 

@@ -8,10 +8,28 @@ import {
   isPendingDocumentApproval,
   isPendingDocumentReview,
 } from '@/lib/documentApproval';
-import { canAuthUserEditDocument, isAuthUserDocumentOwner } from '@/lib/documentOwnership';
-import { isDocumentApprover, isDocumentOwnerSameAsEmail } from '@/lib/users';
+import {
+  canAuthUserEditDocument,
+  isAuthUserInvolvedInDocument,
+} from '@/lib/documentOwnership';
+import {
+  getNextDocumentVersion,
+  isValidRevisionTargetVersion,
+} from '@/lib/documentVersionRevision';
+import { isDocumentApprover } from '@/lib/users';
+import {
+  isSelfServiceDocumentWorkflow,
+  shouldNotifyUser,
+} from '@/lib/documentWorkflowNotifications';
 import { buildClientDocumentUpdate } from '@/lib/security/documentUpdate';
 import { requirePermission } from '@/lib/security/authz';
+import {
+  capturePublishedBaseline,
+  resolveDocumentForAuthUser,
+} from '@/lib/documentPublishedBaseline';
+import { normalizeTeamEmail } from '@/lib/legacyEmails';
+import { canAuthUserViewDocument } from '@/lib/documentVisibility';
+import { archiveSupersededDocumentVersion } from '@/services/documents/documentArchiveService';
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders() });
@@ -34,7 +52,11 @@ export async function GET(
     return jsonResponse({ error: 'Document not found' }, 404);
   }
 
-  return jsonResponse({ document });
+  if (!(await canAuthUserViewDocument(auth, document))) {
+    return jsonResponse({ error: 'Document not found' }, 404);
+  }
+
+  return jsonResponse({ document: await resolveDocumentForAuthUser(auth, document) });
 }
 
 export async function PUT(
@@ -58,6 +80,9 @@ export async function PUT(
     if (!existing) {
       return jsonResponse({ error: 'Document not found' }, 404);
     }
+    if (!(await canAuthUserViewDocument(auth, existing))) {
+      return jsonResponse({ error: 'Document not found' }, 404);
+    }
 
     if (body.type !== undefined && !String(body.type).trim()) {
       return jsonResponse({ error: 'Document type is required' }, 400);
@@ -70,8 +95,40 @@ export async function PUT(
 
     const nextStatus = body.status ?? existing.status;
     const isApproving = existing.status === 'Draft' && nextStatus === 'Active';
+    const isBeginningRevision =
+      body.beginRevision === true &&
+      existing.status === 'Active' &&
+      nextStatus === 'Draft' &&
+      !isExternal;
 
-    if (!(await canAuthUserEditDocument(auth, existing))) {
+    if (existing.status === 'Active' && !isBeginningRevision) {
+      return jsonResponse(
+        {
+          error:
+            'This document is approved and in effect. Start a new version revision instead of editing it.',
+        },
+        403,
+      );
+    }
+
+    if (isBeginningRevision) {
+      const versionAuth = await requirePermission(auth, 'create_versions');
+      if (versionAuth instanceof Response) return versionAuth;
+      if (!(await isAuthUserInvolvedInDocument(auth, existing))) {
+        return jsonResponse({ error: 'You are not allowed to revise this document' }, 403);
+      }
+      const nextVersion = Number(body.version);
+      const expected = getNextDocumentVersion(existing.version);
+      if (!isValidRevisionTargetVersion(existing.version, nextVersion)) {
+        return jsonResponse({ error: 'Invalid revision version number' }, 400);
+      }
+      if (Math.abs(nextVersion - expected) > 0.001) {
+        return jsonResponse(
+          { error: `Next version must be ${expected} for this document` },
+          400,
+        );
+      }
+    } else if (!(await canAuthUserEditDocument(auth, existing))) {
       return jsonResponse({ error: 'You are not allowed to edit this document' }, 403);
     }
 
@@ -100,6 +157,36 @@ export async function PUT(
       approverName: auth.name,
     });
 
+    if (isBeginningRevision) {
+      await archiveSupersededDocumentVersion(existing, auth, Number(body.version));
+      input = {
+        ...input,
+        status: 'Draft',
+        version: Number(body.version),
+        publishedBaseline: capturePublishedBaseline(existing),
+        revisionStartedBy: normalizeTeamEmail(auth.email) ?? auth.email.trim().toLowerCase(),
+        lastSubmittedBy: undefined,
+        submittedAt: undefined,
+        reviewedAt: undefined,
+        reviewedBy: undefined,
+        approvedBy: undefined,
+        owner: '',
+        approver: '',
+        rejectedAt: undefined,
+        rejectedBy: undefined,
+        rejectionReason: undefined,
+      };
+    }
+
+    if (isApproving && existing.publishedBaseline) {
+      input = {
+        ...input,
+        publishedBaseline: undefined,
+        revisionStartedBy: undefined,
+        lastSubmittedBy: undefined,
+      };
+    }
+
     input = {
       ...input,
       type: input.type !== undefined ? String(input.type).trim() : undefined,
@@ -124,9 +211,19 @@ export async function PUT(
       return jsonResponse({ error: 'Document not found' }, 404);
     }
 
-    if (isApproving && existing.createdBy) {
-      const isCreatorAlsoOwner = await isDocumentOwnerSameAsEmail(document.owner, existing.createdBy);
+    if (isBeginningRevision) {
+      await createDocumentEvent({
+        documentId: document.id,
+        type: 'revision_started',
+        actorEmail: auth.email,
+        actorName: auth.name,
+        metadata: {
+          version: String(document.version),
+        },
+      });
+    }
 
+    if (isApproving) {
       await createDocumentEvent({
         documentId: document.id,
         type: 'approved',
@@ -134,16 +231,21 @@ export async function PUT(
         actorName: auth.name,
       });
 
-      await createNotification({
-        recipientEmail: existing.createdBy,
-        documentId: document.id,
-        type: 'document_approved',
-        title: isCreatorAlsoOwner ? 'Document created and approved' : 'Document approved',
-        actorName: auth.name,
-        message: isCreatorAlsoOwner
-          ? `You created and approved "${document.title}".`
-          : `${auth.name} approved "${document.title}".`,
-      });
+      const selfService = await isSelfServiceDocumentWorkflow(document);
+      if (
+        existing.createdBy &&
+        !selfService &&
+        shouldNotifyUser(existing.createdBy, auth.email)
+      ) {
+        await createNotification({
+          recipientEmail: existing.createdBy,
+          documentId: document.id,
+          type: 'document_approved',
+          title: 'Document approved',
+          actorName: auth.name,
+          message: `${auth.name} approved your document "${document.title}".`,
+        });
+      }
     } else {
       const contentChanged =
         body.sourceContent !== undefined && body.sourceContent !== existing.sourceContent;
@@ -165,7 +267,7 @@ export async function PUT(
       }
     }
 
-    return jsonResponse({ document });
+    return jsonResponse({ document: await resolveDocumentForAuthUser(auth, document) });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Invalid request body';
     return jsonResponse({ error: message }, 400);

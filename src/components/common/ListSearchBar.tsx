@@ -6,6 +6,7 @@ interface ListSearchBarProps {
   placeholder?: string;
   className?: string;
   id?: string;
+  showShortcutHint?: boolean;
 }
 
 export function ListSearchBar({
@@ -14,9 +15,10 @@ export function ListSearchBar({
   placeholder = 'Search by title or code…',
   className = '',
   id,
+  showShortcutHint = false,
 }: ListSearchBarProps) {
   return (
-    <div className={`list-search-bar ${className}`.trim()}>
+    <div className={`list-search-bar ${showShortcutHint ? 'list-search-bar-with-kbd' : ''} ${className}`.trim()}>
       <svg
         className="list-search-bar-icon"
         width="18"
@@ -39,6 +41,7 @@ export function ListSearchBar({
         onChange={(e) => onChange(e.target.value)}
         autoComplete="off"
       />
+      {showShortcutHint ? <kbd className="list-search-bar-kbd" aria-hidden="true">⌘ K</kbd> : null}
     </div>
   );
 }

@@ -17,6 +17,7 @@ import { DashboardHeaderActions } from '../../features/notifications/components/
 import type { DashboardNotification } from '../../lib/notifications';
 import { DashboardSidebar } from '../../features/dashboard/components/DashboardSidebar';
 import { DocumentRegisterView } from '../../features/documents/components/DocumentRegisterView';
+import { DocumentArchivesView } from '../../features/documents/components/DocumentArchivesView';
 import { DocumentDetailView } from '../../features/documents/components/DocumentDetailView';
 import { NewDocumentView } from '../../features/documents/components/NewDocumentView';
 import { MyDraftsView } from '../../features/documents/components/MyDraftsView';
@@ -124,6 +125,7 @@ export function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarHovered, setSidebarHovered] = useState(false);
   const [documentDetailEdit, setDocumentDetailEdit] = useState(false);
+  const [documentDetailBeginRevision, setDocumentDetailBeginRevision] = useState(false);
   const [documentReturnNav, setDocumentReturnNav] = useState('documents');
   const [draftsRefreshKey, setDraftsRefreshKey] = useState(0);
   const [notificationsRefreshKey, setNotificationsRefreshKey] = useState(0);
@@ -170,6 +172,7 @@ export function DashboardPage() {
   const isHome = activeNav === 'dashboard';
   const isNewDocument = activeNav === 'document-register';
   const isMyDrafts = activeNav === 'my-drafts';
+  const isDocumentArchives = activeNav === 'document-archives';
   const isChat = activeNav === 'chat';
   const isNotifications = activeNav === 'notifications';
   const isNotificationHistory = activeNav === 'notification-history';
@@ -204,9 +207,14 @@ export function DashboardPage() {
   const isSidebarExpanded = sidebarOpen || sidebarHovered;
   const isSidebarCollapsed = !isSidebarExpanded;
 
-  function openDocument(id: string, options?: { edit?: boolean }, returnNav = activeNav) {
+  function openDocument(
+    id: string,
+    options?: { edit?: boolean; beginRevision?: boolean },
+    returnNav = activeNav,
+  ) {
     setDocumentReturnNav(returnNav);
     setDocumentDetailEdit(Boolean(options?.edit));
+    setDocumentDetailBeginRevision(Boolean(options?.beginRevision));
     setActiveNav(getDocumentDetailViewId(id));
   }
 
@@ -294,7 +302,7 @@ export function DashboardPage() {
       }}
     />
     <div
-      className={`dashboard-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''} ${isChat ? 'dashboard-layout-chat' : ''} ${isSessionLocked ? 'dashboard-layout-session-locked' : ''} ${needsLegalAcceptance ? 'dashboard-layout-legal-pending' : ''}`}
+      className={`dashboard-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''} ${isChat ? 'dashboard-layout-chat' : ''} ${isSessionLocked ? 'dashboard-layout-session-locked' : ''} ${needsLegalAcceptance ? 'dashboard-layout-legal-pending' : ''} ${activeNav === 'documents' ? 'dashboard-layout-register' : ''}`}
     >
       <DashboardSidebar
         activeNav={sidebarActiveNav}
@@ -308,7 +316,9 @@ export function DashboardPage() {
 
       <div className="dashboard-main">
         {!isDocumentDetail && (
-        <header className={`dashboard-header ${isChat ? 'dashboard-header-chat' : ''}`}>
+        <header
+          className={`dashboard-header ${isChat ? 'dashboard-header-chat' : ''} ${activeNav === 'documents' ? 'dashboard-header-register' : ''}`}
+        >
           <div className="dashboard-header-left">
             <button
               type="button"
@@ -320,18 +330,22 @@ export function DashboardPage() {
                 <path d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <h1 className="dashboard-header-title">
-              {isChat ? (
-                <>
-                  Chat
-                  <span className="dashboard-header-chat-count" aria-label={`${chatCount} conversations`}>
-                    {chatCount}
-                  </span>
-                </>
-              ) : (
-                pageTitle
-              )}
-            </h1>
+            {activeNav === 'documents' ? (
+              <p className="dashboard-register-ims">Integrated Management System</p>
+            ) : (
+              <h1 className="dashboard-header-title">
+                {isChat ? (
+                  <>
+                    Chat
+                    <span className="dashboard-header-chat-count" aria-label={`${chatCount} conversations`}>
+                      {chatCount}
+                    </span>
+                  </>
+                ) : (
+                  pageTitle
+                )}
+              </h1>
+            )}
           </div>
 
           {isChat ? <ChatHeaderSearch value={chatSearch} onChange={setChatSearch} /> : null}
@@ -348,7 +362,7 @@ export function DashboardPage() {
         </header>
         )}
 
-        <main className={`dashboard-content ${isDocumentView || isDocumentDetail || isChat || isNotifications || isNotificationHistory || isProfileSettings || isLegalPrivacy || isLegalAccessibility ? 'dashboard-content-full' : ''} ${isChat ? 'dashboard-content-chat' : ''}`}>
+        <main className={`dashboard-content ${isDocumentView || isDocumentDetail || isChat || isNotifications || isNotificationHistory || isProfileSettings || isLegalPrivacy || isLegalAccessibility ? 'dashboard-content-full' : ''} ${isChat ? 'dashboard-content-chat' : ''} ${activeNav === 'documents' ? 'dashboard-content-register' : ''}`}>
           {isLegalPrivacy ? (
             <DashboardLegalView slug="privacy" />
           ) : isLegalAccessibility ? (
@@ -372,8 +386,10 @@ export function DashboardPage() {
             <DocumentDetailView
               documentId={documentDetailId}
               initialEdit={documentDetailEdit}
+              autoBeginRevision={documentDetailBeginRevision}
               onBack={() => {
                 setDocumentDetailEdit(false);
+                setDocumentDetailBeginRevision(false);
                 setActiveNav(documentReturnNav);
               }}
               onApproved={() => {
@@ -385,6 +401,11 @@ export function DashboardPage() {
                 bumpHomeDataRefresh();
               }}
               onDeleted={bumpHomeDataRefresh}
+            />
+          ) : isDocumentArchives ? (
+            <DocumentArchivesView
+              refreshKey={notificationsRefreshKey}
+              onOpenCurrentDocument={(id) => openDocument(id, undefined, 'document-archives')}
             />
           ) : isMyDrafts ? (
             <MyDraftsView
@@ -417,6 +438,7 @@ export function DashboardPage() {
               mode={documentMode}
               refreshKey={notificationsRefreshKey}
               onNewDocument={() => setActiveNav('document-register')}
+              onOpenArchives={() => setActiveNav('document-archives')}
               onDocumentClick={(id, options) => openDocument(id, options, 'documents')}
               onSubmittedForApproval={() => {
                 setNotificationsRefreshKey((key) => key + 1);

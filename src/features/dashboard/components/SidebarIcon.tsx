@@ -23,6 +23,13 @@ export function SidebarIcon({ name, size = 18 }: SidebarIconProps) {
           <path d="M5 9.5V20a1 1 0 0 0 1 1h4v-5h4v5h4a1 1 0 0 0 1-1V9.5" />
         </svg>
       );
+    case 'archive':
+      return (
+        <svg {...props}>
+          <path d="M3 7h18v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
+          <path d="M3 7l3-4h12l3 4M10 11h4" />
+        </svg>
+      );
     case 'clipboard':
       return (
         <svg {...props}>

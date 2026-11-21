@@ -3,6 +3,10 @@ import { api } from '../../../lib/api';
 import { PERMISSION_LABELS } from '../../../lib/permissions/permissionLabels';
 import { useAuth } from '../../../context/AuthContext';
 import type { UserProfile } from '../../../types/auth';
+import { UserAvatar } from '../../../components/common/UserAvatar';
+import { ProfileSettingsSkeleton } from '../../../components/common/skeletons/DashboardSkeletons';
+import { getCachedData, setCachedData } from '../../../lib/data/clientDataCache';
+import { ensureMinSkeletonDuration } from '../../../lib/ui/skeletonLoading';
 import './ProfileSettingsView.css';
 
 interface ProfileSettingsViewProps {
@@ -18,16 +22,13 @@ interface ProfileFormState {
   confirmPassword: string;
 }
 
-function getInitials(firstName: string, lastName: string) {
-  const first = firstName.trim().charAt(0);
-  const last = lastName.trim().charAt(0);
-  return `${first}${last}`.toUpperCase() || 'U';
-}
-
 export function ProfileSettingsView({ onBack }: ProfileSettingsViewProps) {
   const { user, updateUser } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const profileCacheKey = user?.email ? `profile:${user.email}` : 'profile:anonymous';
+  const cachedProfile = getCachedData<UserProfile>(profileCacheKey);
+  const [profile, setProfile] = useState<UserProfile | null>(cachedProfile);
+  const [showSkeleton, setShowSkeleton] = useState(!cachedProfile);
   const [form, setForm] = useState<ProfileFormState>({
     firstName: '',
     lastName: '',
@@ -36,10 +37,9 @@ export function ProfileSettingsView({ onBack }: ProfileSettingsViewProps) {
     newPassword: '',
     confirmPassword: '',
   });
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(user?.photoUrl ?? null);
   const [photoChanged, setPhotoChanged] = useState(false);
   const [removePhoto, setRemovePhoto] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -48,11 +48,27 @@ export function ProfileSettingsView({ onBack }: ProfileSettingsViewProps) {
     let cancelled = false;
 
     async function loadProfile() {
-      setIsLoading(true);
+      const hadCache = Boolean(getCachedData<UserProfile>(profileCacheKey));
+      if (hadCache && cachedProfile) {
+        setForm({
+          firstName: cachedProfile.firstName,
+          lastName: cachedProfile.lastName,
+          email: cachedProfile.email,
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: '',
+        });
+        setShowSkeleton(false);
+      } else {
+        setShowSkeleton(true);
+      }
+
       setError(null);
+      const started = Date.now();
       try {
         const { profile: loadedProfile } = await api.getProfile();
         if (cancelled) return;
+        setCachedData(profileCacheKey, loadedProfile);
         setProfile(loadedProfile);
         setForm({
           firstName: loadedProfile.firstName,
@@ -71,7 +87,10 @@ export function ProfileSettingsView({ onBack }: ProfileSettingsViewProps) {
         }
       } finally {
         if (!cancelled) {
-          setIsLoading(false);
+          if (!hadCache) {
+            await ensureMinSkeletonDuration(started);
+          }
+          setShowSkeleton(false);
         }
       }
     }
@@ -80,7 +99,7 @@ export function ProfileSettingsView({ onBack }: ProfileSettingsViewProps) {
     return () => {
       cancelled = true;
     };
-  }, [user?.email]);
+  }, [user?.email, profileCacheKey]);
 
   function handleFieldChange(field: keyof ProfileFormState, value: string) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -216,7 +235,9 @@ export function ProfileSettingsView({ onBack }: ProfileSettingsViewProps) {
     }
   }
 
-  const initials = getInitials(form.firstName, form.lastName);
+  const displayPhoto = removePhoto ? null : photoPreview ?? user?.photoUrl ?? profile?.photoUrl ?? null;
+  const displayName =
+    [form.firstName, form.lastName].filter(Boolean).join(' ').trim() || user?.name || 'User';
   const permissions = profile?.permissions ?? user?.permissions ?? [];
 
   return (
@@ -233,20 +254,14 @@ export function ProfileSettingsView({ onBack }: ProfileSettingsViewProps) {
         {error && <div className="profile-alert profile-alert-error">{error}</div>}
         {success && <div className="profile-alert profile-alert-success">{success}</div>}
 
-        {isLoading ? (
-          <div className="profile-loading">Loading profile...</div>
+        {showSkeleton ? (
+          <ProfileSettingsSkeleton />
         ) : (
           <form className="profile-form" onSubmit={handleSubmit}>
           <section className="profile-card">
             <h2 className="profile-section-title">Profile photo</h2>
             <div className="profile-photo-row">
-              <div className="profile-photo-preview">
-                {photoPreview ? (
-                  <img src={photoPreview} alt="Profile" className="profile-photo-image" />
-                ) : (
-                  <span className="profile-photo-fallback">{initials}</span>
-                )}
-              </div>
+              <UserAvatar photoUrl={displayPhoto} name={displayName} size="profile" />
               <div className="profile-photo-actions">
                 <input
                   ref={fileInputRef}

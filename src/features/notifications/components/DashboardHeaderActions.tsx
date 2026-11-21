@@ -10,6 +10,10 @@ import { waitForEntryLoading } from '../../../lib/entryLoading';
 import { ConfirmDialog } from '../../../components/dialogs/ConfirmDialog';
 import { appConfig } from '../../../config/app';
 import companyLogo from '../../../assets/daros-logo-icon.png';
+import { UserAvatar } from '../../../components/common/UserAvatar';
+import { NotificationDropdownSkeleton } from '../../../components/common/skeletons/DashboardSkeletons';
+import { getCachedData } from '../../../lib/data/clientDataCache';
+import { runCachedScreenLoad } from '../../../lib/ui/skeletonLoading';
 import './DashboardHeaderActions.css';
 
 export type { DashboardNotification };
@@ -28,7 +32,7 @@ const SETTINGS_ITEMS = [
 
 function BellIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
       <path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5" />
       <path d="M10 20a2 2 0 0 0 4 0" />
     </svg>
@@ -57,12 +61,16 @@ export function DashboardHeaderActions({
   const [activeMenu, setActiveMenu] = useState<'notifications' | 'company' | 'user' | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [notifications, setNotifications] = useState<DashboardNotification[]>([]);
-  const [isLoadingNotifications, setIsLoadingNotifications] = useState(true);
+  const NOTIFICATIONS_BELL_CACHE_KEY = 'notifications:bell';
+  const cachedBellNotifications = getCachedData<DashboardNotification[]>(NOTIFICATIONS_BELL_CACHE_KEY);
+  const [notifications, setNotifications] = useState<DashboardNotification[]>(
+    cachedBellNotifications ?? [],
+  );
+  const [showNotificationsSkeleton, setShowNotificationsSkeleton] = useState(!cachedBellNotifications);
   const [markingId, setMarkingId] = useState<string | null>(null);
 
   const displayName = user?.name ?? 'User';
-  const avatarLetter = displayName.charAt(0).toUpperCase();
+  const userPhotoUrl = user?.photoUrl;
   const companyName = appConfig.company.name;
   const companyLogoUrl = appConfig.company.logoUrl ?? companyLogo;
   const companyLetter = companyName.charAt(0).toUpperCase();
@@ -70,14 +78,19 @@ export function DashboardHeaderActions({
   const unreadCount = unreadNotifications.length;
 
   const loadNotifications = useCallback(async () => {
-    setIsLoadingNotifications(true);
     try {
-      const { notifications: data } = await api.getNotifications();
-      setNotifications(data.map(toDashboardNotification));
+      await runCachedScreenLoad({
+        cacheKey: NOTIFICATIONS_BELL_CACHE_KEY,
+        fetcher: async () => {
+          const { notifications: data } = await api.getNotifications();
+          return data.map(toDashboardNotification);
+        },
+        onData: setNotifications,
+        setShowSkeleton: setShowNotificationsSkeleton,
+      });
     } catch {
       setNotifications([]);
-    } finally {
-      setIsLoadingNotifications(false);
+      setShowNotificationsSkeleton(false);
     }
   }, []);
 
@@ -182,8 +195,8 @@ export function DashboardHeaderActions({
               {unreadCount > 0 && <span className="dha-unread-pill">{unreadCount} new</span>}
             </div>
             <div className="dha-notification-list">
-              {isLoadingNotifications ? (
-                <div className="dha-notification-empty">Loading notifications...</div>
+              {showNotificationsSkeleton ? (
+                <NotificationDropdownSkeleton />
               ) : unreadNotifications.length === 0 ? (
                 <div className="dha-notification-empty">No notifications</div>
               ) : (
@@ -286,12 +299,12 @@ export function DashboardHeaderActions({
           className={`dha-user-logo-btn dha-menu-trigger ${activeMenu === 'user' ? 'active' : ''}`}
           aria-label={`${displayName} menu`}
         >
-          <span className="dha-user-logo-fallback">{avatarLetter}</span>
+          <UserAvatar photoUrl={userPhotoUrl} name={displayName} size="header" />
         </div>
         {activeMenu === 'user' && (
           <div className="dha-dropdown dha-dropdown-user">
             <div className="dha-dropdown-head dha-user-head">
-              <span className="dha-user-avatar">{avatarLetter}</span>
+              <UserAvatar photoUrl={userPhotoUrl} name={displayName} size="dropdown" />
               <div>
                 <div className="dha-user-menu-name">{displayName}</div>
                 <div className="dha-user-menu-email">{user?.email}</div>

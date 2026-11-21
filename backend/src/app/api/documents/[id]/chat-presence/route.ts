@@ -6,6 +6,8 @@ import {
   listDocumentChatPresence,
   updateDocumentChatPresence,
 } from '@/services/comments/documentChatPresenceService';
+import { getDocumentById } from '@/lib/documents';
+import { canAuthUserViewDocument } from '@/lib/documentVisibility';
 import { isMissingTableError } from '@/lib/supabaseSchemaCheck';
 
 export async function OPTIONS() {
@@ -25,6 +27,10 @@ export async function GET(
   }
 
   try {
+    const document = await getDocumentById(id);
+    if (!document || !(await canAuthUserViewDocument(auth, document))) {
+      return jsonResponse({ error: 'Document not found' }, 404);
+    }
     const presence = await listDocumentChatPresence(id, auth.email);
     return jsonResponse({ presence, available: true });
   } catch (err) {
@@ -49,6 +55,10 @@ export async function POST(
   }
 
   try {
+    const document = await getDocumentById(id);
+    if (!document || !(await canAuthUserViewDocument(auth, document))) {
+      return jsonResponse({ error: 'Document not found' }, 404);
+    }
     const body = await request.json();
     const isTyping = Boolean(body.isTyping);
     await updateDocumentChatPresence(id, auth.email, auth.name, isTyping);

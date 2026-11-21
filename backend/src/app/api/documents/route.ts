@@ -1,5 +1,5 @@
 import { requireAuth, jsonResponse, corsHeaders } from '@/lib/auth';
-import { createDocument, listDocuments, listUserDrafts } from '@/lib/documents';
+import { createDocument, listDocumentsForUser, listUserDrafts } from '@/lib/documents';
 import { createDocumentEvent } from '@/lib/documentEvents';
 import type { CreateDocumentInput } from '@/lib/types';
 import { requirePermission } from '@/lib/security/authz';
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
       return jsonResponse({ documents, total: allDrafts.length, limit, offset });
     }
 
-    const all = await listDocuments();
+    const all = await listDocumentsForUser(auth);
     const documents = slicePage(all, limit, offset);
     return jsonResponse({ documents, total: all.length, limit, offset });
   } catch (err) {

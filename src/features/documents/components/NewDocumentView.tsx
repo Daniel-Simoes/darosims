@@ -24,6 +24,10 @@ import { DocumentTypeMenu } from './DocumentTypeMenu';
 import { ProcessMenu } from './ProcessMenu';
 import { OptionPickerMenu } from './OptionPickerMenu';
 import { ConfirmDialog } from '../../../components/dialogs/ConfirmDialog';
+import { DarosActionLoadingOverlay } from '../../../components/common/DarosActionLoadingOverlay';
+import '../../../components/common/FlashAlert.css';
+import { useFlashMessages } from '../../../hooks/useFlashMessages';
+import { runWithMinDuration } from '../../../lib/ui/runWithMinDuration';
 import './NewDocumentView.css';
 
 const DEPARTMENTS = ['Quality', 'Production', 'HR', 'Operations', 'Management'];
@@ -163,8 +167,8 @@ export function NewDocumentView({
   const [externalForm, setExternalForm] = useState(emptyExternalForm);
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const { error, success, successFadingOut, setError, setSuccess, showSuccess, showError } =
+    useFlashMessages();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState('');
   const [fileUploadStatus, setFileUploadStatus] = useState<'idle' | 'checking' | 'success' | 'error'>('idle');
@@ -191,18 +195,8 @@ export function NewDocumentView({
     loadDocuments();
   }, [loadDocuments]);
 
-  const scrollToFormMessage = useCallback(() => {
-    pageTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    document.querySelector('.dashboard-main')?.scrollTo({ top: 0, behavior: 'smooth' });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
-
   function showFormError(message: string) {
-    setSuccess('');
-    setError(message);
-    requestAnimationFrame(() => {
-      scrollToFormMessage();
-    });
+    showError(message);
   }
 
   function updateInternalField<K extends keyof typeof emptyInternalForm>(
@@ -373,9 +367,6 @@ export function NewDocumentView({
   }
 
   async function handleSave(asDraft = true) {
-    setError('');
-    setSuccess('');
-
     const activeForm = origin === 'internal' ? internalForm : externalForm;
     if (origin === 'external' && !externalForm.externalVersion.trim()) {
       showFormError('Version / Edition is required for external documents.');
@@ -438,73 +429,85 @@ export function NewDocumentView({
     setIsSaving(true);
 
     try {
-      const payload: CreateDocumentPayload = {
-        type: activeForm.type.trim(),
-        hasIso: origin === 'internal' && usesOrganisationStructure,
-        ...(origin === 'internal' && usesOrganisationStructure
-          ? { code: internalForm.documentCode.trim() }
-          : {}),
-        process: activeForm.process.trim(),
-        title: activeForm.title.trim(),
-        ...(origin === 'internal' ? { version: 0 } : {}),
-        documentOrigin: origin === 'internal' ? 'Internal' : 'External',
-        status: origin === 'internal' ? 'Draft' : 'Active',
-        owner: origin === 'internal' ? internalForm.owner.trim() : undefined,
-        approver:
-          origin === 'internal'
-            ? internalForm.approver.trim() || internalForm.owner.trim() || undefined
-            : undefined,
-        department: origin === 'external' ? externalForm.department || undefined : undefined,
-        externalRef:
-          origin === 'external' ? externalForm.externalRef.trim() || undefined : undefined,
-        externalVersion:
-          origin === 'external' ? externalForm.externalVersion.trim() : undefined,
-      };
+      let result: {
+        savedDocument: DocumentRecord;
+        notify?: string;
+        afterSave?: () => void;
+      } = await runWithMinDuration(async () => {
+        const payload: CreateDocumentPayload = {
+          type: activeForm.type.trim(),
+          hasIso: origin === 'internal' && usesOrganisationStructure,
+          ...(origin === 'internal' && usesOrganisationStructure
+            ? { code: internalForm.documentCode.trim() }
+            : {}),
+          process: activeForm.process.trim(),
+          title: activeForm.title.trim(),
+          ...(origin === 'internal' ? { version: 0 } : {}),
+          documentOrigin: origin === 'internal' ? 'Internal' : 'External',
+          status: origin === 'internal' ? 'Draft' : 'Active',
+          owner: origin === 'internal' ? internalForm.owner.trim() : undefined,
+          approver:
+            origin === 'internal'
+              ? internalForm.approver.trim() || internalForm.owner.trim() || undefined
+              : undefined,
+          department: origin === 'external' ? externalForm.department || undefined : undefined,
+          externalRef:
+            origin === 'external' ? externalForm.externalRef.trim() || undefined : undefined,
+          externalVersion:
+            origin === 'external' ? externalForm.externalVersion.trim() : undefined,
+        };
 
-      const { document } = await api.createDocument(payload);
-      let savedDocument = document;
+        const { document } = await api.createDocument(payload);
+        let savedDocument = document;
 
-      if (selectedFile) {
-        await api.uploadDocumentFile(document.id, selectedFile);
-        const { document: withFile } = await api.updateDocument(document.id, {
-          fileFormat: fileFormatFromUpload(selectedFile),
-          fileName: selectedFile.name,
-        });
-        savedDocument = withFile;
-      }
+        if (selectedFile) {
+          await api.uploadDocumentFile(document.id, selectedFile);
+          const { document: withFile } = await api.updateDocument(document.id, {
+            fileFormat: fileFormatFromUpload(selectedFile),
+            fileName: selectedFile.name,
+          });
+          savedDocument = withFile;
+        }
 
-      setDocuments((prev) => [savedDocument, ...prev]);
+        if (asDraft && origin === 'internal') {
+          return {
+            savedDocument,
+            afterSave: () => onSavedAsDraft?.(),
+          };
+        }
+
+        if (!asDraft && origin === 'internal') {
+          const savedLabel = savedDocument.code || savedDocument.title;
+          await api.submitDocumentForApproval(savedDocument.id);
+          return {
+            savedDocument,
+            notify: isSelfOwner
+              ? `Document "${savedLabel}" submitted. Open it to review and approve when ready.`
+              : `Document "${savedLabel}" submitted for review.`,
+            afterSave: () => onSubmittedForApproval?.(),
+          };
+        }
+
+        const savedLabel =
+          origin === 'external' ? document.externalRef || document.title : document.code;
+        return {
+          savedDocument,
+          notify: asDraft
+            ? `Document "${savedLabel}" saved as draft.`
+            : `Document "${savedLabel}" submitted for review.`,
+        };
+      });
+
+      setDocuments((prev) => [result.savedDocument, ...prev]);
       setDocumentStructure('');
       setInternalForm(emptyInternalForm);
       setExternalForm(emptyExternalForm);
       resetFileState();
 
-      if (asDraft && origin === 'internal') {
-        onSavedAsDraft?.();
-        return;
+      if (result.notify) {
+        showSuccess(result.notify);
       }
-
-      if (!asDraft && origin === 'internal') {
-        const savedLabel = savedDocument.code || savedDocument.title;
-        await api.submitDocumentForApproval(savedDocument.id);
-        setSuccess(
-          isSelfOwner
-            ? `Document "${savedLabel}" submitted. Open it to review and approve when ready.`
-            : `Document "${savedLabel}" submitted for review.`,
-        );
-        onSubmittedForApproval?.();
-        return;
-      }
-
-      const savedLabel =
-        origin === 'external'
-          ? document.externalRef || document.title
-          : document.code;
-      setSuccess(
-        asDraft
-          ? `Document "${savedLabel}" saved as draft.`
-          : `Document "${savedLabel}" submitted for review.`,
-      );
+      result.afterSave?.();
     } catch (err) {
       showFormError(err instanceof Error ? err.message : 'Failed to save document');
     } finally {
@@ -532,10 +535,20 @@ export function NewDocumentView({
     [usesDarosStructure, internalForm.type, internalForm.process, existingCodes],
   );
 
+  const formActionBusy = isSaving || fileUploadStatus === 'checking';
+
   return (
     <div className="nd-page" ref={pageTopRef}>
+      <DarosActionLoadingOverlay
+        active={formActionBusy}
+        label={fileUploadStatus === 'checking' ? 'Checking file…' : 'Processing…'}
+      />
       {(error || success) && (
-        <div className={`nd-alert ${error ? 'nd-alert-error' : 'nd-alert-success'}`}>
+        <div
+          className={`nd-alert ${error ? 'nd-alert-error' : 'nd-alert-success flash-alert-success'}${
+            success && successFadingOut ? ' flash-alert-fade-out' : ''
+          }`}
+        >
           {error || success}
         </div>
       )}

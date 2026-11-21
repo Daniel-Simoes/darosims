@@ -22,6 +22,8 @@ import { notifyChatActivity } from '../../chat/lib/chatUnread';
 import { useDocumentChatMessages } from '../hooks/useDocumentChatMessages';
 import { useDocumentChatPresence } from '../hooks/useDocumentChatPresence';
 import chatPatternTileUrl from '../../../assets/daros-chat-pattern-tile.png?url';
+import { ChatMessagesSkeleton } from '../../../components/common/skeletons/DashboardSkeletons';
+import { useMinimumSkeleton } from '../../../hooks/useMinimumSkeleton';
 import './DocumentCommentsChat.css';
 
 interface DocumentCommentsChatProps {
@@ -66,6 +68,7 @@ export function DocumentCommentsChat({
     setError,
     isLoading,
   } = useDocumentChatMessages(documentRecord.id, open, onMessageSent);
+  const showChatSkeleton = useMinimumSkeleton(isLoading);
 
   const currentEmail = user?.email?.trim().toLowerCase() ?? '';
 
@@ -305,8 +308,8 @@ export function DocumentCommentsChat({
           ref={messagesScrollRef}
           style={{ '--doc-chat-watermark': `url("${chatPatternTileUrl}")` } as CSSProperties}
         >
-          {isLoading ? (
-            <p className="doc-chat-empty">Loading conversation…</p>
+          {showChatSkeleton ? (
+            <ChatMessagesSkeleton />
           ) : messages.length === 0 ? (
             <p className="doc-chat-empty">
               Start a conversation about this document with the creator and approver.

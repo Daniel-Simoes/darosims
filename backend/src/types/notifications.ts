@@ -1,5 +1,7 @@
 export type NotificationType =
+  | 'review_request'
   | 'approval_request'
+  | 'document_reviewed'
   | 'document_approved'
   | 'document_rejected'
   | 'document_message'

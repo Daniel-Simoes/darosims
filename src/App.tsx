@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { SkeletonTheme } from 'react-loading-skeleton';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { DarosEntryLoading } from './components/DarosEntryLoading';
@@ -47,9 +48,11 @@ function AppShell() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppShell />
-      </BrowserRouter>
+      <SkeletonTheme baseColor="#e8edf3" highlightColor="#f8fafc" borderRadius={8} duration={1.2}>
+        <BrowserRouter>
+          <AppShell />
+        </BrowserRouter>
+      </SkeletonTheme>
     </AuthProvider>
   );
 }

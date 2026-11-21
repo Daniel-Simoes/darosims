@@ -1,6 +1,7 @@
 import { requireAuth, jsonResponse, corsHeaders } from '@/lib/auth';
 import { listAllDocumentEvents } from '@/lib/documentEvents';
-import { listDocuments } from '@/lib/documents';
+import { listDocumentsForUser } from '@/lib/documents';
+import { canAuthUserViewDocument } from '@/lib/documentVisibility';
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders() });
@@ -12,12 +13,20 @@ export async function GET(request: Request) {
 
   try {
     const documentId = new URL(request.url).searchParams.get('documentId')?.trim();
-    const [events, documents] = await Promise.all([listAllDocumentEvents(), listDocuments()]);
+    const [events, documents] = await Promise.all([
+      listAllDocumentEvents(),
+      listDocumentsForUser(auth),
+    ]);
 
     const documentMap = new Map(documents.map((doc) => [doc.id, doc]));
-    const filteredEvents = documentId
-      ? events.filter((event) => event.documentId === documentId)
-      : events;
+    let filteredEvents = events.filter((event) => documentMap.has(event.documentId));
+    if (documentId) {
+      const doc = documentMap.get(documentId);
+      if (!doc || !(await canAuthUserViewDocument(auth, doc))) {
+        return jsonResponse({ timelines: [], total: 0 });
+      }
+      filteredEvents = filteredEvents.filter((event) => event.documentId === documentId);
+    }
 
     const grouped = new Map<string, typeof filteredEvents>();
     for (const event of filteredEvents) {

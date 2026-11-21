@@ -5,12 +5,14 @@ export type DocumentEventType =
   | 'reviewed'
   | 'rejected'
   | 'edited'
+  | 'revision_started'
   | 'approved';
 
 export interface DocumentEventMetadata {
   reason?: string;
   fileName?: string;
   action?: string;
+  version?: string;
   recipientEmail?: string;
   rejectionStage?: 'review' | 'approval';
 }

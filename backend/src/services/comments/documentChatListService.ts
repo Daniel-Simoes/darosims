@@ -1,4 +1,5 @@
 import { readAllDocuments } from '@/repositories/documents/documentRepository';
+import { canAuthUserViewDocument } from '@/lib/documentVisibility';
 import { readAllDocumentComments } from '@/repositories/comments/documentCommentRepository';
 import type { DocumentChatSummary, DocumentCommentMessage, DocumentRecord } from '@/types';
 
@@ -55,6 +56,7 @@ export async function listDocumentChatsForUser(
     messages.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     const document = documentById.get(documentId);
     if (!document) continue;
+    if (!(await canAuthUserViewDocument({ email: userEmail, name: userName }, document))) continue;
     if (!isUserInvolvedInDocumentChat(document, messages, userEmail, userName)) continue;
 
     const last = messages[messages.length - 1];

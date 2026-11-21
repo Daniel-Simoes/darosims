@@ -7,6 +7,9 @@ import { ListPageSizeSelect } from '../../../components/common/ListPageSizeSelec
 import { usePaginatedSlice } from '../../../lib/pagination/usePaginatedSlice';
 import { matchesTitleOrCode } from '../../../lib/search/documentSearch';
 import { EmptyDraftsLottie } from './EmptyDraftsLottie';
+import { DocumentTableSkeleton } from '../../../components/common/skeletons/DashboardSkeletons';
+import { getCachedData } from '../../../lib/data/clientDataCache';
+import { runCachedScreenLoad } from '../../../lib/ui/skeletonLoading';
 import './MyDraftsView.css';
 import './DocumentRegisterView.css';
 
@@ -30,21 +33,28 @@ interface MyDraftsViewProps {
 }
 
 export function MyDraftsView({ onNewDocument, onDocumentClick, refreshKey = 0 }: MyDraftsViewProps) {
-  const [documents, setDocuments] = useState<DocumentRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const DRAFTS_CACHE_KEY = 'drafts:list';
+  const cachedDrafts = getCachedData<DocumentRecord[]>(DRAFTS_CACHE_KEY);
+  const [documents, setDocuments] = useState<DocumentRecord[]>(cachedDrafts ?? []);
+  const [showSkeleton, setShowSkeleton] = useState(!cachedDrafts);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
   const loadDrafts = useCallback(async () => {
     setError('');
-    setIsLoading(true);
     try {
-      const { documents: data } = await api.getMyDrafts();
-      setDocuments(data);
+      await runCachedScreenLoad({
+        cacheKey: DRAFTS_CACHE_KEY,
+        fetcher: async () => {
+          const { documents: data } = await api.getMyDrafts();
+          return data;
+        },
+        onData: setDocuments,
+        setShowSkeleton,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load drafts');
-    } finally {
-      setIsLoading(false);
+      setShowSkeleton(false);
     }
   }, []);
 
@@ -102,8 +112,8 @@ export function MyDraftsView({ onNewDocument, onDocumentClick, refreshKey = 0 }:
         </div>
 
         <div className="doc-table-wrap">
-          {isLoading ? (
-            <div className="doc-table-loading">Loading your drafts...</div>
+          {showSkeleton ? (
+            <DocumentTableSkeleton rows={5} />
           ) : documents.length === 0 ? (
             <div className="my-drafts-empty-state">
               <EmptyDraftsLottie />
@@ -185,7 +195,7 @@ export function MyDraftsView({ onNewDocument, onDocumentClick, refreshKey = 0 }:
           )}
         </div>
 
-        {!isLoading && (
+        {!showSkeleton && (
           <ListPaginationFooter
             total={total}
             page={page}

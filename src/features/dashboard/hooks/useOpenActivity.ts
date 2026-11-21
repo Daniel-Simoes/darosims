@@ -1,33 +1,47 @@
 import { useEffect, useState } from 'react';
 import type { ColoredChartPoint } from '../../../data/moduleVisualizations';
 import { api } from '../../../lib/api';
+import { getCachedData } from '../../../lib/data/clientDataCache';
 import { buildOpenActivityBreakdown } from '../../../lib/documents/openActivityData';
+import { runCachedScreenLoad } from '../../../lib/ui/skeletonLoading';
+
+const CACHE_KEY = 'home:openActivity';
 
 export function useOpenActivity(refreshKey: number) {
-  const [data, setData] = useState<ColoredChartPoint[]>(() => buildOpenActivityBreakdown([]));
-  const [isLoading, setIsLoading] = useState(true);
+  const cached = getCachedData<ColoredChartPoint[]>(CACHE_KEY);
+  const [data, setData] = useState<ColoredChartPoint[]>(cached ?? []);
+  const [showSkeleton, setShowSkeleton] = useState(!cached);
 
   useEffect(() => {
     let active = true;
-    setIsLoading(true);
 
-    api
-      .getDocuments()
-      .then(({ documents }) => {
-        if (!active) return;
-        setData(buildOpenActivityBreakdown(documents));
-      })
-      .catch(() => {
-        if (active) setData(buildOpenActivityBreakdown([]));
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
-      });
+    void (async () => {
+      try {
+        await runCachedScreenLoad({
+          cacheKey: CACHE_KEY,
+          fetcher: async () => {
+            const { documents } = await api.getDocuments();
+            return buildOpenActivityBreakdown(documents);
+          },
+          onData: (points) => {
+            if (active) setData(points);
+          },
+          setShowSkeleton: (value) => {
+            if (active) setShowSkeleton(value);
+          },
+        });
+      } catch {
+        if (active) {
+          setData([]);
+          setShowSkeleton(false);
+        }
+      }
+    })();
 
     return () => {
       active = false;
     };
   }, [refreshKey]);
 
-  return { data, isLoading };
+  return { data, isLoading: showSkeleton };
 }

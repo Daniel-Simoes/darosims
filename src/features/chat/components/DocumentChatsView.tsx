@@ -11,6 +11,9 @@ import { countUnreadChatMessages } from '../lib/chatUnread';
 import type { DocumentCommentMessage } from '../../../types/documentComments';
 import { formatChatListTime, getAvatarTone, getChatInitials } from '../lib/chatUiUtils';
 import { ChatAvatarStack } from './ChatAvatarStack';
+import { ChatListSkeleton } from '../../../components/common/skeletons/DashboardSkeletons';
+import { getCachedData } from '../../../lib/data/clientDataCache';
+import { runCachedScreenLoad } from '../../../lib/ui/skeletonLoading';
 import './DocumentChatsView.css';
 
 function truncate(text: string, max: number) {
@@ -36,8 +39,10 @@ export function DocumentChatsView({
 }: DocumentChatsViewProps) {
   const { user } = useAuth();
   const teamUsers = useTeamUsers();
-  const [chats, setChats] = useState<DocumentChatSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+  const CHATS_CACHE_KEY = 'chats:list';
+  const cachedChats = getCachedData<DocumentChatSummary[]>(CHATS_CACHE_KEY);
+  const [chats, setChats] = useState<DocumentChatSummary[]>(cachedChats ?? []);
+  const [showSkeleton, setShowSkeleton] = useState(!cachedChats);
   const [error, setError] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(initialDocumentId ?? null);
   const [selectedDocument, setSelectedDocument] = useState<DocumentRecord | null>(null);
@@ -46,21 +51,30 @@ export function DocumentChatsView({
 
   const loadChats = useCallback(async (opts?: { silent?: boolean }) => {
     const silent = opts?.silent ?? false;
-    if (!silent) {
-      setError('');
-      setLoading(true);
+    if (silent) {
+      try {
+        const { chats: data } = await api.getDocumentChats();
+        setChats(data);
+      } catch {
+        // keep existing list during background refresh
+      }
+      return;
     }
+
+    setError('');
     try {
-      const { chats: data } = await api.getDocumentChats();
-      setChats(data);
+      await runCachedScreenLoad({
+        cacheKey: CHATS_CACHE_KEY,
+        fetcher: async () => {
+          const { chats: data } = await api.getDocumentChats();
+          return data;
+        },
+        onData: setChats,
+        setShowSkeleton,
+      });
     } catch (err) {
-      if (!silent) {
-        setError(err instanceof Error ? err.message : 'Failed to load chats');
-      }
-    } finally {
-      if (!silent) {
-        setLoading(false);
-      }
+      setError(err instanceof Error ? err.message : 'Failed to load chats');
+      setShowSkeleton(false);
     }
   }, []);
 
@@ -188,8 +202,8 @@ export function DocumentChatsView({
       <aside className="doc-chats-list-panel">
         {error ? <p className="doc-chats-list-error">{error}</p> : null}
 
-        {loading ? (
-          <p className="doc-chats-list-empty">Loading chats…</p>
+        {showSkeleton ? (
+          <ChatListSkeleton />
         ) : filteredChats.length === 0 ? (
           <p className="doc-chats-list-empty">
             {chats.length === 0

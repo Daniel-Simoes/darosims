@@ -7,6 +7,9 @@ import {
 } from '../../../lib/documentEvents';
 import { formatNotificationDate } from '../../../lib/notifications';
 import { ListSearchBar } from '../../../components/common/ListSearchBar';
+import { NotificationHistorySkeleton } from '../../../components/common/skeletons/DashboardSkeletons';
+import { getCachedData } from '../../../lib/data/clientDataCache';
+import { runCachedScreenLoad } from '../../../lib/ui/skeletonLoading';
 import './NotificationHistoryView.css';
 
 interface NotificationHistoryViewProps {
@@ -65,23 +68,30 @@ export function NotificationHistoryView({
   filterDocumentId,
   onDocumentClick,
 }: NotificationHistoryViewProps) {
-  const [timelines, setTimelines] = useState<DocumentTimeline[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const historyCacheKey = `notification-history:${filterDocumentId ?? 'all'}`;
+  const cachedTimelines = getCachedData<DocumentTimeline[]>(historyCacheKey);
+  const [timelines, setTimelines] = useState<DocumentTimeline[]>(cachedTimelines ?? []);
+  const [showSkeleton, setShowSkeleton] = useState(!cachedTimelines);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
 
   const loadHistory = useCallback(async () => {
     setError('');
-    setIsLoading(true);
     try {
-      const { timelines: data } = await api.getDocumentEvents(filterDocumentId);
-      setTimelines(data);
+      await runCachedScreenLoad({
+        cacheKey: historyCacheKey,
+        fetcher: async () => {
+          const { timelines: data } = await api.getDocumentEvents(filterDocumentId);
+          return data;
+        },
+        onData: setTimelines,
+        setShowSkeleton,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load notification history');
-    } finally {
-      setIsLoading(false);
+      setShowSkeleton(false);
     }
-  }, [filterDocumentId]);
+  }, [filterDocumentId, historyCacheKey]);
 
   useEffect(() => {
     loadHistory();
@@ -115,10 +125,8 @@ export function NotificationHistoryView({
 
       {error ? <div className="notification-history-alert">{error}</div> : null}
 
-      {isLoading ? (
-        <div className="notification-history-panel notification-history-empty">
-          <p>Loading history...</p>
-        </div>
+      {showSkeleton ? (
+        <NotificationHistorySkeleton />
       ) : filteredTimelines.length === 0 ? (
         <div className="notification-history-panel notification-history-empty">
           <h2>{search.trim() ? 'No matching history' : 'No history yet'}</h2>

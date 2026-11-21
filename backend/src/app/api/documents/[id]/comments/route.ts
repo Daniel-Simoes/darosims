@@ -6,6 +6,8 @@ import {
   listDocumentComments,
   postDocumentComment,
 } from '@/lib/documentComments';
+import { getDocumentById } from '@/lib/documents';
+import { canAuthUserViewDocument } from '@/lib/documentVisibility';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -38,6 +40,10 @@ export async function GET(
   }
 
   try {
+    const document = await getDocumentById(id);
+    if (!document || !(await canAuthUserViewDocument(auth, document))) {
+      return jsonResponse({ error: 'Document not found' }, 404);
+    }
     const messages = await listDocumentComments(id);
     return jsonResponse({ messages });
   } catch (err) {
@@ -58,6 +64,10 @@ export async function POST(
   }
 
   try {
+    const document = await getDocumentById(id);
+    if (!document || !(await canAuthUserViewDocument(auth, document))) {
+      return jsonResponse({ error: 'Document not found' }, 404);
+    }
     const body = await request.json();
     const text = typeof body.text === 'string' ? body.text : '';
     const message = await postDocumentComment(id, auth.email, auth.name, text);

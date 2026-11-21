@@ -125,9 +125,15 @@
   flex-shrink: 0;
 }
 
+.notifications-card-icon.review_request,
 .notifications-card-icon.approval_request {
   background: #fef3c7;
   color: #b45309;
+}
+
+.notifications-card-icon.document_reviewed {
+  background: #e0f2fe;
+  color: #0369a1;
 }
 
 .notifications-card-icon.document_approved {

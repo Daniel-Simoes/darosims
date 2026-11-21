@@ -38,12 +38,18 @@ export function isDocumentOwnerSameAsUser(
   return user.name.trim().toLowerCase() === ownerName.trim().toLowerCase();
 }
 
-/** Creator, assigned reviewer (document owner), or approver (approvedBy) may edit. */
-export function canUserEditDocument(
+export function isUserInvolvedInDocumentWorkflow(
   user: AuthUser | null,
   document: Pick<
     DocumentRecord,
-    'createdBy' | 'owner' | 'approvedBy' | 'approver' | 'status' | 'submittedAt' | 'rejectionReason'
+    | 'createdBy'
+    | 'owner'
+    | 'approvedBy'
+    | 'approver'
+    | 'reviewedBy'
+    | 'status'
+    | 'submittedAt'
+    | 'rejectionReason'
   >,
 ): boolean {
   if (!user) return false;
@@ -70,5 +76,58 @@ export function canUserEditDocument(
   const approvedBy = document.approvedBy?.trim().toLowerCase();
   if (approvedBy && userName === approvedBy) return true;
 
+  const reviewedBy = document.reviewedBy?.trim().toLowerCase();
+  if (reviewedBy && userName === reviewedBy) return true;
+
   return false;
+}
+
+/** Creator, reviewer, or approver may edit drafts; involved users may start a new version on Active docs. */
+export function canUserEditDocument(
+  user: AuthUser | null,
+  document: Pick<
+    DocumentRecord,
+    | 'createdBy'
+    | 'owner'
+    | 'approvedBy'
+    | 'approver'
+    | 'reviewedBy'
+    | 'status'
+    | 'submittedAt'
+    | 'rejectionReason'
+    | 'publishedBaseline'
+    | 'revisionStartedBy'
+  >,
+): boolean {
+  if (document.status === 'Active') return false;
+
+  const userEmail = user?.email.trim().toLowerCase() ?? '';
+  const starter = document.revisionStartedBy?.trim().toLowerCase() ?? '';
+  if (document.publishedBaseline && starter && userEmail === starter) return true;
+
+  if (!isUserInvolvedInDocumentWorkflow(user, document)) return false;
+  return true;
+}
+
+export function canUserCreateDocumentVersion(user: AuthUser | null): boolean {
+  return Boolean(user?.permissions?.includes('create_versions'));
+}
+
+export function canUserStartApprovedDocumentRevision(
+  user: AuthUser | null,
+  document: Pick<
+    DocumentRecord,
+    | 'status'
+    | 'createdBy'
+    | 'owner'
+    | 'approvedBy'
+    | 'approver'
+    | 'reviewedBy'
+    | 'submittedAt'
+    | 'rejectionReason'
+  >,
+): boolean {
+  if (document.status !== 'Active') return false;
+  if (!canUserCreateDocumentVersion(user)) return false;
+  return isUserInvolvedInDocumentWorkflow(user, document);
 }

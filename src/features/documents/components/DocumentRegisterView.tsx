@@ -1,8 +1,9 @@
 import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { api, fetchDocumentFileBlob, type CreateDocumentPayload, type DocumentRecord } from '../../../lib/api';
 import { documentTypeBadgeClass } from '../../../data/documentRegister';
+import { DOCUMENT_TYPES, TYPE_PREFIX } from '../../../data/documentTypes';
+import { downloadDocumentRegisterCsv } from '../utils/documentRegisterExport';
 import { useTeamUsers } from '../../../context/TeamUsersContext';
-import { canUserDeleteDocument, canUserEditDocument } from '../../../lib/documentUsers';
 import { useAuth } from '../../../context/AuthContext';
 import { generateDocumentCode } from '../../../lib/documentCode';
 import {
@@ -26,9 +27,29 @@ import {
   getDocumentCommentsBlockReason,
   type DocumentCommentsBlockReason,
 } from '../../../lib/documents/documentCommentsGate';
-import { buildDocumentReviewTimeline } from '../utils/reviewHistory';
+import { buildDocumentReviewHistoryRows, buildDocumentReviewTimeline } from '../utils/reviewHistory';
+import { getDocumentRegisterOwnerDisplay, isRegisterOwnerMetaPositive } from '../utils/registerOwnerDisplay';
+import { DocumentRegisterTableActions } from './DocumentRegisterTableActions';
+import { DocumentTypeIcon, getRegisterTypeAvatarClass } from '../utils/registerTypeAvatar';
 import type { DocumentEventRecord } from '../../../types/audit';
+import type { DocumentArchiveRecord } from '../../../types/documentArchive';
+
+const REGISTER_LIST_CACHE_KEY = 'register:list';
+
+type RegisterListCache = {
+  documents: DocumentRecord[];
+  archives: DocumentArchiveRecord[];
+};
+import { DarosActionLoadingOverlay } from '../../../components/common/DarosActionLoadingOverlay';
+import '../../../components/common/FlashAlert.css';
+import { useFlashMessages } from '../../../hooks/useFlashMessages';
+import { runWithMinDuration } from '../../../lib/ui/runWithMinDuration';
+import { getCachedData } from '../../../lib/data/clientDataCache';
+import { runCachedScreenLoad } from '../../../lib/ui/skeletonLoading';
+import { DocumentRegisterStats } from './DocumentRegisterStats';
+import { DocumentTableSkeleton, RegisterStatsSkeleton } from '../../../components/common/skeletons/DashboardSkeletons';
 import './DocumentRegisterView.css';
+import './DocumentRegisterStats.css';
 
 
 const ORIGINS = ['Internal', 'External'];
@@ -76,11 +97,11 @@ function CalendarIcon() {
   );
 }
 
-function getOwnerInitials(name?: string) {
-  if (!name?.trim()) return '?';
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-  return `${parts[0].charAt(0)}${parts[parts.length - 1].charAt(0)}`.toUpperCase();
+function getTypeAvatarLetter(doc: DocumentRecord) {
+  const prefix = TYPE_PREFIX[doc.type];
+  if (prefix?.trim()) return prefix.trim().charAt(0).toUpperCase();
+  const type = doc.type?.trim();
+  return type ? type.charAt(0).toUpperCase() : '?';
 }
 
 function getRegisterStatusLabel(doc: DocumentRecord) {
@@ -134,11 +155,13 @@ export function DocumentRegisterView({
   mode = 'register',
   onNewDocument,
   onDocumentClick,
+  onOpenArchives,
   refreshKey = 0,
 }: {
   mode?: 'new' | 'register';
   onNewDocument?: () => void;
-  onDocumentClick?: (documentId: string, options?: { edit?: boolean }) => void;
+  onDocumentClick?: (documentId: string, options?: { edit?: boolean; beginRevision?: boolean }) => void;
+  onOpenArchives?: () => void;
   onSubmittedForApproval?: () => void;
   refreshKey?: number;
 }) {
@@ -147,16 +170,20 @@ export function DocumentRegisterView({
   const ownerNames = teamUsers.map((entry) => entry.name);
   const showForm = mode === 'new';
   const showRegister = mode === 'register';
-  const [documents, setDocuments] = useState<DocumentRecord[]>([]);
+  const registerCache = getCachedData<RegisterListCache>(REGISTER_LIST_CACHE_KEY);
+  const [documents, setDocuments] = useState<DocumentRecord[]>(registerCache?.documents ?? []);
+  const [archives, setArchives] = useState<DocumentArchiveRecord[]>(registerCache?.archives ?? []);
+  const [showSkeleton, setShowSkeleton] = useState(!registerCache);
   const [form, setForm] = useState(emptyForm);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const { error, success, successFadingOut, showSuccess, showError } = useFlashMessages();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const registerActionBusy = isSaving || Boolean(deletingId);
   const [viewingPdfId, setViewingPdfId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [historyDocument, setHistoryDocument] = useState<DocumentRecord | null>(null);
   const [historyEvents, setHistoryEvents] = useState<DocumentEventRecord[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -189,16 +216,27 @@ export function DocumentRegisterView({
         };
 
   const loadDocuments = useCallback(async () => {
-    setError('');
     try {
-      const { documents: data } = await api.getDocuments();
-      setDocuments(data);
+      await runCachedScreenLoad<RegisterListCache>({
+        cacheKey: REGISTER_LIST_CACHE_KEY,
+        fetcher: async () => {
+          const [docsResult, archivesResult] = await Promise.all([
+            api.getDocuments(),
+            api.getDocumentArchives().catch(() => ({ archives: [], total: 0 })),
+          ]);
+          return { documents: docsResult.documents, archives: archivesResult.archives };
+        },
+        onData: ({ documents: nextDocs, archives: nextArchives }) => {
+          setDocuments(nextDocs);
+          setArchives(nextArchives);
+        },
+        setShowSkeleton,
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load documents');
-    } finally {
-      setIsLoading(false);
+      showError(err instanceof Error ? err.message : 'Failed to load documents');
+      setShowSkeleton(false);
     }
-  }, []);
+  }, [showError]);
 
   useEffect(() => {
     loadDocuments();
@@ -211,8 +249,6 @@ export function DocumentRegisterView({
 
   function handleClear() {
     setForm(emptyForm);
-    setSuccess('');
-    setError('');
   }
 
   function getDocumentLabel(doc: DocumentRecord) {
@@ -222,13 +258,9 @@ export function DocumentRegisterView({
 
   async function handleViewDocumentPdf(doc: DocumentRecord) {
     if (!doc.fileName) {
-      setSuccess('');
-      setError('This document has no file attached yet.');
+      showError('This document has no file attached yet.');
       return;
     }
-
-    setSuccess('');
-    setError('');
     setViewingPdfId(doc.id);
 
     try {
@@ -237,11 +269,11 @@ export function DocumentRegisterView({
       const opened = window.open(objectUrl, '_blank', 'noopener,noreferrer');
       if (!opened) {
         URL.revokeObjectURL(objectUrl);
-        setError('Allow pop-ups in your browser to view the document.');
+        showError('Allow pop-ups in your browser to view the document.');
         return;
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to open the document file.');
+      showError(err instanceof Error ? err.message : 'Unable to open the document file.');
     } finally {
       setViewingPdfId(null);
     }
@@ -251,16 +283,16 @@ export function DocumentRegisterView({
     const label = getDocumentLabel(doc);
     if (!window.confirm(`Delete document "${label}"? This action cannot be undone.`)) return;
 
-    setError('');
-    setSuccess('');
     setDeletingId(doc.id);
 
     try {
-      await api.deleteDocument(doc.id);
-      setDocuments((prev) => prev.filter((item) => item.id !== doc.id));
-      setSuccess(`Document "${label}" deleted.`);
+      await runWithMinDuration(async () => {
+        await api.deleteDocument(doc.id);
+        setDocuments((prev) => prev.filter((item) => item.id !== doc.id));
+      });
+      showSuccess(`Document "${label}" deleted.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete document');
+      showError(err instanceof Error ? err.message : 'Failed to delete document');
     } finally {
       setDeletingId(null);
     }
@@ -268,8 +300,6 @@ export function DocumentRegisterView({
 
   async function handleSave(e: FormEvent) {
     e.preventDefault();
-    setError('');
-    setSuccess('');
     setIsSaving(true);
 
     try {
@@ -293,21 +323,54 @@ export function DocumentRegisterView({
         comments: form.comments || undefined,
       };
 
-      const { document } = await api.createDocument(payload);
+      const { document } = await runWithMinDuration(() => api.createDocument(payload));
       setDocuments((prev) => [document, ...prev]);
-      setSuccess(`Document "${document.code}" created successfully.`);
       setForm(emptyForm);
+      showSuccess(`Document "${document.code}" created successfully.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create document');
+      showError(err instanceof Error ? err.message : 'Failed to create document');
     } finally {
       setIsSaving(false);
     }
   }
 
   const filteredDocuments = useMemo(
-    () => documents.filter((doc) => matchesTitleOrCode(searchQuery, doc)),
-    [documents, searchQuery],
+    () =>
+      documents.filter((doc) => {
+        if (typeFilter && doc.type !== typeFilter) return false;
+        return matchesTitleOrCode(searchQuery, doc);
+      }),
+    [documents, searchQuery, typeFilter],
   );
+
+  const typeOptionsInRegister = useMemo(() => {
+    const inDocs = new Set(documents.map((doc) => doc.type).filter(Boolean));
+    const ordered: string[] = DOCUMENT_TYPES.filter((type) => inDocs.has(type));
+    for (const type of inDocs) {
+      if (!ordered.includes(type)) ordered.push(type);
+    }
+    return ordered.sort((a, b) => a.localeCompare(b));
+  }, [documents]);
+
+  function handleExportRegister() {
+    const exportRows =
+      selectedIds.size > 0
+        ? filteredDocuments.filter((doc) => selectedIds.has(doc.id))
+        : filteredDocuments;
+    if (exportRows.length === 0) {
+      showError('No documents to export. Adjust filters or select rows.');
+      return;
+    }
+    const stem =
+      typeFilter.trim().replace(/\s+/g, '-').toLowerCase() || 'document-register';
+    downloadDocumentRegisterCsv(exportRows, stem);
+    showSuccess(`Exported ${exportRows.length} document(s) to CSV.`);
+  }
+
+  function clearRegisterFilters() {
+    setTypeFilter('');
+    setSearchQuery('');
+  }
 
   const {
     pagedItems: pagedDocuments,
@@ -342,17 +405,25 @@ export function DocumentRegisterView({
   }
 
   async function openReviewHistory(doc: DocumentRecord) {
+    const historyCacheKey = `review-history:events:${doc.id}`;
+    const cachedEvents = getCachedData<DocumentEventRecord[]>(historyCacheKey);
+
     setHistoryDocument(doc);
-    setHistoryEvents([]);
+    setHistoryEvents(cachedEvents ?? []);
     setHistoryError('');
-    setHistoryLoading(true);
 
     try {
-      const { timelines } = await api.getDocumentEvents(doc.id);
-      setHistoryEvents(timelines[0]?.events ?? []);
+      await runCachedScreenLoad({
+        cacheKey: historyCacheKey,
+        fetcher: async () => {
+          const { timelines } = await api.getDocumentEvents(doc.id);
+          return timelines[0]?.events ?? [];
+        },
+        onData: setHistoryEvents,
+        setShowSkeleton: setHistoryLoading,
+      });
     } catch (err) {
       setHistoryError(err instanceof Error ? err.message : 'Failed to load review history');
-    } finally {
       setHistoryLoading(false);
     }
   }
@@ -372,6 +443,12 @@ export function DocumentRegisterView({
     [historyDocument, historyEvents, teamUsers],
   );
 
+  const reviewHistoryTableRows = useMemo(
+    () =>
+      historyDocument ? buildDocumentReviewHistoryRows(historyDocument, historyEvents) : [],
+    [historyDocument, historyEvents],
+  );
+
   function toggleSelectRow(id: string) {
     setSelectedIds((current) => {
       const next = new Set(current);
@@ -388,16 +465,21 @@ export function DocumentRegisterView({
     if (!value || value === '—') return;
     try {
       await navigator.clipboard.writeText(value);
-      setSuccess('Copied to clipboard.');
+      showSuccess('Copied to clipboard.');
     } catch {
-      setError('Could not copy to clipboard.');
+      showError('Could not copy to clipboard.');
     }
   }
 
   return (
-    <div className="doc-register">
+    <div className="doc-register doc-register-mock">
+      <DarosActionLoadingOverlay active={registerActionBusy} />
       {(error || success) && (
-        <div className={`doc-alert ${error ? 'doc-alert-error' : 'doc-alert-success'}`}>
+        <div
+          className={`doc-alert ${error ? 'doc-alert-error' : 'doc-alert-success flash-alert-success'}${
+            success && successFadingOut ? ' flash-alert-fade-out' : ''
+          }`}
+        >
           {error || success}
         </div>
       )}
@@ -608,28 +690,40 @@ export function DocumentRegisterView({
       )}
 
       {showRegister && (
-      <section className="doc-card">
-        <div className="doc-card-header">
-          <div className="doc-card-title-group">
-            <div className="doc-card-icon doc-card-icon-blue">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <path d="M14 2v6h6" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="doc-card-title">Document Register</h2>
-              <p className="doc-card-subtitle">Manage and track all controlled documents</p>
-            </div>
-          </div>
-          <div className="doc-card-actions">
-            <button type="button" className="doc-btn doc-btn-outline">
+      <>
+        <header className="doc-reg-page-hero">
+          <h1 className="doc-reg-hero-title">Document Register</h1>
+          <p className="doc-reg-hero-subtitle">Manage and track all your documents in one place</p>
+        </header>
+        {showSkeleton ? (
+          <RegisterStatsSkeleton />
+        ) : (
+          <DocumentRegisterStats documents={documents} archives={archives} onOpenArchives={onOpenArchives} />
+        )}
+
+      <section className="doc-card doc-reg-card">
+        <div className="doc-reg-toolbar doc-reg-toolbar-top">
+          <ListSearchBar
+            value={searchQuery}
+            onChange={setSearchQuery}
+            className="doc-reg-search"
+            placeholder="Search by title, code, or keyword…"
+            showShortcutHint
+          />
+          <div className="doc-reg-toolbar-right">
+            <ListPageSizeSelect pageSize={pageSize} onPageSizeChange={setPageSize} />
+            <button
+              type="button"
+              className={`doc-btn doc-btn-outline${filtersOpen || typeFilter ? ' doc-btn-outline-active' : ''}`}
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen((open) => !open)}
+            >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M22 3H2l8 9.46V19l4-2v-4.54L22 3z" />
               </svg>
-              Filters
+              Filters{typeFilter ? ' (1)' : ''}
             </button>
-            <button type="button" className="doc-btn doc-btn-outline">
+            <button type="button" className="doc-btn doc-btn-outline" onClick={handleExportRegister}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
               </svg>
@@ -648,14 +742,35 @@ export function DocumentRegisterView({
           </div>
         </div>
 
-        <div className="doc-card-toolbar">
-          <ListSearchBar value={searchQuery} onChange={setSearchQuery} />
-          <ListPageSizeSelect pageSize={pageSize} onPageSizeChange={setPageSize} />
-        </div>
+        {filtersOpen ? (
+          <div className="doc-reg-filters-panel">
+            <div className="doc-reg-filter-field">
+              <label htmlFor="doc-reg-type-filter">Document type</label>
+              <select
+                id="doc-reg-type-filter"
+                className="doc-input doc-reg-filter-select"
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+              >
+                <option value="">All document types</option>
+                {typeOptionsInRegister.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {typeFilter || searchQuery ? (
+              <button type="button" className="doc-btn doc-btn-outline doc-reg-filter-clear" onClick={clearRegisterFilters}>
+                Clear filters
+              </button>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="doc-reg-table-wrap">
-          {isLoading ? (
-            <div className="doc-table-loading">Loading documents...</div>
+          {showSkeleton ? (
+            <DocumentTableSkeleton />
           ) : documents.length === 0 ? (
             <div className="doc-register-empty-state">
               <EmptyDraftsLottie />
@@ -668,7 +783,7 @@ export function DocumentRegisterView({
             <div className="doc-register-empty-state">
               <h3 className="doc-register-empty-title">No matching documents</h3>
               <p className="doc-register-empty-text">
-                Try a different title or document code.
+                Try a different search, document type filter, or code.
               </p>
             </div>
           ) : (
@@ -698,6 +813,7 @@ export function DocumentRegisterView({
                 {pagedDocuments.map((doc) => {
                   const registerCode =
                     doc.documentOrigin === 'External' ? doc.externalRef || '—' : doc.code || '—';
+                  const ownerDisplay = getDocumentRegisterOwnerDisplay(doc, teamUsers);
 
                   return (
                     <tr
@@ -705,38 +821,38 @@ export function DocumentRegisterView({
                       className={`doc-reg-row ${selectedIds.has(doc.id) ? 'selected' : ''}`}
                     >
                       <td className="doc-reg-col-check">
-                        <div className="doc-reg-check-cell">
-                          <input
-                            type="checkbox"
-                            className="doc-reg-checkbox"
-                            checked={selectedIds.has(doc.id)}
-                            onChange={() => toggleSelectRow(doc.id)}
-                            aria-label={`Select ${doc.title}`}
-                          />
+                        <input
+                          type="checkbox"
+                          className="doc-reg-checkbox"
+                          checked={selectedIds.has(doc.id)}
+                          onChange={() => toggleSelectRow(doc.id)}
+                          aria-label={`Select ${doc.title}`}
+                        />
+                      </td>
+                      <td>
+                        <div className="doc-reg-origin-cell">
                           <span className="doc-reg-bookmark" aria-hidden="true">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
                               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
                             </svg>
                           </span>
+                          <span
+                            className={`doc-reg-origin-icon ${doc.documentOrigin === 'External' ? 'external' : 'internal'}`}
+                            title={doc.documentOrigin === 'External' ? 'External document' : 'Internal document'}
+                          >
+                            {doc.documentOrigin === 'External' ? (
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                                <path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z" />
+                                <path d="M3 9l2.5-5h13L21 9" />
+                              </svg>
+                            ) : (
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                                <path d="M4 4h16v16H4z" />
+                                <path d="m22 6-10 7L2 6" />
+                              </svg>
+                            )}
+                          </span>
                         </div>
-                      </td>
-                      <td>
-                        <span
-                          className={`doc-reg-origin-icon ${doc.documentOrigin === 'External' ? 'external' : 'internal'}`}
-                          title={doc.documentOrigin === 'External' ? 'External document' : 'Internal document'}
-                        >
-                          {doc.documentOrigin === 'External' ? (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                              <path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z" />
-                              <path d="M3 9l2.5-5h13L21 9" />
-                            </svg>
-                          ) : (
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                              <path d="M4 4h16v16H4z" />
-                              <path d="m22 6-10 7L2 6" />
-                            </svg>
-                          )}
-                        </span>
                       </td>
                       <td>
                         <span className={`doc-reg-pill ${getRegisterStatusClass(doc)}`}>
@@ -745,7 +861,9 @@ export function DocumentRegisterView({
                       </td>
                       <td>
                         <div className="doc-reg-code-cell">
-                          <span className="doc-reg-avatar">{getOwnerInitials(doc.owner)}</span>
+                          <span className={`doc-reg-avatar ${getRegisterTypeAvatarClass(doc.type)}`}>
+                            {getTypeAvatarLetter(doc)}
+                          </span>
                           <div className="doc-reg-code-text">
                             <button
                               type="button"
@@ -773,102 +891,49 @@ export function DocumentRegisterView({
                       <td className="doc-reg-title-cell">{doc.title}</td>
                       <td>
                         <span className={`doc-reg-type-pill ${documentTypeBadgeClass(doc.type)}`}>
+                          <DocumentTypeIcon type={doc.type} />
                           {doc.type}
+                        </span>
+                      </td>
+                      <td className="doc-reg-process-cell">
+                        <span className="doc-reg-process-inner">
+                          <span className="doc-reg-process-icon" aria-hidden="true">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                              <path d="M3 7h18v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
+                              <path d="M3 7l3-4h12l3 4" />
+                            </svg>
+                          </span>
+                          {doc.process || '—'}
                         </span>
                       </td>
                       <td>
                         <div className="doc-reg-stack">
-                          <span className="doc-reg-stack-primary">{doc.process || '—'}</span>
-                          {doc.department ? (
-                            <span className="doc-reg-stack-secondary">{doc.department}</span>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="doc-reg-stack">
-                          <span className="doc-reg-stack-primary">{doc.owner || '—'}</span>
-                          {doc.approvedBy ? (
-                            <span className="doc-reg-stack-secondary">Approved: {doc.approvedBy}</span>
+                          <span className="doc-reg-stack-primary">{ownerDisplay.primary}</span>
+                          {ownerDisplay.secondary ? (
+                            <span
+                              className={`doc-reg-stack-secondary${
+                                isRegisterOwnerMetaPositive(ownerDisplay.secondary) ? ' is-positive' : ''
+                              }`}
+                            >
+                              {ownerDisplay.secondary}
+                            </span>
                           ) : null}
                         </div>
                       </td>
                       <td className="doc-reg-col-actions">
-                          <div className="doc-reg-action-grid" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              type="button"
-                              className="doc-reg-round-btn"
-                              title="Document review history"
-                              onClick={() => void openReviewHistory(doc)}
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                                <circle cx="12" cy="12" r="9" />
-                                <path d="M12 7v5l3 2" />
-                              </svg>
-                            </button>
-                            <button
-                              type="button"
-                              className="doc-reg-round-btn"
-                              title="Comments"
-                              onClick={() => handleCommentsClick(doc)}
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                              </svg>
-                            </button>
-                            {canUserEditDocument(user, doc) ? (
-                              <button
-                                type="button"
-                                className="doc-reg-round-btn doc-reg-round-btn-primary"
-                                title="Edit"
-                                onClick={() => onDocumentClick?.(doc.id, { edit: true })}
-                              >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                                  <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
-                                </svg>
-                              </button>
-                            ) : null}
-                            {canUserDeleteDocument(user, doc) ? (
-                              <button
-                                type="button"
-                                className="doc-reg-round-btn doc-reg-round-btn-danger"
-                                title="Delete"
-                                disabled={deletingId === doc.id}
-                                onClick={() => handleDelete(doc)}
-                              >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                                  <path d="M3 6h18M8 6V4h8v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-                                  <path d="M10 11v6M14 11v6" />
-                                </svg>
-                              </button>
-                            ) : null}
-                            <button
-                              type="button"
-                              className="doc-reg-round-btn"
-                              title={
-                                doc.fileName
-                                  ? 'View document — open the uploaded file'
-                                  : 'No file attached'
-                              }
-                              disabled={!doc.fileName || viewingPdfId === doc.id}
-                              onClick={() => void handleViewDocumentPdf(doc)}
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                <path d="M14 2v6h6" />
-                              </svg>
-                            </button>
-                            <button
-                              type="button"
-                              className="doc-reg-round-btn"
-                              title="Open — document details and preview"
-                              onClick={() => onDocumentClick?.(doc.id)}
-                            >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
-                                <circle cx="12" cy="12" r="3" />
-                              </svg>
-                            </button>
-                          </div>
+                        <DocumentRegisterTableActions
+                          doc={doc}
+                          user={user}
+                          deletingId={deletingId}
+                          viewingPdfId={viewingPdfId}
+                          onView={() => onDocumentClick?.(doc.id)}
+                          onChat={() => handleCommentsClick(doc)}
+                          onEdit={() => onDocumentClick?.(doc.id, { edit: true })}
+                          onBeginRevision={() => onDocumentClick?.(doc.id, { beginRevision: true })}
+                          onHistory={() => void openReviewHistory(doc)}
+                          onOpenFile={() => void handleViewDocumentPdf(doc)}
+                          onDelete={() => handleDelete(doc)}
+                        />
                       </td>
                     </tr>
                   );
@@ -886,12 +951,14 @@ export function DocumentRegisterView({
           itemLabel="entries"
         />
       </section>
+      </>
       )}
 
       <DocumentReviewHistoryDialog
         open={Boolean(historyDocument)}
         documentRecord={historyDocument}
         steps={reviewHistorySteps}
+        tableRows={reviewHistoryTableRows}
         isLoading={historyLoading}
         error={historyError}
         onClose={closeReviewHistory}

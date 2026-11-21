@@ -7,6 +7,7 @@ import {
   LineChart,
   MiniBarChart,
 } from './ChartWidgets';
+import { ChartBlockSkeleton } from '../../../components/common/skeletons/DashboardSkeletons';
 import './HomeCharts.css';
 
 interface HomeChartsProps {
@@ -42,7 +43,7 @@ export function HomeCharts({ refreshKey = 0 }: HomeChartsProps) {
         </div>
         <div className="home-chart-body home-chart-body-bars">
           {documentsByTypeLoading ? (
-            <p className="home-chart-loading">Loading document breakdown…</p>
+            <ChartBlockSkeleton height={160} />
           ) : documentsByType.length === 0 ? (
             <p className="home-chart-empty">No documents in the register yet.</p>
           ) : (
@@ -60,7 +61,7 @@ export function HomeCharts({ refreshKey = 0 }: HomeChartsProps) {
         </div>
         <div className="home-chart-body">
           {activityLoading ? (
-            <p className="home-chart-loading">Loading open activity…</p>
+            <ChartBlockSkeleton height={160} />
           ) : (
             <DonutChart data={activityBreakdown} showAllCategories />
           )}

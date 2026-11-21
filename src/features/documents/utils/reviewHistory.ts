@@ -1,6 +1,7 @@
 import type { DocumentEventRecord } from '../../../types/audit';
 import type { DocumentRecord } from '../../../types/documents';
 import { getDocumentEventDescription } from '../../../lib/documentEvents';
+import { normalizeTeamEmail } from '../../../lib/legacyEmails';
 
 export interface DocumentReviewHistoryRow {
   versionNumber: number;
@@ -75,18 +76,18 @@ function resolveEmail(
 ): string | undefined {
   const raw = value?.trim();
   if (!raw) return undefined;
-  if (raw.includes('@')) return raw.toLowerCase();
+  if (raw.includes('@')) return normalizeTeamEmail(raw);
   const match = teamUsers.find(
     (user) =>
       user.name.trim().toLowerCase() === raw.toLowerCase() ||
       user.email.trim().toLowerCase() === raw.toLowerCase(),
   );
-  return match?.email.toLowerCase();
+  return match?.email ? normalizeTeamEmail(match.email) : undefined;
 }
 
 function pickEmail(...candidates: (string | undefined)[]): string | undefined {
   for (const candidate of candidates) {
-    if (candidate?.includes('@')) return candidate.trim().toLowerCase();
+    if (candidate?.includes('@')) return normalizeTeamEmail(candidate);
   }
   return undefined;
 }
@@ -106,6 +107,19 @@ function reviewerEmailForDoc(
 function approverEmailForDoc(doc: DocumentRecord, teamUsers: ReviewHistoryTeamUser[]): string | undefined {
   const designated = doc.approver?.trim() || doc.owner?.trim();
   return resolveEmail(designated, teamUsers) || pickEmail(designated);
+}
+
+function isRevisionStartedEvent(event: DocumentEventRecord): boolean {
+  return (
+    event.type === 'revision_started' ||
+    (event.type === 'edited' && event.metadata?.action === 'revision_started')
+  );
+}
+
+function revisionVersionLabel(event: DocumentEventRecord, doc: DocumentRecord): string {
+  const fromMeta = event.metadata?.version?.trim();
+  if (fromMeta) return fromMeta;
+  return String(doc.version);
 }
 
 type RejectionStage = 'review' | 'approval';
@@ -150,6 +164,7 @@ function eventSection(event: DocumentEventRecord): string {
     case 'submitted':
     case 'resubmitted':
     case 'reviewed':
+    case 'revision_started':
       return 'Approval workflow';
     case 'approved':
       return 'Header / Document Review History';
@@ -158,8 +173,16 @@ function eventSection(event: DocumentEventRecord): string {
     case 'edited':
       return event.metadata?.action === 'file_replaced' ? 'Document file' : 'Document content';
     default:
+      if (isRevisionStartedEvent(event)) {
+        return 'Approval workflow';
+      }
       return '';
   }
+}
+
+function eventSectionFromEvent(event: DocumentEventRecord): string {
+  if (isRevisionStartedEvent(event)) return 'Approval workflow';
+  return eventSection(event);
 }
 
 function eventDescription(event: DocumentEventRecord, doc: DocumentRecord): string {
@@ -169,9 +192,9 @@ function eventDescription(event: DocumentEventRecord, doc: DocumentRecord): stri
     case 'approved':
       return 'Document approved and published for controlled use.';
     case 'submitted':
-      return 'Submitted for approval.';
+      return 'Submitted for review.';
     case 'resubmitted':
-      return 'Updated document submitted for approval again.';
+      return 'Updated document submitted for review again.';
     case 'reviewed':
       return 'Review completed and sent for final approval.';
     case 'rejected':
@@ -185,7 +208,15 @@ function eventDescription(event: DocumentEventRecord, doc: DocumentRecord): stri
         return `Replaced document file (${event.metadata.fileName}).`;
       }
       return 'Document content or metadata updated.';
+    case 'revision_started': {
+      const version = revisionVersionLabel(event, doc);
+      return `Document update started for version ${version}.`;
+    }
     default:
+      if (isRevisionStartedEvent(event)) {
+        const version = revisionVersionLabel(event, doc);
+        return `Document update started for version ${version}.`;
+      }
       return getDocumentEventDescription(event);
   }
 }
@@ -204,7 +235,10 @@ function eventJustification(event: DocumentEventRecord, doc: DocumentRecord): st
       ? 'To align with the Integrated Management System (IMS) structure'
       : '';
   }
-  if (event.type === 'edited' || event.type === 'resubmitted') {
+  if (event.type === 'edited' || event.type === 'resubmitted' || event.type === 'revision_started') {
+    return 'To align with the Integrated Management System (IMS) structure and maintain version control traceability';
+  }
+  if (isRevisionStartedEvent(event)) {
     return 'To align with the Integrated Management System (IMS) structure and maintain version control traceability';
   }
   return '';
@@ -256,7 +290,7 @@ export function buildDocumentReviewHistoryRows(
   return sorted.map((event, index) => ({
     versionNumber: index + 1,
     date: formatReviewDate(event.createdAt),
-    section: eventSection(event),
+    section: eventSectionFromEvent(event),
     descriptionOfChange: eventDescription(event, doc),
     justificationForChange: eventJustification(event, doc),
     approvedBy: eventApprovedBy(event, doc),
@@ -268,8 +302,10 @@ const TIMELINE_EVENT_TYPES = new Set<DocumentEventRecord['type']>([
   'submitted',
   'resubmitted',
   'reviewed',
+  'revision_started',
   'approved',
   'rejected',
+  'edited',
 ]);
 
 export function buildDocumentReviewTimeline(
@@ -386,6 +422,27 @@ export function buildDocumentReviewTimeline(
   for (const event of sorted) {
     if (event.type === 'created') continue;
 
+    if (isRevisionStartedEvent(event)) {
+      const version = revisionVersionLabel(event, doc);
+      const parsedVersion = Number.parseFloat(version);
+      const actorEmail =
+        pickEmail(event.actorEmail) || resolveEmail(event.actorName, teamUsers);
+
+      steps.push({
+        id: `revision-${event.id}`,
+        title: `Document update to version ${version}`,
+        description: `Revision started. The document was returned to draft — submit for review and approval when ready (version ${version}).`,
+        date: formatReviewDateTime(event.createdAt),
+        version: Number.isFinite(parsedVersion) ? parsedVersion : doc.version,
+        byEmail: actorEmail,
+      });
+      continue;
+    }
+
+    if (event.type === 'edited') {
+      continue;
+    }
+
     if (event.type === 'submitted' || event.type === 'resubmitted') {
       lastSubmitAt = event.createdAt;
       const reviewerEmail = reviewerEmailForDoc(doc, teamUsers, event.metadata?.recipientEmail);
@@ -396,7 +453,7 @@ export function buildDocumentReviewTimeline(
       steps.push({
         id: `${event.type}-${event.id}`,
         title: event.type === 'resubmitted' ? 'Resubmitted for review' : 'Submitted for review',
-        description: 'Submitted for approval.',
+        description: 'Submitted for review.',
         date: formatReviewDateTime(event.createdAt),
         byEmail: submitterEmail,
         toEmail: reviewerEmail,

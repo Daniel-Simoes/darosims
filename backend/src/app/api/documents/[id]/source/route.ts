@@ -1,5 +1,6 @@
 import { requireAuth, jsonResponse, corsHeaders } from '@/lib/auth';
 import { getDocumentById } from '@/lib/documents';
+import { canAuthUserViewDocument } from '@/lib/documentVisibility';
 import { readDocumentSourceFile } from '@/lib/documentFiles';
 
 export async function OPTIONS() {
@@ -16,6 +17,9 @@ export async function GET(
   const { id } = await params;
   const document = await getDocumentById(id);
   if (!document) {
+    return jsonResponse({ error: 'Document not found' }, 404);
+  }
+  if (!(await canAuthUserViewDocument(auth, document))) {
     return jsonResponse({ error: 'Document not found' }, 404);
   }
 

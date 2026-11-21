@@ -1,4 +1,5 @@
 import { findUserEmailByName } from '@/repositories/users/userRepository';
+import { normalizeTeamEmail } from '@/lib/legacyEmails';
 import type { DocumentRecord } from '@/types';
 
 export function getDesignatedApprover(document: Pick<DocumentRecord, 'approver' | 'owner'>): string {
@@ -10,8 +11,9 @@ export async function resolveDesignatedApproverEmail(
 ): Promise<string | null> {
   const value = getDesignatedApprover(document);
   if (!value) return null;
-  if (value.includes('@')) return value.toLowerCase();
-  return findUserEmailByName(value);
+  if (value.includes('@')) return normalizeTeamEmail(value) ?? value.toLowerCase();
+  const fromName = await findUserEmailByName(value);
+  return fromName ? normalizeTeamEmail(fromName) ?? fromName : null;
 }
 
 export function isPendingDocumentReview(
@@ -32,5 +34,6 @@ export async function isAuthUserDesignatedApprover(
 ): Promise<boolean> {
   const approverEmail = await resolveDesignatedApproverEmail(document);
   if (!approverEmail) return false;
-  return approverEmail.toLowerCase() === userEmail.trim().toLowerCase();
+  const normalizedUser = normalizeTeamEmail(userEmail) ?? userEmail.trim().toLowerCase();
+  return normalizeTeamEmail(approverEmail) === normalizedUser;
 }

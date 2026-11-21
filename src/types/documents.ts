@@ -2,6 +2,29 @@ export type { DocumentType } from '../data/documentTypes';
 
 export type DocumentStatus = 'Active' | 'Draft' | 'Obsolete';
 
+export interface DocumentPublishedBaseline {
+  version: number;
+  title: string;
+  type: string;
+  process: string;
+  owner: string;
+  approver?: string;
+  approvedBy?: string;
+  department?: string;
+  effectiveDate: string;
+  nextReviewDate: string;
+  fileName?: string;
+  fileFormat?: 'pdf' | 'image' | 'text' | 'video' | 'audio' | 'office' | 'other' | 'word';
+  sourceContent?: string;
+  reviewFrequency?: string;
+  repository?: string;
+  distribution?: string;
+  retentionPeriod?: string;
+  retentionNotes?: string;
+  disposition?: string;
+  comments?: string;
+}
+
 export interface DocumentRecord {
   id: string;
   code: string;
@@ -39,6 +62,9 @@ export interface DocumentRecord {
   rejectionReason?: string;
   rejectedAt?: string;
   rejectedBy?: string;
+  publishedBaseline?: DocumentPublishedBaseline;
+  revisionStartedBy?: string;
+  lastSubmittedBy?: string;
 }
 
 export interface CreateDocumentPayload {
@@ -70,6 +96,8 @@ export interface CreateDocumentPayload {
 }
 
 export interface UpdateDocumentPayload {
+  /** Start a new controlled revision from an approved (Active) document. */
+  beginRevision?: boolean;
   type?: string;
   hasIso?: boolean;
   process?: string;

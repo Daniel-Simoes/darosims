@@ -17,10 +17,14 @@ import {
   isUserDesignatedApprover,
 } from '../../../lib/documents/documentApprovalWorkflow';
 import { useTeamUsers } from '../../../context/TeamUsersContext';
+import { DocumentDetailSkeleton } from '../../../components/common/skeletons/DashboardSkeletons';
+import { getCachedData } from '../../../lib/data/clientDataCache';
+import { runCachedScreenLoad } from '../../../lib/ui/skeletonLoading';
 import {
   canUserApproveDocuments,
   canUserDeleteDocument,
   canUserEditDocument,
+  canUserStartApprovedDocumentRevision,
   isDocumentOwnerSameAsUser,
 } from '../../../lib/documentUsers';
 import { useAuth } from '../../../context/AuthContext';
@@ -28,8 +32,18 @@ import { DocumentPreview } from './DocumentPreview';
 import { DocumentTypeMenu } from './DocumentTypeMenu';
 import { ProcessMenu } from './ProcessMenu';
 import { ConfirmDialog } from '../../../components/dialogs/ConfirmDialog';
+import { DocumentWorkflowPeopleDialog } from '../../../components/dialogs/DocumentWorkflowPeopleDialog';
+import { hasOpenDocumentRevision } from '../../../lib/documents/documentPublishedBaseline';
 import { RejectDocumentDialog } from '../../../components/dialogs/RejectDocumentDialog';
 import { recalculateDocumentCodeForTypeProcessChange } from '../../../lib/documentCode';
+import {
+  formatRevisionVersionLabel,
+  getNextDocumentVersion,
+} from '../../../lib/documents/documentVersionRevision';
+import { DarosActionLoadingOverlay } from '../../../components/common/DarosActionLoadingOverlay';
+import '../../../components/common/FlashAlert.css';
+import { useFlashMessages } from '../../../hooks/useFlashMessages';
+import { runWithMinDuration } from '../../../lib/ui/runWithMinDuration';
 import './DocumentDetailView.css';
 
 const STATUSES: DocumentRecord['status'][] = ['Active', 'Draft', 'Obsolete'];
@@ -37,6 +51,7 @@ const STATUSES: DocumentRecord['status'][] = ['Active', 'Draft', 'Obsolete'];
 interface DocumentDetailViewProps {
   documentId: string;
   initialEdit?: boolean;
+  autoBeginRevision?: boolean;
   onBack: () => void;
   onDeleted?: () => void;
   onApproved?: () => void;
@@ -112,6 +127,7 @@ function documentToForm(doc: DocumentRecord) {
 export function DocumentDetailView({
   documentId,
   initialEdit = false,
+  autoBeginRevision = false,
   onBack,
   onDeleted,
   onApproved,
@@ -120,41 +136,71 @@ export function DocumentDetailView({
   const { user } = useAuth();
   const teamUsers = useTeamUsers();
   const canApprove = canUserApproveDocuments(user);
-  const [document, setDocument] = useState<DocumentRecord | null>(null);
-  const [form, setForm] = useState(documentToForm({} as DocumentRecord));
-  const [isLoading, setIsLoading] = useState(true);
+  const documentCacheKey = `document:${documentId}`;
+  const cachedDocument = getCachedData<DocumentRecord>(documentCacheKey);
+  const [document, setDocument] = useState<DocumentRecord | null>(cachedDocument);
+  const [form, setForm] = useState(
+    cachedDocument ? documentToForm(cachedDocument) : documentToForm({} as DocumentRecord),
+  );
+  const [showSkeleton, setShowSkeleton] = useState(!cachedDocument);
+  const [isLoading, setIsLoading] = useState(!cachedDocument);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const { error, success, successFadingOut, setError, showSuccess, showError } = useFlashMessages();
   const [showOwnerConfirmDialog, setShowOwnerConfirmDialog] = useState(false);
   const [showResubmitConfirmDialog, setShowResubmitConfirmDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [revisionReviewerDialogOpen, setRevisionReviewerDialogOpen] = useState(false);
+  const [revisionApproverDialogOpen, setRevisionApproverDialogOpen] = useState(false);
+  const [revisionWorkflowReviewer, setRevisionWorkflowReviewer] = useState('');
+  const [revisionWorkflowApprover, setRevisionWorkflowApprover] = useState('');
+  const autoBeginRevisionAttempted = useRef(false);
   const [revisionFileError, setRevisionFileError] = useState('');
   const [isUploadingRevisionFile, setIsUploadingRevisionFile] = useState(false);
+  const actionBusy = isSaving || isDeleting || isUploadingRevisionFile;
   const ownerFieldRef = useRef<HTMLDivElement>(null);
   const [registerCodes, setRegisterCodes] = useState<string[]>([]);
+  const ownerNames = teamUsers.map((entry) => entry.name);
 
   const loadDocument = useCallback(async () => {
     setError('');
     setIsLoading(true);
     try {
-      const { document: data } = await api.getDocument(documentId);
-      setDocument(data);
-      setForm(documentToForm(data));
-      const mayEdit = user ? canUserEditDocument(user, data) : false;
-      setIsEditing(initialEdit && mayEdit);
+      await runCachedScreenLoad({
+        cacheKey: documentCacheKey,
+        fetcher: async () => (await api.getDocument(documentId)).document,
+        onData: (data) => {
+          setDocument(data);
+          setForm(documentToForm(data));
+          const mayEdit = user ? canUserEditDocument(user, data) : false;
+          setIsEditing(initialEdit && mayEdit);
+        },
+        setShowSkeleton,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load document');
+      setShowSkeleton(false);
     } finally {
       setIsLoading(false);
     }
-  }, [documentId, initialEdit, user]);
+  }, [documentCacheKey, documentId, initialEdit, user, setError]);
 
   useEffect(() => {
     loadDocument();
   }, [loadDocument]);
+
+  useEffect(() => {
+    autoBeginRevisionAttempted.current = false;
+  }, [documentId]);
+
+  useEffect(() => {
+    if (!autoBeginRevision || autoBeginRevisionAttempted.current || !document || isLoading) return;
+    if (document.status !== 'Active' || !user || !canUserStartApprovedDocumentRevision(user, document)) return;
+
+    autoBeginRevisionAttempted.current = true;
+    void handleStartVersionUpdate();
+  }, [autoBeginRevision, document, isLoading, user]);
 
   useEffect(() => {
     if (!isEditing || !document) {
@@ -206,9 +252,38 @@ export function DocumentDetailView({
     setError('');
   }
 
+  async function handleStartVersionUpdate() {
+    if (!document || document.status !== 'Active' || isExternal) return;
+
+    const nextVersion = getNextDocumentVersion(document.version);
+    setError('');
+    setIsSaving(true);
+    try {
+      await runWithMinDuration(async () => {
+        const { document: updated } = await api.updateDocument(documentId, {
+          beginRevision: true,
+          status: 'Draft',
+          version: nextVersion,
+        });
+        setDocument(updated);
+        setForm(documentToForm(updated));
+        setIsEditing(true);
+      });
+      showSuccess(
+        `New draft started at version ${formatRevisionVersionLabel(nextVersion)}. Update the content and submit for review.`,
+      );
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to start document revision');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   async function saveFormChanges(options?: {
     status?: DocumentRecord['status'];
     stayInEdit?: boolean;
+    ownerOverride?: string;
+    approverOverride?: string;
   }): Promise<DocumentRecord | null> {
     if (!document) return null;
     if (!canUserEditDocument(user, document)) {
@@ -242,8 +317,10 @@ export function DocumentDetailView({
       title: form.title,
       status: nextStatus,
       documentOrigin: form.documentOrigin,
-      owner: form.owner || undefined,
-      approver: form.approver.trim() || form.owner.trim() || undefined,
+      owner: options?.ownerOverride ?? (form.owner || undefined),
+      approver:
+        options?.approverOverride ??
+        (form.approver.trim() || form.owner.trim() || undefined),
       approvedBy: isApproving ? user?.name : form.approvedBy || undefined,
       department: form.department || undefined,
       effectiveDate: form.effectiveDate || undefined,
@@ -275,21 +352,19 @@ export function DocumentDetailView({
   }
 
   async function handleSave(overrides?: { status?: DocumentRecord['status'] }) {
-    setError('');
-    setSuccess('');
     setIsSaving(true);
     try {
-      const updated = await saveFormChanges({ status: overrides?.status });
+      const updated = await runWithMinDuration(() => saveFormChanges({ status: overrides?.status }));
       if (!updated) return;
       const isApproving = overrides?.status === 'Active';
-      setSuccess(
+      showSuccess(
         isApproving ? 'Document approved successfully.' : 'Document updated successfully.',
       );
       if (isApproving) {
         onApproved?.();
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update document');
+      showError(err instanceof Error ? err.message : 'Failed to update document');
     } finally {
       setIsSaving(false);
     }
@@ -305,17 +380,17 @@ export function DocumentDetailView({
     }
 
     setIsUploadingRevisionFile(true);
-    setError('');
-    setSuccess('');
     try {
-      const updated = await replaceDocumentSourceFile(documentId, file, {
-        clearRejectionMetadata: false,
-      });
+      const updated = await runWithMinDuration(() =>
+        replaceDocumentSourceFile(documentId, file, {
+          clearRejectionMetadata: false,
+        }),
+      );
       setDocument(updated);
       setForm(documentToForm(updated));
-      setSuccess('New file attached. Save your changes, then resubmit for review.');
+      showSuccess('New file attached. Save your changes, then resubmit for review.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload document file');
+      showError(err instanceof Error ? err.message : 'Failed to upload document file');
     } finally {
       setIsUploadingRevisionFile(false);
     }
@@ -324,26 +399,27 @@ export function DocumentDetailView({
   async function completeResubmitForReview() {
     if (!document) return;
 
-    setError('');
-    setSuccess('');
     setIsSaving(true);
 
     try {
-      const saved = await saveFormChanges({ stayInEdit: false });
-      if (!saved) return;
-      if (!saved.fileName) {
-        setError('Upload a document file before resubmitting for review.');
-        return;
-      }
+      await runWithMinDuration(async () => {
+        const saved = await saveFormChanges({ stayInEdit: false });
+        if (!saved) {
+          throw new Error('Could not save changes before resubmitting.');
+        }
+        if (!saved.fileName) {
+          throw new Error('Upload a document file before resubmitting for review.');
+        }
 
-      const { document: updated } = await api.submitDocumentForApproval(documentId);
-      setDocument(updated);
-      setForm(documentToForm(updated));
-      setIsEditing(false);
-      setSuccess('Document resubmitted for review.');
-      onSubmittedForApproval?.();
+        const { document: updated } = await api.submitDocumentForApproval(documentId);
+        setDocument(updated);
+        setForm(documentToForm(updated));
+        setIsEditing(false);
+        onSubmittedForApproval?.();
+      });
+      showSuccess('Document resubmitted for review.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to resubmit document');
+      showError(err instanceof Error ? err.message : 'Failed to resubmit document');
     } finally {
       setIsSaving(false);
       setShowResubmitConfirmDialog(false);
@@ -371,23 +447,23 @@ export function DocumentDetailView({
     if (!document || !isPendingDocumentReview(document)) return;
     if (!isDocumentOwnerSameAsUser(user, document.owner)) return;
 
-    setError('');
-    setSuccess('');
     setIsSaving(true);
 
     try {
-      const { document: updated } = await api.reviewDocument(documentId);
-      setDocument(updated);
-      setForm(documentToForm(updated));
-      const approverLabel = getDesignatedApprover(updated);
-      const isFinalApprover = isUserDesignatedApprover(user, updated, teamUsers);
-      setSuccess(
-        isFinalApprover
+      let message = 'Review complete.';
+      await runWithMinDuration(async () => {
+        const { document: updated } = await api.reviewDocument(documentId);
+        setDocument(updated);
+        setForm(documentToForm(updated));
+        const approverLabel = getDesignatedApprover(updated);
+        const isFinalApprover = isUserDesignatedApprover(user, updated, teamUsers);
+        message = isFinalApprover
           ? 'Review complete. You can approve the document when ready.'
-          : `Review complete. Sent to ${approverLabel || 'the approver'} for final approval.`,
-      );
+          : `Review complete. Sent to ${approverLabel || 'the approver'} for final approval.`;
+      });
+      showSuccess(message);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to review document');
+      showError(err instanceof Error ? err.message : 'Failed to review document');
     } finally {
       setIsSaving(false);
     }
@@ -402,18 +478,18 @@ export function DocumentDetailView({
     if (pendingFinal && !isUserDesignatedApprover(user, document, teamUsers)) return;
     if (!pendingReview && !pendingFinal) return;
 
-    setError('');
-    setSuccess('');
     setIsSaving(true);
 
     try {
-      const { document: updated } = await api.rejectDocumentForApproval(documentId, reason);
-      setDocument(updated);
-      setForm(documentToForm(updated));
-      setShowRejectDialog(false);
-      setSuccess('Document was not approved. The requester has been notified.');
+      await runWithMinDuration(async () => {
+        const { document: updated } = await api.rejectDocumentForApproval(documentId, reason);
+        setDocument(updated);
+        setForm(documentToForm(updated));
+        setShowRejectDialog(false);
+      });
+      showSuccess('Document was not approved. The requester has been notified.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reject document');
+      showError(err instanceof Error ? err.message : 'Failed to reject document');
     } finally {
       setIsSaving(false);
     }
@@ -422,18 +498,54 @@ export function DocumentDetailView({
   async function submitForReview() {
     if (!document || document.status !== 'Draft' || document.submittedAt) return;
 
-    setError('');
-    setSuccess('');
     setIsSaving(true);
 
     try {
-      const { document: updated } = await api.submitDocumentForApproval(documentId);
-      setDocument(updated);
-      setForm(documentToForm(updated));
-      setSuccess('Document submitted for review.');
-      onSubmittedForApproval?.();
+      await runWithMinDuration(async () => {
+        const { document: updated } = await api.submitDocumentForApproval(documentId);
+        setDocument(updated);
+        setForm(documentToForm(updated));
+        setIsEditing(false);
+        onSubmittedForApproval?.();
+      });
+      showSuccess('Document submitted for review.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit document for review');
+      showError(err instanceof Error ? err.message : 'Failed to submit document for review');
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function completeRevisionWorkflowSubmit() {
+    if (!document || !revisionWorkflowReviewer.trim()) return;
+
+    setIsSaving(true);
+    try {
+      const approver = revisionWorkflowApprover.trim() || revisionWorkflowReviewer.trim();
+      await runWithMinDuration(async () => {
+        const saved = await saveFormChanges({
+          stayInEdit: true,
+          ownerOverride: revisionWorkflowReviewer.trim(),
+          approverOverride: approver,
+        });
+        if (!saved) {
+          throw new Error('Could not save reviewer and approver.');
+        }
+        if (!saved.fileName) {
+          throw new Error('Upload a document file before submitting for review.');
+        }
+        await api.submitDocumentForApproval(documentId);
+        const { document: updated } = await api.getDocument(documentId);
+        setDocument(updated);
+        setForm(documentToForm(updated));
+        setIsEditing(false);
+        onSubmittedForApproval?.();
+      });
+      setRevisionApproverDialogOpen(false);
+      setRevisionReviewerDialogOpen(false);
+      showSuccess('New version submitted for review.');
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to submit for review');
     } finally {
       setIsSaving(false);
     }
@@ -442,12 +554,28 @@ export function DocumentDetailView({
   function handleSubmitForReview() {
     if (!document || document.status !== 'Draft' || document.submittedAt) return;
 
+    if (hasOpenDocumentRevision(document)) {
+      setRevisionWorkflowReviewer(form.owner.trim());
+      setRevisionWorkflowApprover(form.approver.trim() || form.owner.trim());
+      setRevisionReviewerDialogOpen(true);
+      return;
+    }
+
     if (isDocumentOwnerSameAsUser(user, document.owner)) {
       setShowOwnerConfirmDialog(true);
       return;
     }
 
     void submitForReview();
+  }
+
+  function handleRevisionReviewerConfirm() {
+    if (!revisionWorkflowReviewer.trim()) return;
+    setRevisionApproverDialogOpen(true);
+  }
+
+  function handleRevisionApproverConfirm() {
+    void completeRevisionWorkflowSubmit();
   }
 
   function handleConfirmSubmitForReview() {
@@ -474,19 +602,22 @@ export function DocumentDetailView({
     if (!window.confirm(`Delete document "${label}"? This action cannot be undone.`)) return;
 
     setIsDeleting(true);
-    setError('');
     try {
-      await api.deleteDocument(documentId);
+      await runWithMinDuration(() => api.deleteDocument(documentId));
       onDeleted?.();
       onBack();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete document');
+      showError(err instanceof Error ? err.message : 'Failed to delete document');
       setIsDeleting(false);
     }
   }
 
-  if (isLoading) {
-    return <div className="dd-page"><div className="dd-loading">Loading document...</div></div>;
+  if (showSkeleton) {
+    return (
+      <div className="dd-page">
+        <DocumentDetailSkeleton />
+      </div>
+    );
   }
 
   if (!document) {
@@ -518,13 +649,18 @@ export function DocumentDetailView({
     isDraftInternal && !document.submittedAt && isCreator && !isRejected;
   const canDelete = canUserDeleteDocument(user, document);
   const canEditDocument = canUserEditDocument(user, document);
+  const canStartVersionUpdate = canUserStartApprovedDocumentRevision(user, document);
+  const nextRevisionVersion = !isExternal ? getNextDocumentVersion(document.version) : null;
   const displayCode = isExternal ? document.externalRef || '—' : document.code || '—';
   const displayVersion = isExternal
     ? document.externalVersion || '—'
-    : String(document.version).padStart(2, '0');
+    : Number.isInteger(document.version)
+      ? String(document.version).padStart(2, '0')
+      : formatRevisionVersionLabel(document.version);
 
   return (
     <div className="dd-page">
+      <DarosActionLoadingOverlay active={actionBusy} />
       <div className="dd-topbar">
         <div className="dd-topbar-left">
           <button type="button" className="dd-back-btn" onClick={onBack} aria-label="Back">
@@ -589,6 +725,18 @@ export function DocumentDetailView({
                   {isSaving ? 'Submitting...' : 'Submit for Review'}
                 </button>
               ) : null}
+              {canStartVersionUpdate && nextRevisionVersion !== null ? (
+                <button
+                  type="button"
+                  className="dd-btn dd-btn-outline"
+                  onClick={() => void handleStartVersionUpdate()}
+                  disabled={isSaving}
+                >
+                  {isSaving
+                    ? 'Starting revision...'
+                    : `Update document to version ${formatRevisionVersionLabel(nextRevisionVersion)}`}
+                </button>
+              ) : null}
               {canEditDocument ? (
                 <button type="button" className="dd-btn dd-btn-outline" onClick={() => setIsEditing(true)}>
                   {canReviseRejected ? 'Revise & resubmit' : 'Edit Document'}
@@ -634,7 +782,13 @@ export function DocumentDetailView({
       </div>
 
       {(error || success) && (
-        <div className={`dd-alert ${error ? 'dd-alert-error' : 'dd-alert-success'}`}>
+        <div
+          className={`dd-alert ${error ? 'dd-alert-error' : 'dd-alert-success flash-alert-success'}${
+            success && successFadingOut ? ' flash-alert-fade-out' : ''
+          }`}
+          role={error ? 'alert' : 'status'}
+          aria-live="polite"
+        >
           {error || success}
         </div>
       )}
@@ -1027,6 +1181,39 @@ export function DocumentDetailView({
         cancelLabel="Choose a different reviewer"
         onConfirm={handleConfirmSubmitForReview}
         onCancel={handleChangeDocumentOwner}
+      />
+
+      <DocumentWorkflowPeopleDialog
+        open={revisionReviewerDialogOpen && !revisionApproverDialogOpen}
+        title="Who will review this version?"
+        message="Choose the person responsible for reviewing the new document version before approval."
+        fieldLabel="Reviewer"
+        value={revisionWorkflowReviewer}
+        options={ownerNames}
+        placeholder="Select reviewer..."
+        confirmLabel="Continue"
+        onValueChange={setRevisionWorkflowReviewer}
+        onConfirm={handleRevisionReviewerConfirm}
+        onCancel={() => setRevisionReviewerDialogOpen(false)}
+        confirmDisabled={!revisionWorkflowReviewer.trim()}
+      />
+
+      <DocumentWorkflowPeopleDialog
+        open={revisionApproverDialogOpen}
+        title="Who will approve this version?"
+        message="Choose the person who will give final approval after review."
+        fieldLabel="Approver"
+        value={revisionWorkflowApprover}
+        options={ownerNames}
+        placeholder="Select approver..."
+        confirmLabel="Submit for review"
+        onValueChange={setRevisionWorkflowApprover}
+        onConfirm={handleRevisionApproverConfirm}
+        onCancel={() => {
+          setRevisionApproverDialogOpen(false);
+          setRevisionReviewerDialogOpen(true);
+        }}
+        confirmDisabled={!revisionWorkflowApprover.trim() && !revisionWorkflowReviewer.trim()}
       />
 
       <RejectDocumentDialog

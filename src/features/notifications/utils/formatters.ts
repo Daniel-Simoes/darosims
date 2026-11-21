@@ -46,8 +46,12 @@ export function toDashboardNotification(notification: NotificationRecord): Dashb
 
 export function getNotificationTypeLabel(type?: NotificationRecord['type']) {
   switch (type) {
+    case 'review_request':
+      return 'Review request';
     case 'approval_request':
       return 'Approval request';
+    case 'document_reviewed':
+      return 'Review completed';
     case 'document_approved':
       return 'Document approved';
     case 'document_rejected':

@@ -9,6 +9,16 @@ import {
   type DashboardNotification,
 } from '../../../lib/notifications';
 import { ConfirmDialog } from '../../../components/dialogs/ConfirmDialog';
+import { NotificationListSkeleton } from '../../../components/common/skeletons/DashboardSkeletons';
+import { getCachedData } from '../../../lib/data/clientDataCache';
+import { runCachedScreenLoad } from '../../../lib/ui/skeletonLoading';
+
+const NOTIFICATIONS_PAGE_CACHE_KEY = 'notifications:page';
+
+type NotificationsPageCache = {
+  notifications: DashboardNotification[];
+  documents: DocumentRecord[];
+};
 import './NotificationsView.css';
 
 interface NotificationsViewProps {
@@ -26,11 +36,20 @@ function NotificationTypeIcon({ type }: { type?: DashboardNotification['type'] }
     );
   }
 
-  if (type === 'approval_request') {
+  if (type === 'approval_request' || type === 'review_request') {
     return (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
         <path d="M12 8v4l3 3" />
         <circle cx="12" cy="12" r="9" />
+      </svg>
+    );
+  }
+
+  if (type === 'document_reviewed') {
+    return (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+        <path d="M9 11 12 14 22 4" />
+        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
       </svg>
     );
   }
@@ -65,28 +84,43 @@ export function NotificationsView({
   onNotificationClick,
   onNotificationsChange,
 }: NotificationsViewProps) {
-  const [notifications, setNotifications] = useState<DashboardNotification[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const cached = getCachedData<NotificationsPageCache>(NOTIFICATIONS_PAGE_CACHE_KEY);
+  const [notifications, setNotifications] = useState<DashboardNotification[]>(
+    cached?.notifications ?? [],
+  );
+  const [showSkeleton, setShowSkeleton] = useState(!cached);
   const [error, setError] = useState('');
   const [actionId, setActionId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<DashboardNotification | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [documentsById, setDocumentsById] = useState<Map<string, DocumentRecord>>(new Map());
+  const [documentsById, setDocumentsById] = useState<Map<string, DocumentRecord>>(() =>
+    cached ? new Map(cached.documents.map((doc) => [doc.id, doc])) : new Map(),
+  );
 
   const loadNotifications = useCallback(async () => {
     setError('');
-    setIsLoading(true);
     try {
-      const [{ notifications: data }, { documents }] = await Promise.all([
-        api.getNotifications(),
-        api.getDocuments(),
-      ]);
-      setNotifications(data.map(toDashboardNotification));
-      setDocumentsById(new Map(documents.map((doc) => [doc.id, doc])));
+      await runCachedScreenLoad<NotificationsPageCache>({
+        cacheKey: NOTIFICATIONS_PAGE_CACHE_KEY,
+        fetcher: async () => {
+          const [{ notifications: data }, { documents }] = await Promise.all([
+            api.getNotifications(),
+            api.getDocuments(),
+          ]);
+          return {
+            notifications: data.map(toDashboardNotification),
+            documents,
+          };
+        },
+        onData: ({ notifications: nextNotifications, documents }) => {
+          setNotifications(nextNotifications);
+          setDocumentsById(new Map(documents.map((doc) => [doc.id, doc])));
+        },
+        setShowSkeleton,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load notifications');
-    } finally {
-      setIsLoading(false);
+      setShowSkeleton(false);
     }
   }, []);
 
@@ -192,9 +226,9 @@ export function NotificationsView({
 
       {error && <div className="notifications-alert">{error}</div>}
 
-      {isLoading ? (
-        <div className="notifications-panel notifications-empty-state">
-          <p>Loading notifications...</p>
+      {showSkeleton ? (
+        <div className="notifications-panel">
+          <NotificationListSkeleton />
         </div>
       ) : notifications.length === 0 ? (
         <div className="notifications-panel notifications-empty-state">
