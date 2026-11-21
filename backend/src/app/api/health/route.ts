@@ -15,6 +15,9 @@ export async function GET() {
   if (provider === 'supabase') {
     try {
       const schema = await verifySupabaseSchema();
+      const presenceReady = !schema.missingTables.includes('document_chat_presence');
+      const chatReady = !schema.missingTables.includes('document_comments');
+
       if (!schema.ok) {
         return jsonResponse(
           {
@@ -22,8 +25,8 @@ export async function GET() {
             provider,
             supabaseConfigured,
             supabaseHost,
-            chatReady: !schema.missingTables.includes('document_comments'),
-            presenceReady: !schema.missingTables.includes('document_chat_presence'),
+            chatReady,
+            presenceReady,
             missingTables: schema.missingTables,
             hint:
               chatStorageHint(schema.missingTables) ??
@@ -32,6 +35,19 @@ export async function GET() {
           },
           503,
         );
+      }
+
+      if (!presenceReady) {
+        return jsonResponse({
+          ok: true,
+          provider,
+          supabaseConfigured,
+          supabaseHost,
+          chatReady,
+          presenceReady,
+          missingTables: schema.missingTables,
+          hint: chatStorageHint(schema.missingTables),
+        });
       }
 
       const { error } = await getSupabaseAdmin().from('users').select('email').limit(1);

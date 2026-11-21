@@ -1,13 +1,17 @@
 import { getSupabaseAdmin } from '@/database/supabase/client';
 
-const REQUIRED_TABLES = [
+const CORE_TABLES = [
   'users',
   'documents',
   'notifications',
   'document_events',
   'document_comments',
-  'document_chat_presence',
 ] as const;
+
+/** Optional; chat works without online/typing indicators. */
+const OPTIONAL_TABLES = ['document_chat_presence'] as const;
+
+const REQUIRED_TABLES = [...CORE_TABLES, ...OPTIONAL_TABLES] as const;
 
 export type SupabaseSchemaCheckResult = {
   ok: boolean;
@@ -35,8 +39,12 @@ export async function verifySupabaseSchema(): Promise<SupabaseSchemaCheckResult>
     }
   }
 
+  const coreMissing = missingTables.filter((table) =>
+    (CORE_TABLES as readonly string[]).includes(table),
+  );
+
   return {
-    ok: missingTables.length === 0 && errors.length === 0,
+    ok: coreMissing.length === 0 && errors.length === 0,
     missingTables,
     errors,
   };
