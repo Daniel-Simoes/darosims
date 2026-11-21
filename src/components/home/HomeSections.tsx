@@ -126,8 +126,8 @@ export function CTASection() {
       <div className="container cta-content">
         <h2 className="cta-title">Ready to simplify your management system?</h2>
         <p className="cta-description">
-          Join SMEs across Ireland and the UK who are replacing spreadsheets
-          with an integrated compliance platform.
+          Explore how an integrated compliance platform can replace spreadsheets for your team in
+          Ireland and the UK — contact us for a tailored demo.
         </p>
         <div className="cta-actions">
           <a href="#contact" className="btn btn-primary">Request a Demo</a>

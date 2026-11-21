@@ -1,7 +1,10 @@
 import { HandheldAuthLink } from '../auth/HandheldAuthLink';
 import { brand } from '../../data/brand';
 import { images } from '../../data/images';
+import { imageCredits } from '../../data/imageCredits';
 import './Hero.css';
+
+const heroImage = imageCredits.find((entry) => entry.id === 'hero-dashboard');
 
 export function Hero() {
   return (
@@ -47,23 +50,13 @@ export function Hero() {
           <div className="hero-image-frame">
             <img
               src={images.heroDashboard}
-              alt="Daros compliance dashboard preview"
+              alt={heroImage?.alt ?? 'Illustrative Daros dashboard preview'}
+              title={heroImage?.copyright}
               className="hero-image"
             />
-            <div className="hero-float-card hero-float-card--top">
-              <span className="hero-float-icon">✓</span>
-              <div>
-                <strong>87%</strong>
-                <span>Compliance Score</span>
-              </div>
-            </div>
-            <div className="hero-float-card hero-float-card--bottom">
-              <span className="hero-float-icon">📊</span>
-              <div>
-                <strong>32 KPIs</strong>
-                <span>Tracked live</span>
-              </div>
-            </div>
+            <p className="hero-image-caption" role="note">
+              Demonstration illustration — not actual customer results.
+            </p>
           </div>
         </div>
       </div>

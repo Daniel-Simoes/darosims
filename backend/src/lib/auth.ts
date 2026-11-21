@@ -1,6 +1,8 @@
 import { SignJWT, jwtVerify } from 'jose';
 import { env } from '@/config/env';
 import { ensureServerBootstrap } from '@/lib/ensureServerBootstrap';
+import { securityHeaders } from '@/lib/security/headers';
+import { readSessionToken, sessionCookieHeader, clearSessionCookieHeader } from '@/lib/security/session';
 import type { AuthUser, JwtPayload } from '@/types';
 
 const secret = new TextEncoder().encode(env.jwtSecret);
@@ -38,6 +40,10 @@ export function getBearerToken(request: Request): string | null {
   return header.slice(7);
 }
 
+export async function resolveAuthToken(request: Request): Promise<string | null> {
+  return readSessionToken(request) ?? getBearerToken(request);
+}
+
 export async function requireAuth(request: Request): Promise<JwtPayload | Response> {
   try {
     await ensureServerBootstrap();
@@ -47,29 +53,51 @@ export async function requireAuth(request: Request): Promise<JwtPayload | Respon
     return jsonResponse({ error: message }, 503);
   }
 
-  const token = getBearerToken(request);
+  const token = await resolveAuthToken(request);
   if (!token) {
-    return Response.json({ error: 'Authentication required' }, { status: 401 });
+    return jsonResponse({ error: 'Authentication required' }, 401);
   }
 
   const payload = await verifyToken(token);
   if (!payload) {
-    return Response.json({ error: 'Invalid or expired token' }, { status: 401 });
+    return jsonResponse({ error: 'Invalid or expired session' }, 401);
   }
 
   return payload;
 }
 
-export function corsHeaders() {
+export function corsHeaders(): Record<string, string> {
   return {
     'Access-Control-Allow-Origin': env.corsOrigin,
+    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Cache-Control': 'no-store, max-age=0, must-revalidate',
-    Vary: 'Authorization',
+    Vary: 'Origin, Authorization, Cookie',
+    ...securityHeaders(),
   };
 }
 
-export function jsonResponse(data: unknown, status = 200) {
-  return Response.json(data, { status, headers: corsHeaders() });
+export function mergeResponseHeaders(extra?: HeadersInit): Headers {
+  const headers = new Headers(corsHeaders());
+  if (extra) {
+    new Headers(extra).forEach((value, key) => headers.set(key, value));
+  }
+  return headers;
+}
+
+export function jsonResponse(data: unknown, status = 200, extraHeaders?: HeadersInit) {
+  return Response.json(data, { status, headers: mergeResponseHeaders(extraHeaders) });
+}
+
+export function jsonResponseWithSession(data: unknown, token: string, status = 200) {
+  return jsonResponse(data, status, {
+    'Set-Cookie': sessionCookieHeader(token),
+  });
+}
+
+export function jsonResponseClearSession(data: unknown, status = 200) {
+  return jsonResponse(data, status, {
+    'Set-Cookie': clearSessionCookieHeader(),
+  });
 }

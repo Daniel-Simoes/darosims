@@ -1,4 +1,4 @@
-import { requireAuth, jsonResponse, corsHeaders, signToken } from '@/lib/auth';
+import { requireAuth, jsonResponse, corsHeaders, signToken, jsonResponseWithSession } from '@/lib/auth';
 import { getUserProfile, updateUserProfile } from '@/services/users/profileService';
 import type { UpdateProfilePayload } from '@/types';
 
@@ -32,7 +32,7 @@ export async function PATCH(request: Request) {
   try {
     const { profile } = await updateUserProfile(auth.email, payload);
     const token = await signToken(profile);
-    return jsonResponse({ profile, token });
+    return jsonResponseWithSession({ profile }, token);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Failed to update profile';
     return jsonResponse({ error: message }, 400);

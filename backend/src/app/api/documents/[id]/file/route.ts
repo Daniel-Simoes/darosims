@@ -7,6 +7,8 @@ import {
   validateUploadedDocumentFile,
 } from '@/lib/documentFileMeta';
 import { readDocumentFile, saveDocumentFile } from '@/lib/documentFiles';
+import { requirePermission } from '@/lib/security/authz';
+import { canAuthUserEditDocument } from '@/lib/documentOwnership';
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders() });
@@ -49,10 +51,17 @@ export async function POST(
   const auth = await requireAuth(request);
   if (auth instanceof Response) return auth;
 
+  const uploadAuth = await requirePermission(auth, 'edit_documents');
+  if (uploadAuth instanceof Response) return uploadAuth;
+
   const { id } = await params;
   const document = await getDocumentById(id);
   if (!document) {
     return jsonResponse({ error: 'Document not found' }, 404);
+  }
+
+  if (!(await canAuthUserEditDocument(auth, document))) {
+    return jsonResponse({ error: 'You are not allowed to upload files for this document' }, 403);
   }
 
   try {

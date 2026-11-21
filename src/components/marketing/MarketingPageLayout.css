@@ -91,11 +91,19 @@
   background: var(--color-bg);
 }
 
+.marketing-stats-disclaimer {
+  padding: 24px 24px 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  line-height: 1.55;
+  max-width: 720px;
+}
+
 .marketing-stats-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 32px;
-  padding: 32px 24px;
+  padding: 16px 24px 32px;
 }
 
 .marketing-stat {

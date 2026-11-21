@@ -42,6 +42,7 @@ export function normalizeUser(
     role: user.role,
     photoUrl: user.photoUrl,
     permissions: user.permissions ?? getPermissionsForRole(user.role),
+    legalPoliciesAcceptedAt: user.legalPoliciesAcceptedAt,
   };
 }
 

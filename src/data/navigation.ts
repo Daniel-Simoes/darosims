@@ -243,4 +243,14 @@ export const footerNavigation = {
     { label: 'Contact', href: '/company/contact' },
     { label: 'Press', href: '/company/press' },
   ],
+  legal: [
+    { label: 'Privacy Policy', href: '/legal/privacy' },
+    { label: 'Terms of Service', href: '/legal/terms' },
+    { label: 'Cookie Notice', href: '/legal/cookies' },
+    { label: 'Refund Policy', href: '/legal/refunds' },
+    { label: 'Data subject request', href: '/legal/data-request' },
+    { label: 'Accessibility', href: '/legal/accessibility' },
+    { label: 'Company data', href: '/legal/company-data' },
+    { label: 'Legal & risk notice', href: '/legal/legal-risks' },
+  ],
 };

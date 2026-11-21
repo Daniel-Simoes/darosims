@@ -1,7 +1,7 @@
 [
   {
     "email": "daniel@daros.com",
-    "password": "1234",
+    "password": "$2b$12$xitjiwWbbk7KmGo1EWdLUO0U8e1Qzxl9xwdXhSQfHD0FJCHYsalfi",
     "name": "Daniel",
     "firstName": "Daniel",
     "lastName": "",
@@ -23,7 +23,7 @@
   },
   {
     "email": "rodrigo@daros.com",
-    "password": "1234",
+    "password": "$2b$12$xitjiwWbbk7KmGo1EWdLUO0U8e1Qzxl9xwdXhSQfHD0FJCHYsalfi",
     "name": "Rodrigo",
     "firstName": "Rodrigo",
     "lastName": "",
@@ -45,7 +45,7 @@
   },
   {
     "email": "admin@daros.com",
-    "password": "1234",
+    "password": "$2b$12$xitjiwWbbk7KmGo1EWdLUO0U8e1Qzxl9xwdXhSQfHD0FJCHYsalfi",
     "name": "Admin",
     "firstName": "Admin",
     "lastName": "",

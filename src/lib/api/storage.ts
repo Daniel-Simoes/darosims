@@ -1,19 +1,19 @@
 import { getStoredToken } from './client';
 import type { DocumentResponse } from '../../types/documents';
 
-export async function uploadDocumentFile(id: string, file: File) {
+function authHeaders(): Record<string, string> {
   const token = getStoredToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export async function uploadDocumentFile(id: string, file: File) {
   const formData = new FormData();
   formData.append('file', file);
 
-  const headers: Record<string, string> = {};
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
   const response = await fetch(`/api/documents/${id}/file`, {
     method: 'POST',
-    headers,
+    credentials: 'include',
+    headers: authHeaders(),
     body: formData,
   });
 
@@ -26,18 +26,13 @@ export async function uploadDocumentFile(id: string, file: File) {
 }
 
 export async function uploadDocumentSourceFile(id: string, file: File) {
-  const token = getStoredToken();
   const formData = new FormData();
   formData.append('file', file);
 
-  const headers: Record<string, string> = {};
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
   const response = await fetch(`/api/documents/${id}/source`, {
     method: 'POST',
-    headers,
+    credentials: 'include',
+    headers: authHeaders(),
     body: formData,
   });
 
@@ -50,9 +45,9 @@ export async function uploadDocumentSourceFile(id: string, file: File) {
 }
 
 export async function fetchDocumentFileBlob(documentId: string): Promise<Blob> {
-  const token = getStoredToken();
   const response = await fetch(`/api/documents/${documentId}/file`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    credentials: 'include',
+    headers: authHeaders(),
   });
 
   if (!response.ok) {
@@ -64,9 +59,9 @@ export async function fetchDocumentFileBlob(documentId: string): Promise<Blob> {
 }
 
 export async function fetchDocumentSourceBlob(documentId: string): Promise<Blob> {
-  const token = getStoredToken();
   const response = await fetch(`/api/documents/${documentId}/source`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    credentials: 'include',
+    headers: authHeaders(),
   });
 
   if (!response.ok) {

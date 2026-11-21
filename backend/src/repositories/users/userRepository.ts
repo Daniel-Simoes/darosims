@@ -33,7 +33,10 @@ export async function listPublicUsers() {
 export async function updateUserByEmail(
   email: string,
   updates: Partial<
-    Pick<StoredUser, 'email' | 'name' | 'firstName' | 'lastName' | 'password' | 'photoUrl'>
+    Pick<
+      StoredUser,
+      'email' | 'name' | 'firstName' | 'lastName' | 'password' | 'photoUrl' | 'legalPoliciesAcceptedAt'
+    >
   >,
 ) {
   return (await repo()).updateUserByEmail(email, updates);

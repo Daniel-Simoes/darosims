@@ -8,6 +8,11 @@ import {
   getPhotoFilePath,
   updateUserByEmail,
 } from '@/repositories/users/userRepository';
+import {
+  assertPasswordPolicy,
+  hashPassword,
+  verifyPassword,
+} from '@/lib/security/password';
 import type { AuthUser, UpdateProfilePayload, UserProfile } from '@/types';
 
 function buildDisplayName(firstName: string, lastName: string) {
@@ -23,7 +28,23 @@ function toProfile(user: AuthUser & { password?: string }): UserProfile {
     role: user.role,
     photoUrl: user.photoUrl,
     permissions: user.permissions ?? getPermissionsForRole(user.role),
+    legalPoliciesAcceptedAt: user.legalPoliciesAcceptedAt,
   };
+}
+
+export async function acceptLegalPolicies(email: string): Promise<UserProfile> {
+  const user = await findUserByEmail(email);
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  const updated = await updateUserByEmail(email, {
+    legalPoliciesAcceptedAt: new Date().toISOString(),
+  });
+  if (!updated) {
+    throw new Error('Failed to record acceptance');
+  }
+  return toProfile(updated);
 }
 
 async function savePhotoFromDataUrl(email: string, photoDataUrl: string) {
@@ -87,12 +108,10 @@ export async function updateUserProfile(
     if (!payload.currentPassword?.trim()) {
       throw new Error('Current password is required to set a new password');
     }
-    if (user.password !== payload.currentPassword) {
+    if (!(await verifyPassword(payload.currentPassword!.trim(), user.password))) {
       throw new Error('Current password is incorrect');
     }
-    if ((payload.newPassword?.trim().length ?? 0) < 4) {
-      throw new Error('New password must be at least 4 characters');
-    }
+    assertPasswordPolicy(payload.newPassword!.trim());
   }
 
   if (email !== user.email) {
@@ -123,12 +142,16 @@ export async function updateUserProfile(
     }
   }
 
+  const nextPassword = wantsPasswordChange
+    ? await hashPassword(payload.newPassword!.trim())
+    : user.password;
+
   const updated = await updateUserByEmail(currentEmail, {
     email,
     firstName,
     lastName,
     name: buildDisplayName(firstName, lastName),
-    password: wantsPasswordChange ? payload.newPassword!.trim() : user.password,
+    password: nextPassword,
     photoUrl,
   });
 

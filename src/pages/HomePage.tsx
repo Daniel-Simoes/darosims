@@ -1,5 +1,4 @@
-import { Navbar } from '../components/layout/Navbar';
-import { Footer } from '../components/layout/Footer';
+import { PublicSiteLayout } from '../components/layout/PublicSiteLayout';
 import { Hero } from '../components/home/Hero';
 import { TrustBar } from '../components/home/TrustBar';
 import { FeaturesSection } from '../components/home/FeaturesSection';
@@ -13,19 +12,15 @@ import {
 
 export function HomePage() {
   return (
-    <>
-      <Navbar />
-      <main>
-        <Hero />
-        <TrustBar />
-        <FeaturesSection />
-        <ShowcaseSection />
-        <StandardsSection />
-        <MissionSection />
-        <ValuesSection />
-        <CTASection />
-      </main>
-      <Footer />
-    </>
+    <PublicSiteLayout>
+      <Hero />
+      <TrustBar />
+      <FeaturesSection />
+      <ShowcaseSection />
+      <StandardsSection />
+      <MissionSection />
+      <ValuesSection />
+      <CTASection />
+    </PublicSiteLayout>
   );
 }

@@ -1,0 +1,129 @@
+.legal-page {
+  padding: 32px 0 64px;
+  background: var(--color-bg-alt);
+}
+
+.legal-page-inner {
+  max-width: 800px;
+}
+
+.legal-breadcrumb {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-bottom: 24px;
+}
+
+.legal-breadcrumb a:hover {
+  color: var(--color-primary-dark);
+}
+
+.legal-header h1 {
+  font-size: 2rem;
+  color: var(--color-dark);
+  margin-bottom: 12px;
+}
+
+.legal-summary {
+  font-size: 1.05rem;
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+
+.legal-updated {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-bottom: 32px;
+}
+
+.legal-section {
+  margin-bottom: 28px;
+  padding: 20px 24px;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.legal-section h2 {
+  font-size: 1.1rem;
+  margin-bottom: 12px;
+  color: var(--color-dark);
+}
+
+.legal-section p {
+  margin-bottom: 10px;
+  color: var(--color-text);
+  line-height: 1.65;
+}
+
+.legal-section p:last-child {
+  margin-bottom: 0;
+}
+
+.legal-footer-links {
+  margin-top: 32px;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
+
+.lgpd-page .legal-section {
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.lgpd-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 520px;
+}
+
+.lgpd-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-dark);
+}
+
+.lgpd-form input,
+.lgpd-form select,
+.lgpd-form textarea {
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+}
+
+.lgpd-form textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.lgpd-hint {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin: 0 0 20px;
+}
+
+.lgpd-success {
+  padding: 12px 16px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  border-radius: var(--radius-sm);
+}
+
+.lgpd-error {
+  padding: 12px 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  border-radius: var(--radius-sm);
+}
+
+.lgpd-privacy-note {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}

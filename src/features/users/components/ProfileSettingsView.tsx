@@ -165,7 +165,7 @@ export function ProfileSettingsView({ onBack }: ProfileSettingsViewProps) {
         return;
       }
       if (form.newPassword.trim().length < 4) {
-        setError('New password must be at least 4 characters.');
+        setError('New password must be at least 8 characters.');
         return;
       }
       if (form.newPassword !== form.confirmPassword) {

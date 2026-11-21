@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { api, getStoredToken, setStoredToken, type AuthUser } from '../../../lib/api';
+import { api, setStoredToken, type AuthUser } from '../../../lib/api';
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -31,16 +31,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isSessionLocked, setIsSessionLocked] = useState(false);
 
   useEffect(() => {
-    const token = getStoredToken();
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
-
     api
       .me()
       .then(({ user: currentUser }) => setUser(currentUser))
-      .catch(() => setStoredToken(null))
+      .catch(() => {
+        setStoredToken(null);
+        setUser(null);
+      })
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -54,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     const { token, user: loggedInUser } = await api.login(email, password);
-    setStoredToken(token);
+    setStoredToken(token ?? null);
     setUser(loggedInUser);
     setIsSessionLocked(false);
   }, []);
@@ -65,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    void api.logout().catch(() => undefined);
     setStoredToken(null);
     setUser(null);
     setIsSessionLocked(false);

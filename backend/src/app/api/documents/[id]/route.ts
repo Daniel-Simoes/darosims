@@ -10,6 +10,8 @@ import {
 } from '@/lib/documentApproval';
 import { canAuthUserEditDocument, isAuthUserDocumentOwner } from '@/lib/documentOwnership';
 import { isDocumentApprover, isDocumentOwnerSameAsEmail } from '@/lib/users';
+import { buildClientDocumentUpdate } from '@/lib/security/documentUpdate';
+import { requirePermission } from '@/lib/security/authz';
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders() });
@@ -42,13 +44,16 @@ export async function PUT(
   const auth = await requireAuth(request);
   if (auth instanceof Response) return auth;
 
+  const editAuth = await requirePermission(auth, 'edit_documents');
+  if (editAuth instanceof Response) return editAuth;
+
   const { id } = await params;
   if (!id?.trim()) {
     return jsonResponse({ error: 'Document id is required' }, 400);
   }
 
   try {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
     const existing = await getDocumentById(id);
     if (!existing) {
       return jsonResponse({ error: 'Document not found' }, 404);
@@ -90,48 +95,28 @@ export async function PUT(
       }
     }
 
-    const input: UpdateDocumentInput = {
-      type: body.type,
-      process: body.process ? String(body.process).trim() : undefined,
-      title: body.title ? String(body.title).trim() : undefined,
+    let input = buildClientDocumentUpdate(body, existing, {
+      isApproving,
+      approverName: auth.name,
+    });
+
+    input = {
+      ...input,
+      type: input.type !== undefined ? String(input.type).trim() : undefined,
+      process: input.process !== undefined ? String(input.process).trim() : undefined,
+      title: input.title !== undefined ? String(input.title).trim() : undefined,
       version: isExternal
         ? undefined
         : isApproving
           ? Math.max(Number(existing.version) || 0, 1)
-          : body.version !== undefined
-            ? Number(body.version)
+          : input.version !== undefined
+            ? Number(input.version)
             : undefined,
-      status: body.status,
-      documentOrigin: body.documentOrigin,
-      externalRef: body.externalRef,
-      externalVersion: body.externalVersion,
-      owner: body.owner,
-      approver: body.approver,
-      approvedBy: isApproving ? auth.name : body.approvedBy,
-      department: body.department,
-      effectiveDate: body.effectiveDate ?? (isApproving ? new Date().toISOString().slice(0, 10) : undefined),
-      reviewFrequency: body.reviewFrequency,
-      nextReviewDate: body.nextReviewDate,
-      repository: body.repository,
-      distribution: body.distribution,
-      retentionPeriod: body.retentionPeriod,
-      retentionNotes: body.retentionNotes,
-      disposition: body.disposition,
-      comments: body.comments,
-      sourceContent: body.sourceContent,
-      fileFormat: body.fileFormat ?? existing.fileFormat,
-      fileName: body.fileName ?? (isApproving ? existing.fileName : undefined),
-      sourceModified: body.sourceModified ?? existing.sourceModified,
-      ...(isApproving
-        ? { submittedAt: undefined, reviewedAt: undefined, reviewedBy: undefined }
-        : {
-            ...(body.submittedAt !== undefined ? { submittedAt: body.submittedAt } : {}),
-            ...(body.reviewedAt !== undefined ? { reviewedAt: body.reviewedAt } : {}),
-            ...(body.reviewedBy !== undefined ? { reviewedBy: body.reviewedBy } : {}),
-          }),
-      ...(body.rejectionReason !== undefined ? { rejectionReason: body.rejectionReason } : {}),
-      ...(body.rejectedAt !== undefined ? { rejectedAt: body.rejectedAt } : {}),
-      ...(body.rejectedBy !== undefined ? { rejectedBy: body.rejectedBy } : {}),
+      effectiveDate:
+        input.effectiveDate ?? (isApproving ? new Date().toISOString().slice(0, 10) : undefined),
+      fileFormat: input.fileFormat ?? existing.fileFormat,
+      fileName: input.fileName ?? (isApproving ? existing.fileName : undefined),
+      sourceModified: input.sourceModified ?? existing.sourceModified,
     };
 
     const document = await updateDocument(id, input);
@@ -173,7 +158,8 @@ export async function PUT(
           actorName: auth.name,
           metadata: {
             action: fileChanged || clearingRejection ? 'file_replaced' : 'content_updated',
-            fileName: body.fileName ?? existing.fileName,
+            fileName:
+              typeof body.fileName === 'string' ? body.fileName : (existing.fileName ?? undefined),
           },
         });
       }

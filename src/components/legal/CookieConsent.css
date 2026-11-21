@@ -1,0 +1,35 @@
+.cookie-consent {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1200;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 24px;
+  background: #0f172a;
+  color: #f8fafc;
+  border-top: 1px solid #334155;
+  box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.35);
+}
+
+.cookie-consent-text {
+  margin: 0;
+  flex: 1;
+  min-width: 220px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #e2e8f0;
+}
+
+.cookie-consent-text a {
+  color: #7dd3fc;
+  text-decoration: underline;
+}
+
+.cookie-consent-btn {
+  flex-shrink: 0;
+}

@@ -1,14 +1,19 @@
 import { HandheldAuthLink } from '../auth/HandheldAuthLink';
 import { images } from '../../data/images';
+import { imageCredits } from '../../data/imageCredits';
 import './ShowcaseSection.css';
+
+function creditAlt(id: string, fallback: string) {
+  return imageCredits.find((entry) => entry.id === id)?.alt ?? fallback;
+}
 
 const showcases = [
   {
-    title: 'Real-time compliance visibility',
+    title: 'Compliance visibility in one place',
     description:
-      'Track your compliance score, open actions and audit readiness from a single dashboard. No more scattered spreadsheets or outdated reports.',
+      'Monitor open actions, document status and audit preparation from a single dashboard — without scattered spreadsheets or outdated reports.',
     image: images.analytics,
-    alt: 'Analytics dashboard showing compliance metrics',
+    alt: creditAlt('analytics', 'Operational metrics analysis'),
     reverse: false,
   },
   {
@@ -16,7 +21,7 @@ const showcases = [
     description:
       'Daros replaces paper-based systems with a cloud platform designed for organisations of 10–250 employees across Ireland and the UK.',
     image: images.teamCollaboration,
-    alt: 'Team collaborating on compliance workflows',
+    alt: creditAlt('team-collaboration', 'Collaboration on compliance work'),
     reverse: true,
   },
   {
@@ -24,7 +29,7 @@ const showcases = [
     description:
       'Structure your path to ISO 9001, 14001, 45001 and 22000 with guided workflows, document control and audit preparation tools.',
     image: images.compliancePlanning,
-    alt: 'Business planning and compliance documentation',
+    alt: creditAlt('compliance-planning', 'Team compliance planning'),
     reverse: false,
   },
 ];

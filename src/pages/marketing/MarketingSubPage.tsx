@@ -1,6 +1,5 @@
 import { Navigate, useParams } from 'react-router-dom';
-import { Navbar } from '../../components/layout/Navbar';
-import { Footer } from '../../components/layout/Footer';
+import { PublicSiteLayout } from '../../components/layout/PublicSiteLayout';
 import { MarketingPageLayout } from '../../components/marketing/MarketingPageLayout';
 import { getMarketingPage, isMarketingCategory } from '../../data/marketingPages';
 
@@ -18,12 +17,8 @@ export function MarketingSubPage() {
   }
 
   return (
-    <>
-      <Navbar />
-      <main>
-        <MarketingPageLayout page={page} />
-      </main>
-      <Footer />
-    </>
+    <PublicSiteLayout>
+      <MarketingPageLayout page={page} />
+    </PublicSiteLayout>
   );
 }

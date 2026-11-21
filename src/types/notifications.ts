@@ -2,7 +2,8 @@ export type NotificationType =
   | 'approval_request'
   | 'document_approved'
   | 'document_rejected'
-  | 'document_message';
+  | 'document_message'
+  | 'lgpd_request';
 
 export interface NotificationRecord {
   id: string;

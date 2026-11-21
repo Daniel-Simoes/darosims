@@ -57,10 +57,28 @@ export function Footer() {
               ))}
             </ul>
           </div>
+
+          <div>
+            <h4 className="footer-column-title">Legal &amp; privacy</h4>
+            <ul className="footer-links">
+              {footerNavigation.legal.map((link) => (
+                <li key={link.label}>
+                  <Link to={link.href}>{link.label}</Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         <div className="footer-bottom">
           <span>© {new Date().getFullYear()} {brand.fullName}. All rights reserved.</span>
+          <span>
+            <Link to="/legal/privacy">Privacy</Link>
+            {' · '}
+            <Link to="/legal/terms">Terms</Link>
+            {' · '}
+            <Link to="/legal/cookies">Cookies</Link>
+          </span>
           <span>{brand.domain}</span>
         </div>
       </div>

@@ -44,9 +44,18 @@ export function Navbar() {
                   setActiveMenu(item.label);
                 }}
               >
-                <button className="navbar-link" type="button">
+                <button
+                  className="navbar-link"
+                  type="button"
+                  aria-expanded={item.sections ? activeMenu === item.label : undefined}
+                  aria-haspopup={item.sections ? 'menu' : undefined}
+                  onClick={() => {
+                    if (!item.sections) return;
+                    setActiveMenu((current) => (current === item.label ? null : item.label));
+                  }}
+                >
                   {item.label}
-                  {item.sections && <span className="navbar-link-chevron">▾</span>}
+                  {item.sections && <span className="navbar-link-chevron" aria-hidden="true">▾</span>}
                 </button>
                 {item.sections && activeMenu === item.label && (
                   <MegaMenu sections={item.sections} onNavigate={closeMenu} />

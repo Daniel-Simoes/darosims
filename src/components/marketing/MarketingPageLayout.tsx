@@ -38,14 +38,23 @@ export function MarketingPageLayout({ page, children }: MarketingPageLayoutProps
       </section>
 
       {page.stats && page.stats.length > 0 ? (
-        <section className="marketing-stats">
-          <div className="container marketing-stats-grid">
-            {page.stats.map((stat) => (
-              <div key={stat.label} className="marketing-stat">
-                <span className="marketing-stat-value">{stat.value}</span>
-                <span className="marketing-stat-label">{stat.label}</span>
-              </div>
-            ))}
+        <section className="marketing-stats" aria-labelledby="marketing-stats-heading">
+          <div className="container">
+            <h2 id="marketing-stats-heading" className="visually-hidden">
+              Platform highlights
+            </h2>
+            <p className="marketing-stats-disclaimer" role="note">
+              Figures below describe product capabilities or design goals — not audited customer
+              metrics or performance guarantees.
+            </p>
+            <div className="marketing-stats-grid">
+              {page.stats.map((stat) => (
+                <div key={stat.label} className="marketing-stat">
+                  <span className="marketing-stat-value">{stat.value}</span>
+                  <span className="marketing-stat-label">{stat.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       ) : null}

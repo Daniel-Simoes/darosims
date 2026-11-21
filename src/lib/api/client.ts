@@ -1,9 +1,11 @@
 const TOKEN_KEY = 'daros_auth_token';
 
+/** @deprecated Session uses HttpOnly cookies; legacy bearer fallback only. */
 export function getStoredToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
+/** @deprecated */
 export function setStoredToken(token: string | null) {
   if (token) {
     localStorage.setItem(TOKEN_KEY, token);
@@ -27,6 +29,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   try {
     response = await fetch(path, {
       ...options,
+      credentials: 'include',
       cache: 'no-store',
       headers,
     });
@@ -37,7 +40,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     throw new Error(
       onLocalDev
         ? 'Cannot reach the API. Run `npm run dev:all` in the project folder (backend :3000 + site :5173).'
-        : 'Network error contacting the API. Open /api/health on this site or try again later.',
+        : 'Network error contacting the API.',
     );
   }
   let data: Record<string, unknown> = {};
@@ -55,7 +58,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
         throw new Error(
           onLocalDev
             ? 'API request failed. Run `npm run dev:all` (backend on :3000 + frontend on :5173).'
-            : `API error (${response.status}). Check Vercel env vars and open /api/health on this site.`,
+            : `API error (${response.status}).`,
         );
       }
     }
@@ -68,8 +71,7 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 
   if (!response.ok) {
     const errorText = typeof data.error === 'string' ? data.error : `Request failed (${response.status})`;
-    const hint = typeof data.hint === 'string' ? data.hint : '';
-    throw new Error(hint ? `${errorText} ${hint}` : errorText);
+    throw new Error(errorText);
   }
 
   return data as T;

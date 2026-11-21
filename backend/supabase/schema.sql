@@ -38,12 +38,50 @@ create index if not exists document_events_body_document_idx on public.document_
 create index if not exists document_comments_body_document_idx on public.document_comments ((body->>'documentId'));
 create index if not exists document_chat_presence_body_document_idx on public.document_chat_presence ((body->>'documentId'));
 
+alter table public.documents enable row level security;
+alter table public.users enable row level security;
+alter table public.notifications enable row level security;
+alter table public.document_events enable row level security;
+alter table public.document_comments enable row level security;
+alter table public.document_chat_presence enable row level security;
+
+revoke all on public.documents from anon, authenticated;
+revoke all on public.users from anon, authenticated;
+revoke all on public.notifications from anon, authenticated;
+revoke all on public.document_events from anon, authenticated;
+revoke all on public.document_comments from anon, authenticated;
+revoke all on public.document_chat_presence from anon, authenticated;
+
 grant all on public.documents to service_role;
 grant all on public.users to service_role;
 grant all on public.notifications to service_role;
 grant all on public.document_events to service_role;
 grant all on public.document_comments to service_role;
 grant all on public.document_chat_presence to service_role;
+
+drop policy if exists "service role only documents" on public.documents;
+create policy "service role only documents" on public.documents
+  for all to service_role using (true) with check (true);
+
+drop policy if exists "service role only users" on public.users;
+create policy "service role only users" on public.users
+  for all to service_role using (true) with check (true);
+
+drop policy if exists "service role only notifications" on public.notifications;
+create policy "service role only notifications" on public.notifications
+  for all to service_role using (true) with check (true);
+
+drop policy if exists "service role only document_events" on public.document_events;
+create policy "service role only document_events" on public.document_events
+  for all to service_role using (true) with check (true);
+
+drop policy if exists "service role only document_comments" on public.document_comments;
+create policy "service role only document_comments" on public.document_comments
+  for all to service_role using (true) with check (true);
+
+drop policy if exists "service role only document_chat_presence" on public.document_chat_presence;
+create policy "service role only document_chat_presence" on public.document_chat_presence
+  for all to service_role using (true) with check (true);
 
 -- Private bucket for PDFs / source files (create in Storage if this insert fails)
 insert into storage.buckets (id, name, public)

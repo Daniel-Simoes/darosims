@@ -1,6 +1,10 @@
-import { signToken, corsHeaders, jsonResponse } from '@/lib/auth';
+import { signToken, corsHeaders, jsonResponse, jsonResponseWithSession } from '@/lib/auth';
 import { ensureServerBootstrap } from '@/lib/ensureServerBootstrap';
 import { validateCredentials } from '@/lib/users';
+import { checkRateLimit, getClientIp } from '@/lib/security/rateLimit';
+import { parseEmail } from '@/lib/security/input';
+import { safeApiError } from '@/lib/security/errors';
+import { assertHoneypotEmpty } from '@/lib/security/input';
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders() });
@@ -9,12 +13,30 @@ export async function OPTIONS() {
 export async function POST(request: Request) {
   try {
     await ensureServerBootstrap();
+
+    const rate = checkRateLimit(`login:${getClientIp(request)}`, {
+      limit: 10,
+      windowMs: 15 * 60 * 1000,
+    });
+    if (!rate.allowed) {
+      return jsonResponse(
+        { error: 'Too many login attempts. Try again later.' },
+        429,
+        rate.retryAfterSec ? { 'Retry-After': String(rate.retryAfterSec) } : undefined,
+      );
+    }
+
     const body = await request.json();
-    const email = String(body.email ?? '').trim();
-    const password = String(body.password ?? '');
+    assertHoneypotEmpty(body.website);
+
+    const email = parseEmail(body.email);
+    const password = typeof body.password === 'string' ? body.password : '';
 
     if (!email || !password) {
       return jsonResponse({ error: 'Email and password are required' }, 400);
+    }
+    if (password.length > 256) {
+      return jsonResponse({ error: 'Invalid credentials' }, 400);
     }
 
     const user = await validateCredentials(email, password);
@@ -23,13 +45,8 @@ export async function POST(request: Request) {
     }
 
     const token = await signToken(user);
-    return jsonResponse({ token, user });
+    return jsonResponseWithSession({ user }, token);
   } catch (error) {
-    console.error('[auth/login]', error);
-    const message = error instanceof Error ? error.message : 'Login failed';
-    if (message.includes('JSON')) {
-      return jsonResponse({ error: 'Invalid request body' }, 400);
-    }
-    return jsonResponse({ error: message }, 500);
+    return jsonResponse({ error: safeApiError('Login failed', error, '[auth/login]') }, 500);
   }
 }

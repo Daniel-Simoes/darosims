@@ -29,6 +29,9 @@ import { useTeamUsers } from '../../context/TeamUsersContext';
 import { ModuleVisualizationView } from '../../features/dashboard/components/ModuleVisualizationView';
 import { useAuth } from '../../features/authentication/context/AuthContext';
 import { SessionReauthDialog } from '../../features/authentication/components/SessionReauthDialog';
+import { FirstLoginLegalDialog } from '../../features/authentication/components/FirstLoginLegalDialog';
+import { DashboardLegalView } from '../../features/dashboard/components/DashboardLegalView';
+import { api } from '../../lib/api';
 import { useDashboardInactivity } from '../../features/authentication/hooks/useDashboardInactivity';
 import { TeamUsersProvider } from '../../context/TeamUsersContext';
 import { ProfileSettingsView } from '../../features/users/components/ProfileSettingsView';
@@ -110,7 +113,11 @@ function DashboardOverview({
 }
 
 export function DashboardPage() {
-  const { user, login, lockSession, isSessionLocked, endEntryLoading } = useAuth();
+  const { user, login, lockSession, isSessionLocked, endEntryLoading, updateUser } = useAuth();
+
+  const needsLegalAcceptance = Boolean(
+    user && !user.legalPoliciesAcceptedAt && !isSessionLocked,
+  );
 
   useDashboardInactivity(!isSessionLocked, lockSession);
   const [activeNav, setActiveNav] = useState('dashboard');
@@ -167,6 +174,8 @@ export function DashboardPage() {
   const isNotifications = activeNav === 'notifications';
   const isNotificationHistory = activeNav === 'notification-history';
   const isProfileSettings = activeNav === 'profile-settings';
+  const isLegalPrivacy = activeNav === 'legal-privacy';
+  const isLegalAccessibility = activeNav === 'legal-accessibility';
   const documentDetailId = parseDocumentDetailViewId(activeNav);
   const isDocumentDetail = documentDetailId !== null;
   const isDocumentView = documentViews.includes(activeNav);
@@ -179,7 +188,11 @@ export function DashboardPage() {
     ? 'Document Details'
     : isProfileSettings
       ? 'Profile Settings'
-      : isDocumentView || isChat || isNotifications || isNotificationHistory
+      : isLegalPrivacy
+        ? 'Privacy Policy'
+        : isLegalAccessibility
+          ? 'Accessibility'
+          : isDocumentView || isChat || isNotifications || isNotificationHistory
       ? (documentPageTitles[activeNav] ?? 'Documents')
       : isModuleView && activeModule
         ? activeModule.title
@@ -273,8 +286,15 @@ export function DashboardPage() {
       defaultEmail={user?.email ?? ''}
       onLogin={login}
     />
+    <FirstLoginLegalDialog
+      open={needsLegalAcceptance}
+      onAccept={async () => {
+        const { user: updated } = await api.acceptLegalPolicies();
+        updateUser(updated);
+      }}
+    />
     <div
-      className={`dashboard-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''} ${isChat ? 'dashboard-layout-chat' : ''} ${isSessionLocked ? 'dashboard-layout-session-locked' : ''}`}
+      className={`dashboard-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''} ${isChat ? 'dashboard-layout-chat' : ''} ${isSessionLocked ? 'dashboard-layout-session-locked' : ''} ${needsLegalAcceptance ? 'dashboard-layout-legal-pending' : ''}`}
     >
       <DashboardSidebar
         activeNav={sidebarActiveNav}
@@ -328,8 +348,12 @@ export function DashboardPage() {
         </header>
         )}
 
-        <main className={`dashboard-content ${isDocumentView || isDocumentDetail || isChat || isNotifications || isNotificationHistory || isProfileSettings ? 'dashboard-content-full' : ''} ${isChat ? 'dashboard-content-chat' : ''}`}>
-          {isProfileSettings ? (
+        <main className={`dashboard-content ${isDocumentView || isDocumentDetail || isChat || isNotifications || isNotificationHistory || isProfileSettings || isLegalPrivacy || isLegalAccessibility ? 'dashboard-content-full' : ''} ${isChat ? 'dashboard-content-chat' : ''}`}>
+          {isLegalPrivacy ? (
+            <DashboardLegalView slug="privacy" />
+          ) : isLegalAccessibility ? (
+            <DashboardLegalView slug="accessibility" />
+          ) : isProfileSettings ? (
             <ProfileSettingsView onBack={() => setActiveNav(profileReturnNav)} />
           ) : isNewDocument ? (
             <NewDocumentView

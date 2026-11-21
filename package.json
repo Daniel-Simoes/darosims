@@ -7,11 +7,13 @@
     "dev": "vite",
     "dev:backend": "npm run dev --prefix backend",
     "dev:all": "concurrently -n backend,web -c blue,green \"npm run dev:backend\" \"npm run dev\"",
+    "dev:clean": "rm -rf backend/.next && npm run dev:all",
     "build": "tsc -b && vite build",
     "build:chat-pattern": "node scripts/build-chat-pattern-tile.mjs",
     "build:backend": "npm run build --prefix backend",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "security:audit": "npm audit --audit-level=high && npm audit --prefix backend --audit-level=high"
   },
   "dependencies": {
     "lottie-react": "^3.1.1",

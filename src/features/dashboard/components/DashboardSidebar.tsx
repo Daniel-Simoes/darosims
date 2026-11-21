@@ -96,6 +96,28 @@ export function DashboardSidebar({
         </nav>
 
         <div className="dash-sidebar-footer">
+          <button
+            type="button"
+            className={`dash-sidebar-link ${activeNav === 'legal-privacy' ? 'active' : ''}`}
+            onClick={() => handleNavClick('legal-privacy')}
+            title={isCollapsed ? 'Privacy Policy' : undefined}
+          >
+            <span className="dash-sidebar-link-icon">
+              <SidebarIcon name="shield" />
+            </span>
+            {!isCollapsed && 'Privacy Policy'}
+          </button>
+          <button
+            type="button"
+            className={`dash-sidebar-link ${activeNav === 'legal-accessibility' ? 'active' : ''}`}
+            onClick={() => handleNavClick('legal-accessibility')}
+            title={isCollapsed ? 'Accessibility' : undefined}
+          >
+            <span className="dash-sidebar-link-icon">
+              <SidebarIcon name="book" />
+            </span>
+            {!isCollapsed && 'Accessibility'}
+          </button>
           <button type="button" className="dash-sidebar-link" title={isCollapsed ? 'Settings' : undefined}>
             <span className="dash-sidebar-link-icon">
               <SidebarIcon name="settings" />

@@ -8,6 +8,8 @@ export interface AuthUser {
   role: 'admin';
   photoUrl?: string;
   permissions: Permission[];
+  /** ISO timestamp when the user accepted Privacy Policy and Terms in-app */
+  legalPoliciesAcceptedAt?: string;
 }
 
 export interface JwtPayload {

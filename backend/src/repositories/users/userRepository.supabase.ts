@@ -6,6 +6,7 @@ import {
   normalizeUser,
   type StoredUser,
 } from '@/repositories/users/userRepository.shared';
+import { hashPasswordDev, isPasswordHash } from '@/lib/security/password';
 
 function toPublicUser(user: StoredUser): AuthUser {
   const { password: _password, ...publicUser } = user;
@@ -54,7 +55,12 @@ export async function listPublicUsers(): Promise<AuthUser[]> {
 
 export async function updateUserByEmail(
   email: string,
-  updates: Partial<Pick<StoredUser, 'email' | 'name' | 'firstName' | 'lastName' | 'password' | 'photoUrl'>>,
+  updates: Partial<
+    Pick<
+      StoredUser,
+      'email' | 'name' | 'firstName' | 'lastName' | 'password' | 'photoUrl' | 'legalPoliciesAcceptedAt'
+    >
+  >,
 ): Promise<StoredUser | null> {
   const current = await findUserByEmail(email);
   if (!current) return null;
@@ -97,10 +103,11 @@ export async function ensureDefaultAdminFromEnv(): Promise<void> {
   const users = await readRawUsers();
   if (users.length > 0) return;
 
+  const storedPassword = isPasswordHash(password) ? password : await hashPasswordDev(password);
   await upsertUser(
     normalizeUser({
       email,
-      password,
+      password: storedPassword,
       role: 'admin',
       name: 'Administrator',
       firstName: 'Admin',

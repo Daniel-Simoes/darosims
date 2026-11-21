@@ -54,6 +54,8 @@ export function getNotificationTypeLabel(type?: NotificationRecord['type']) {
       return 'Not approved';
     case 'document_message':
       return 'Document message';
+    case 'lgpd_request':
+      return 'LGPD request';
     default:
       return 'Notification';
   }

@@ -4,17 +4,34 @@ import {
   findUserEmailByName,
   listPublicUsers,
   readAllUsers,
+  updateUserByEmail,
 } from '@/repositories/users/userRepository';
+import { hashPasswordDev, isPasswordHash, verifyPassword } from '@/lib/security/password';
 import type { AuthUser } from '@/types';
+
+async function upgradeLegacyPasswordIfNeeded(email: string, plain: string, stored: string) {
+  if (isPasswordHash(stored)) return;
+  const hash = await hashPasswordDev(plain);
+  try {
+    await updateUserByEmail(email, { password: hash });
+  } catch {
+    // Best-effort rehash after legacy login
+  }
+}
 
 export async function validateCredentials(
   email: string,
   password: string,
 ): Promise<AuthUser | null> {
   const user = await findUserByEmail(email);
-  if (!user || user.password !== password) {
+  if (!user || !(await verifyPassword(password, user.password))) {
     return null;
   }
+
+  if (!isPasswordHash(user.password)) {
+    await upgradeLegacyPasswordIfNeeded(user.email, password, user.password);
+  }
+
   const { password: _password, ...publicUser } = user;
   return publicUser;
 }

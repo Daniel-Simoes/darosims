@@ -8,6 +8,7 @@ export interface UserProfile {
   role: 'admin';
   photoUrl?: string;
   permissions: Permission[];
+  legalPoliciesAcceptedAt?: string;
 }
 
 export interface UpdateProfilePayload {

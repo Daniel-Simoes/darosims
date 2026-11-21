@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { DarosEntryLoading } from './components/DarosEntryLoading';
@@ -7,7 +7,8 @@ import { SignInPage } from './pages/SignInPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { HandheldWebGate } from './features/dashboard/components/DashboardDesktopOnly';
 import { MarketingSubPage } from './pages/marketing/MarketingSubPage';
-
+import { LegalDocumentPage } from './pages/legal/LegalDocumentPage';
+import { LgpdRequestPage } from './pages/legal/LgpdRequestPage';
 function AppShell() {
   const { isEntryLoading } = useAuth();
 
@@ -16,6 +17,9 @@ function AppShell() {
       {isEntryLoading ? <DarosEntryLoading /> : null}
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/legal/data-request" element={<LgpdRequestPage />} />
+        <Route path="/legal/lgpd" element={<Navigate to="/legal/data-request" replace />} />
+        <Route path="/legal/:slug" element={<LegalDocumentPage />} />
         <Route
           path="/signin"
           element={

@@ -6,7 +6,7 @@
 
 .footer-grid {
   display: grid;
-  grid-template-columns: 2fr repeat(4, 1fr);
+  grid-template-columns: 2fr repeat(5, 1fr);
   gap: 48px;
   margin-bottom: 48px;
 }
@@ -56,10 +56,22 @@
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding-top: 24px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.footer-bottom a {
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.footer-bottom a:hover {
+  color: var(--color-primary);
 }
 
 @media (max-width: 1024px) {

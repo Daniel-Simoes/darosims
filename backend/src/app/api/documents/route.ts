@@ -2,6 +2,8 @@ import { requireAuth, jsonResponse, corsHeaders } from '@/lib/auth';
 import { createDocument, listDocuments, listUserDrafts } from '@/lib/documents';
 import { createDocumentEvent } from '@/lib/documentEvents';
 import type { CreateDocumentInput } from '@/lib/types';
+import { requirePermission } from '@/lib/security/authz';
+import { parseListLimit, slicePage } from '@/lib/security/pagination';
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders() });
@@ -11,15 +13,24 @@ export async function GET(request: Request) {
   const auth = await requireAuth(request);
   if (auth instanceof Response) return auth;
 
+  const viewAuth = await requirePermission(auth, 'view_documents');
+  if (viewAuth instanceof Response) return viewAuth;
+
   try {
-    const scope = new URL(request.url).searchParams.get('scope');
+    const searchParams = new URL(request.url).searchParams;
+    const limit = parseListLimit(searchParams);
+    const offset = Math.max(0, Number.parseInt(searchParams.get('offset') ?? '0', 10) || 0);
+
+    const scope = searchParams.get('scope');
     if (scope === 'drafts') {
-      const documents = await listUserDrafts(auth.email);
-      return jsonResponse({ documents, total: documents.length });
+      const allDrafts = await listUserDrafts(auth.email);
+      const documents = slicePage(allDrafts, limit, offset);
+      return jsonResponse({ documents, total: allDrafts.length, limit, offset });
     }
 
-    const documents = await listDocuments();
-    return jsonResponse({ documents, total: documents.length });
+    const all = await listDocuments();
+    const documents = slicePage(all, limit, offset);
+    return jsonResponse({ documents, total: all.length, limit, offset });
   } catch (err) {
     console.error('GET /api/documents error:', err);
     const message = err instanceof Error ? err.message : 'Failed to load documents';
@@ -30,6 +41,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const auth = await requireAuth(request);
   if (auth instanceof Response) return auth;
+
+  const createAuth = await requirePermission(auth, 'create_documents');
+  if (createAuth instanceof Response) return createAuth;
 
   try {
     const body = await request.json();
@@ -97,7 +111,7 @@ export async function POST(request: Request) {
       retentionNotes: body.retentionNotes,
       disposition: body.disposition,
       comments: body.comments,
-      status: body.status,
+      status: 'Draft',
     };
 
     const document = await createDocument(input, auth.email);

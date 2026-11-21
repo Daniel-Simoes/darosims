@@ -6,6 +6,7 @@ export interface AuthUser {
   role: 'admin';
   photoUrl?: string;
   permissions: Permission[];
+  legalPoliciesAcceptedAt?: string;
 }
 
 export interface UserProfile extends AuthUser {}
@@ -20,8 +21,9 @@ export interface UpdateProfilePayload {
 }
 
 export interface LoginResponse {
-  token: string;
   user: AuthUser;
+  /** Legacy — session is stored in HttpOnly cookie. */
+  token?: string;
 }
 
 export interface MeResponse {

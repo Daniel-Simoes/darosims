@@ -5,6 +5,7 @@ import { waitForEntryLoading } from '../../lib/entryLoading';
 import { images } from '../../data/images';
 import logoOnDark from '../../assets/daros-logo-on-dark.png';
 import logoVertical from '../../assets/daros-logo-vertical.png';
+import { CookieConsent } from '../../components/legal/CookieConsent';
 import './SignInPage.css';
 
 export function SignInPage() {
@@ -15,7 +16,6 @@ export function SignInPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const from = (location.state as { from?: string } | null)?.from ?? '/dashboard';
 
   useEffect(() => {
@@ -50,6 +50,7 @@ export function SignInPage() {
 
   return (
     <div className="signin-page">
+      <CookieConsent />
       <div className="signin-visual">
         <img
           src={images.heroDashboard}

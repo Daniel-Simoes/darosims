@@ -1,0 +1,15 @@
+.skip-to-content {
+  position: absolute;
+  left: -9999px;
+  top: 8px;
+  z-index: 2000;
+  padding: 10px 16px;
+  background: var(--color-dark);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+.skip-to-content:focus {
+  left: 16px;
+}
