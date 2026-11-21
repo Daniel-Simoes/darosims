@@ -27,7 +27,16 @@ export async function isAuthUserDocumentOwner(
 
 export async function canAuthUserEditDocument(
   auth: { email: string; name: string },
-  document: Pick<DocumentRecord, 'createdBy' | 'owner' | 'approvedBy' | 'approver'>,
+  document: Pick<
+    DocumentRecord,
+    | 'createdBy'
+    | 'owner'
+    | 'approvedBy'
+    | 'approver'
+    | 'status'
+    | 'submittedAt'
+    | 'rejectionReason'
+  >,
 ): Promise<boolean> {
   const email = auth.email.trim().toLowerCase();
   const name = auth.name.trim().toLowerCase();
