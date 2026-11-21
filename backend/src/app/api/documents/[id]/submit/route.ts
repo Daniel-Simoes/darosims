@@ -29,13 +29,15 @@ export async function POST(
 
     const document = await submitDocumentForApproval(id, auth.email);
     const submissionType = await getLatestSubmissionType(id);
+    const approverEmail = await resolveDocumentOwnerEmail(document.owner);
+
     await createDocumentEvent({
       documentId: document.id,
       type: submissionType,
       actorEmail: auth.email,
       actorName: auth.name,
+      metadata: approverEmail ? { recipientEmail: approverEmail } : undefined,
     });
-    const approverEmail = await resolveDocumentOwnerEmail(document.owner);
     const isCreatorAlsoOwner = await isDocumentOwnerSameAsEmail(document.owner, auth.email);
 
     if (approverEmail) {

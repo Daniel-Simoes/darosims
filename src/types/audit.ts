@@ -4,6 +4,7 @@ export type DocumentEventType =
   | 'created'
   | 'submitted'
   | 'resubmitted'
+  | 'reviewed'
   | 'rejected'
   | 'edited'
   | 'approved';
@@ -19,6 +20,7 @@ export interface DocumentEventRecord {
     reason?: string;
     fileName?: string;
     action?: string;
+    recipientEmail?: string;
   };
 }
 

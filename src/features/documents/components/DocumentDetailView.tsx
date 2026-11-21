@@ -2,7 +2,20 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { api, type DocumentRecord, type UpdateDocumentPayload } from '../../../lib/api';
 import type { DocumentType } from '../../../data/documentTypes';
 import { documentTypeBadgeClass } from '../../../data/documentRegister';
-import { isInternalDraftDocument } from '../../../lib/documentStatus';
+import {
+  getDocumentStatusLabel,
+  isInternalDraftDocument,
+  isRejectedDocument,
+} from '../../../lib/documentStatus';
+import { DOCUMENT_UPLOAD_ACCEPT } from '../../../lib/documents/documentFileKind';
+import { replaceDocumentSourceFile } from '../../../lib/documents/documentSourceFile';
+import { validateDocumentFile } from '../../../lib/documents/documentUpload';
+import {
+  getDesignatedApprover,
+  isPendingDocumentApproval,
+  isPendingDocumentReview,
+  isUserDesignatedApprover,
+} from '../../../lib/documents/documentApprovalWorkflow';
 import { useTeamUsers } from '../../../context/TeamUsersContext';
 import {
   canUserApproveDocuments,
@@ -56,6 +69,20 @@ function EditField({
   );
 }
 
+function resolveTeamMemberLabel(
+  value: string | undefined,
+  teamUsers: { name: string; email: string }[],
+): string {
+  const raw = value?.trim();
+  if (!raw) return '—';
+  const match = teamUsers.find(
+    (entry) =>
+      entry.email.trim().toLowerCase() === raw.toLowerCase() ||
+      entry.name.trim().toLowerCase() === raw.toLowerCase(),
+  );
+  return match?.name ?? raw;
+}
+
 function documentToForm(doc: DocumentRecord) {
   return {
     type: doc.type,
@@ -67,6 +94,7 @@ function documentToForm(doc: DocumentRecord) {
     externalRef: doc.externalRef ?? '',
     externalVersion: doc.externalVersion ?? '',
     owner: doc.owner ?? '',
+    approver: doc.approver ?? '',
     approvedBy: doc.approvedBy ?? '',
     department: doc.department ?? '',
     effectiveDate: doc.effectiveDate ?? '',
@@ -101,7 +129,10 @@ export function DocumentDetailView({
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showOwnerConfirmDialog, setShowOwnerConfirmDialog] = useState(false);
+  const [showResubmitConfirmDialog, setShowResubmitConfirmDialog] = useState(false);
   const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [revisionFileError, setRevisionFileError] = useState('');
+  const [isUploadingRevisionFile, setIsUploadingRevisionFile] = useState(false);
   const ownerFieldRef = useRef<HTMLDivElement>(null);
   const [registerCodes, setRegisterCodes] = useState<string[]>([]);
 
@@ -175,84 +206,84 @@ export function DocumentDetailView({
     setError('');
   }
 
-  async function handleSave(overrides?: { status?: DocumentRecord['status'] }) {
-    if (!document) return;
+  async function saveFormChanges(options?: {
+    status?: DocumentRecord['status'];
+    stayInEdit?: boolean;
+  }): Promise<DocumentRecord | null> {
+    if (!document) return null;
     if (!canUserEditDocument(user, document)) {
       setError('You are not allowed to edit this document.');
-      return;
+      return null;
     }
-    setError('');
-    setSuccess('');
-    setIsSaving(true);
 
-    const nextStatus = overrides?.status ?? form.status;
+    const nextStatus = options?.status ?? form.status;
     const isExternal = form.documentOrigin === 'External';
     if (isExternal && !form.externalVersion.trim()) {
       setError('Version / Edition is required for external documents.');
-      setIsSaving(false);
-      return;
+      return null;
     }
 
     const isApproving =
-      !isExternal &&
-      document.status === 'Draft' &&
-      nextStatus === 'Active';
+      !isExternal && document.status === 'Draft' && nextStatus === 'Active';
 
     if (isApproving && !canApprove) {
       setError('You are not authorized to approve documents.');
-      setIsSaving(false);
-      return;
+      return null;
     }
 
-    try {
-      if (isApproving && !document.fileName) {
-        setError('Cannot approve: upload a PDF document first.');
-        setIsSaving(false);
-        return;
-      }
+    if (isApproving && !document.fileName) {
+      setError('Cannot approve: upload a document file first.');
+      return null;
+    }
 
-      const payload: UpdateDocumentPayload = {
-        type: form.type,
-        process: form.process,
-        title: form.title,
-        status: nextStatus,
-        documentOrigin: form.documentOrigin,
-        owner: form.owner || undefined,
-        approvedBy: isApproving ? user?.name : form.approvedBy || undefined,
-        department: form.department || undefined,
-        effectiveDate: form.effectiveDate || undefined,
-        reviewFrequency: form.reviewFrequency || undefined,
-        nextReviewDate: form.nextReviewDate || undefined,
-        repository: form.repository || undefined,
-        distribution: form.distribution || undefined,
-        retentionPeriod: form.retentionPeriod || undefined,
-        retentionNotes: form.retentionNotes || undefined,
-        disposition: form.disposition || undefined,
-        comments: form.comments || undefined,
-        externalRef: isExternal ? form.externalRef.trim() || undefined : undefined,
-        externalVersion: isExternal ? form.externalVersion.trim() : undefined,
-        version: isExternal
-          ? undefined
-          : isApproving
-            ? Math.max(Number(form.version) || document.version || 0, 1)
-            : Number(form.version) || document.version,
-        ...(isApproving
-          ? {
-              fileFormat: 'pdf' as const,
-              fileName: document.fileName ?? `${form.title.trim() || document.title}.pdf`,
-              sourceModified: false,
-            }
-          : {}),
-      };
+    const payload: UpdateDocumentPayload = {
+      type: form.type,
+      process: form.process,
+      title: form.title,
+      status: nextStatus,
+      documentOrigin: form.documentOrigin,
+      owner: form.owner || undefined,
+      approver: form.approver.trim() || form.owner.trim() || undefined,
+      approvedBy: isApproving ? user?.name : form.approvedBy || undefined,
+      department: form.department || undefined,
+      effectiveDate: form.effectiveDate || undefined,
+      reviewFrequency: form.reviewFrequency || undefined,
+      nextReviewDate: form.nextReviewDate || undefined,
+      repository: form.repository || undefined,
+      distribution: form.distribution || undefined,
+      retentionPeriod: form.retentionPeriod || undefined,
+      retentionNotes: form.retentionNotes || undefined,
+      disposition: form.disposition || undefined,
+      comments: form.comments || undefined,
+      externalRef: isExternal ? form.externalRef.trim() || undefined : undefined,
+      externalVersion: isExternal ? form.externalVersion.trim() : undefined,
+      version: isExternal
+        ? undefined
+        : isApproving
+          ? Math.max(Number(form.version) || document.version || 0, 1)
+          : Number(form.version) || document.version,
+      ...(isApproving ? { fileName: document.fileName } : {}),
+    };
 
-      const { document: updated } = await api.updateDocument(documentId, payload);
-      setDocument(updated);
-      setForm(documentToForm(updated));
+    const { document: updated } = await api.updateDocument(documentId, payload);
+    setDocument(updated);
+    setForm(documentToForm(updated));
+    if (!options?.stayInEdit) {
       setIsEditing(false);
+    }
+    return updated;
+  }
+
+  async function handleSave(overrides?: { status?: DocumentRecord['status'] }) {
+    setError('');
+    setSuccess('');
+    setIsSaving(true);
+    try {
+      const updated = await saveFormChanges({ status: overrides?.status });
+      if (!updated) return;
+      const isApproving = overrides?.status === 'Active';
       setSuccess(
-        isApproving
-          ? 'Document approved and published as PDF.'
-          : 'Document updated successfully.',
+        isApproving ? 'Document approved successfully.' : 'Document updated successfully.',
       );
       if (isApproving) {
         onApproved?.();
@@ -264,13 +295,112 @@ export function DocumentDetailView({
     }
   }
 
+  async function handleRevisionFileSelect(file: File | undefined) {
+    if (!file || !document) return;
+    setRevisionFileError('');
+    const validationError = validateDocumentFile(file);
+    if (validationError) {
+      setRevisionFileError(validationError);
+      return;
+    }
+
+    setIsUploadingRevisionFile(true);
+    setError('');
+    setSuccess('');
+    try {
+      const updated = await replaceDocumentSourceFile(documentId, file, {
+        clearRejectionMetadata: false,
+      });
+      setDocument(updated);
+      setForm(documentToForm(updated));
+      setSuccess('New file attached. Save your changes, then resubmit for review.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload document file');
+    } finally {
+      setIsUploadingRevisionFile(false);
+    }
+  }
+
+  async function completeResubmitForReview() {
+    if (!document) return;
+
+    setError('');
+    setSuccess('');
+    setIsSaving(true);
+
+    try {
+      const saved = await saveFormChanges({ stayInEdit: false });
+      if (!saved) return;
+      if (!saved.fileName) {
+        setError('Upload a document file before resubmitting for review.');
+        return;
+      }
+
+      const { document: updated } = await api.submitDocumentForApproval(documentId);
+      setDocument(updated);
+      setForm(documentToForm(updated));
+      setIsEditing(false);
+      setSuccess('Document resubmitted for review.');
+      onSubmittedForApproval?.();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to resubmit document');
+    } finally {
+      setIsSaving(false);
+      setShowResubmitConfirmDialog(false);
+    }
+  }
+
+  function handleResubmitForReviewClick() {
+    if (!document || !isRejectedDocument(document) || !isCreator) return;
+
+    if (isDocumentOwnerSameAsUser(user, document.owner)) {
+      setShowResubmitConfirmDialog(true);
+      return;
+    }
+
+    void completeResubmitForReview();
+  }
+
   async function handleApprove() {
     if (!document || document.status !== 'Draft' || !canApprove) return;
+    if (!isPendingDocumentApproval(document)) return;
     await handleSave({ status: 'Active' });
+  }
+
+  async function handleReview() {
+    if (!document || !isPendingDocumentReview(document)) return;
+    if (!isDocumentOwnerSameAsUser(user, document.owner)) return;
+
+    setError('');
+    setSuccess('');
+    setIsSaving(true);
+
+    try {
+      const { document: updated } = await api.reviewDocument(documentId);
+      setDocument(updated);
+      setForm(documentToForm(updated));
+      const approverLabel = getDesignatedApprover(updated);
+      const isFinalApprover = isUserDesignatedApprover(user, updated, teamUsers);
+      setSuccess(
+        isFinalApprover
+          ? 'Review complete. You can approve the document when ready.'
+          : `Review complete. Sent to ${approverLabel || 'the approver'} for final approval.`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to review document');
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   async function handleReject(reason: string) {
     if (!document || document.status !== 'Draft' || !document.submittedAt || !canApprove) return;
+
+    const pendingReview = isPendingDocumentReview(document);
+    const pendingFinal = isPendingDocumentApproval(document);
+    if (pendingReview && !isDocumentOwnerSameAsUser(user, document.owner)) return;
+    if (pendingFinal && !isUserDesignatedApprover(user, document, teamUsers)) return;
+    if (!pendingReview && !pendingFinal) return;
 
     setError('');
     setSuccess('');
@@ -297,27 +427,11 @@ export function DocumentDetailView({
     setIsSaving(true);
 
     try {
-      const isSelfReviewer = isDocumentOwnerSameAsUser(user, document.owner);
-
-      if (isSelfReviewer) {
-        const { document: updated } = await api.updateDocument(documentId, {
-          status: 'Active',
-          version: Math.max(Number(document.version) || 0, 1),
-          approvedBy: user?.name,
-          fileFormat: 'pdf',
-          fileName: document.fileName ?? `${document.title}.pdf`,
-        });
-        setDocument(updated);
-        setForm(documentToForm(updated));
-        setSuccess('Document reviewed and approved.');
-        onApproved?.();
-      } else {
-        const { document: updated } = await api.submitDocumentForApproval(documentId);
-        setDocument(updated);
-        setForm(documentToForm(updated));
-        setSuccess('Document submitted for review.');
-        onSubmittedForApproval?.();
-      }
+      const { document: updated } = await api.submitDocumentForApproval(documentId);
+      setDocument(updated);
+      setForm(documentToForm(updated));
+      setSuccess('Document submitted for review.');
+      onSubmittedForApproval?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit document for review');
     } finally {
@@ -388,12 +502,20 @@ export function DocumentDetailView({
 
   const isExternal = document.documentOrigin === 'External';
   const isDraftInternal = isInternalDraftDocument(document);
-  const isPendingApproval = Boolean(document.submittedAt) && document.status === 'Draft';
   const isAssignedOwner = isDocumentOwnerSameAsUser(user, document.owner);
-  const canReviewPending = isPendingApproval && canApprove && isAssignedOwner;
+  const pendingReview = isPendingDocumentReview(document);
+  const pendingFinalApproval = isPendingDocumentApproval(document);
+  const canReviewPending = pendingReview && canApprove && isAssignedOwner;
+  const canFinalApprove =
+    pendingFinalApproval && canApprove && isUserDesignatedApprover(user, document, teamUsers);
+  const workflowStatusLabel = getDocumentStatusLabel(document);
+  const reviewedByLabel = resolveTeamMemberLabel(document.reviewedBy, teamUsers);
   const isCreator =
     (user?.email?.toLowerCase() ?? '') === (document.createdBy?.toLowerCase() ?? '');
-  const canSubmitForReview = isDraftInternal && !document.submittedAt && isCreator;
+  const isRejected = isRejectedDocument(document);
+  const canReviseRejected = isRejected && isCreator && isDraftInternal;
+  const canSubmitForReview =
+    isDraftInternal && !document.submittedAt && isCreator && !isRejected;
   const canDelete = canUserDeleteDocument(user, document);
   const canEditDocument = canUserEditDocument(user, document);
   const displayCode = isExternal ? document.externalRef || '—' : document.code || '—';
@@ -418,6 +540,26 @@ export function DocumentDetailView({
           {!isEditing ? (
             <>
               {canReviewPending ? (
+                <>
+                  <button
+                    type="button"
+                    className="dd-btn dd-btn-primary"
+                    onClick={handleReview}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? 'Reviewing...' : 'Review and Send for Approval'}
+                  </button>
+                  <button
+                    type="button"
+                    className="dd-btn dd-btn-danger"
+                    onClick={() => setShowRejectDialog(true)}
+                    disabled={isSaving}
+                  >
+                    Do Not Approve
+                  </button>
+                </>
+              ) : null}
+              {canFinalApprove ? (
                 <>
                   <button
                     type="button"
@@ -449,7 +591,7 @@ export function DocumentDetailView({
               ) : null}
               {canEditDocument ? (
                 <button type="button" className="dd-btn dd-btn-outline" onClick={() => setIsEditing(true)}>
-                  Edit Document
+                  {canReviseRejected ? 'Revise & resubmit' : 'Edit Document'}
                 </button>
               ) : null}
               {canDelete ? (
@@ -468,7 +610,22 @@ export function DocumentDetailView({
               <button type="button" className="dd-btn dd-btn-outline" onClick={handleCancelEdit}>
                 Cancel
               </button>
-              <button type="button" className="dd-btn dd-btn-primary" onClick={() => handleSave()} disabled={isSaving}>
+              {canReviseRejected ? (
+                <button
+                  type="button"
+                  className="dd-btn dd-btn-primary"
+                  onClick={handleResubmitForReviewClick}
+                  disabled={isSaving || isUploadingRevisionFile}
+                >
+                  {isSaving ? 'Resubmitting...' : 'Resubmit for Review'}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                className="dd-btn dd-btn-primary"
+                onClick={() => handleSave()}
+                disabled={isSaving || isUploadingRevisionFile}
+              >
                 {isSaving ? 'Saving...' : 'Save Changes'}
               </button>
             </>
@@ -492,6 +649,19 @@ export function DocumentDetailView({
               {document.rejectedAt ? ` · ${new Date(document.rejectedAt).toLocaleString()}` : ''}
             </span>
           ) : null}
+          {!isEditing ? (
+            <button
+              type="button"
+              className="dd-btn dd-btn-primary dd-rejection-action"
+              onClick={() => setIsEditing(true)}
+            >
+              Revise & resubmit
+            </button>
+          ) : (
+            <p className="dd-rejection-edit-hint">
+              Update the fields below, replace the file if needed, then use Resubmit for Review.
+            </p>
+          )}
         </div>
       ) : null}
 
@@ -525,20 +695,27 @@ export function DocumentDetailView({
                 <InfoRow label="Process" value={document.process} />
                 <InfoRow label="Origin" value={document.documentOrigin ?? 'Internal'} />
                 <InfoRow label={isExternal ? 'Version / Edition' : 'Version'} value={displayVersion} />
-                <InfoRow label="PDF File" value={document.fileName || '—'} />
+                <InfoRow label="Attached File" value={document.fileName || '—'} />
               </section>
 
               <section className="dd-card">
                 <h3 className="dd-card-title">Control & Approval</h3>
-                <InfoRow label="Document Owner" value={document.owner} />
+                <InfoRow label="Document Owner (Reviewer)" value={document.owner} />
+                <InfoRow
+                  label="Final Approver"
+                  value={getDesignatedApprover(document) || document.owner}
+                />
                 <InfoRow
                   label="Workflow Status"
                   value={
-                    isPendingApproval ? (
-                      <span className="doc-badge badge-draft">Pending Review</span>
-                    ) : document.status
+                    workflowStatusLabel !== document.status ? (
+                      <span className="doc-badge badge-draft">{workflowStatusLabel}</span>
+                    ) : (
+                      document.status
+                    )
                   }
                 />
+                <InfoRow label="Reviewed By" value={reviewedByLabel} />
                 <InfoRow label="Approved By" value={document.approvedBy} />
                 <InfoRow label="Department" value={document.department} />
                 <InfoRow label="Effective Date" value={document.effectiveDate} />
@@ -638,8 +815,35 @@ export function DocumentDetailView({
                       </EditField>
                     </>
                   )}
-                  <EditField label="PDF File">
-                    <input className="dd-input" value={document.fileName || '—'} readOnly />
+                  <EditField label="Attached File" wide>
+                    {canReviseRejected ? (
+                      <div className="dd-revision-file">
+                        <p className="dd-revision-file-current">
+                          Current: {document.fileName || 'No file attached'}
+                        </p>
+                        <label className="dd-btn dd-btn-outline dd-revision-file-btn">
+                          {isUploadingRevisionFile ? 'Uploading...' : 'Upload new document'}
+                          <input
+                            type="file"
+                            hidden
+                            accept={DOCUMENT_UPLOAD_ACCEPT}
+                            disabled={isUploadingRevisionFile || isSaving}
+                            onChange={(e) => {
+                              void handleRevisionFileSelect(e.target.files?.[0]);
+                              e.target.value = '';
+                            }}
+                          />
+                        </label>
+                        {revisionFileError ? (
+                          <p className="dd-revision-file-error">{revisionFileError}</p>
+                        ) : null}
+                        <p className="dd-revision-file-hint">
+                          PDF, Office, images, and more · max 50 MB
+                        </p>
+                      </div>
+                    ) : (
+                      <input className="dd-input" value={document.fileName || '—'} readOnly />
+                    )}
                   </EditField>
                 </div>
               </section>
@@ -648,7 +852,7 @@ export function DocumentDetailView({
                 <h3 className="dd-card-title">Control & Approval</h3>
                 <div className="dd-edit-grid">
                   <div ref={ownerFieldRef}>
-                    <EditField label="Document Owner">
+                    <EditField label="Document Owner (Reviewer)">
                       <select
                         className="dd-input"
                         value={form.owner}
@@ -661,6 +865,18 @@ export function DocumentDetailView({
                       </select>
                     </EditField>
                   </div>
+                  <EditField label="Final Approver">
+                    <select
+                      className="dd-input"
+                      value={form.approver}
+                      onChange={(e) => updateField('approver', e.target.value)}
+                    >
+                      <option value="">Same as reviewer (default)</option>
+                      {teamUsers.map((entry) => (
+                        <option key={entry.email} value={entry.name}>{entry.name}</option>
+                      ))}
+                    </select>
+                  </EditField>
                   <EditField label="Workflow Status">
                     <select
                       className="dd-input"
@@ -794,9 +1010,19 @@ export function DocumentDetailView({
       </div>
 
       <ConfirmDialog
+        open={showResubmitConfirmDialog}
+        title="Resubmit for your own review"
+        message="You are the reviewer for this document. After you resubmit, open the workflow and use Review and Send for Approval. If you are also the final approver, approve on the next step. Continue?"
+        confirmLabel="Yes, resubmit"
+        cancelLabel="Cancel"
+        onConfirm={() => void completeResubmitForReview()}
+        onCancel={() => setShowResubmitConfirmDialog(false)}
+      />
+
+      <ConfirmDialog
         open={showOwnerConfirmDialog}
-        title="Submit for review and approve"
-        message="You selected yourself as the reviewer for this document. Submitting will review and approve it immediately—the document becomes active with no extra step. Continue?"
+        title="Submit for your own review"
+        message="You selected yourself as the reviewer for this document. After you submit, you will need to open it and use Review and Send for Approval. If you are also the final approver, you can approve it on the next step. Continue?"
         confirmLabel="Yes, submit"
         cancelLabel="Choose a different reviewer"
         onConfirm={handleConfirmSubmitForReview}

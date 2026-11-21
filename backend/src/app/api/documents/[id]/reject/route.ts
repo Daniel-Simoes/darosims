@@ -2,6 +2,7 @@ import { requireAuth, jsonResponse, corsHeaders } from '@/lib/auth';
 import { getDocumentById, rejectDocumentForApproval } from '@/lib/documents';
 import { createDocumentEvent } from '@/lib/documentEvents';
 import { createNotification } from '@/lib/notifications';
+import { isAuthUserDesignatedApprover, isPendingDocumentApproval } from '@/lib/documentApproval';
 import { isAuthUserDocumentOwner } from '@/lib/documentOwnership';
 import { isDocumentApprover, isDocumentOwnerSameAsEmail } from '@/lib/users';
 
@@ -37,7 +38,15 @@ export async function POST(
       return jsonResponse({ error: 'Document not found' }, 404);
     }
 
-    if (!(await isAuthUserDocumentOwner(auth.email, existing.owner))) {
+    const pendingApproval = isPendingDocumentApproval(existing);
+    const canRejectAsReviewer = await isAuthUserDocumentOwner(auth.email, existing.owner);
+    const canRejectAsApprover = await isAuthUserDesignatedApprover(auth.email, existing);
+
+    if (pendingApproval) {
+      if (!canRejectAsApprover) {
+        return jsonResponse({ error: 'Only the designated approver can reject at this stage' }, 403);
+      }
+    } else if (!canRejectAsReviewer) {
       return jsonResponse(
         { error: 'Only the assigned document owner can reject this approval request' },
         403,

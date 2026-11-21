@@ -1,9 +1,13 @@
 import { requireAuth, jsonResponse, corsHeaders } from '@/lib/auth';
 import { deleteDocument, getDocumentById, updateDocument } from '@/lib/documents';
-import { deleteDocumentSourceFile } from '@/lib/documentFiles';
 import { createDocumentEvent } from '@/lib/documentEvents';
 import { createNotification } from '@/lib/notifications';
 import type { UpdateDocumentInput } from '@/lib/types';
+import {
+  isAuthUserDesignatedApprover,
+  isPendingDocumentApproval,
+  isPendingDocumentReview,
+} from '@/lib/documentApproval';
 import { canAuthUserEditDocument, isAuthUserDocumentOwner } from '@/lib/documentOwnership';
 import { isDocumentApprover, isDocumentOwnerSameAsEmail } from '@/lib/users';
 
@@ -70,11 +74,20 @@ export async function PUT(
       return jsonResponse({ error: 'You are not authorized to approve documents' }, 403);
     }
 
-    if (isApproving && existing.submittedAt && !(await isAuthUserDocumentOwner(auth.email, existing.owner))) {
+    if (isApproving && isPendingDocumentReview(existing)) {
       return jsonResponse(
-        { error: 'Only the assigned document owner can approve this submission' },
+        { error: 'Complete the review step before approving this document' },
         403,
       );
+    }
+
+    if (isApproving && isPendingDocumentApproval(existing)) {
+      if (!(await isAuthUserDesignatedApprover(auth.email, existing))) {
+        return jsonResponse(
+          { error: 'Only the designated approver can approve this document' },
+          403,
+        );
+      }
     }
 
     const input: UpdateDocumentInput = {
@@ -93,6 +106,7 @@ export async function PUT(
       externalRef: body.externalRef,
       externalVersion: body.externalVersion,
       owner: body.owner,
+      approver: body.approver,
       approvedBy: isApproving ? auth.name : body.approvedBy,
       department: body.department,
       effectiveDate: body.effectiveDate ?? (isApproving ? new Date().toISOString().slice(0, 10) : undefined),
@@ -105,12 +119,16 @@ export async function PUT(
       disposition: body.disposition,
       comments: body.comments,
       sourceContent: body.sourceContent,
-      fileFormat: isApproving ? 'pdf' : body.fileFormat,
-      fileName: isApproving
-        ? body.fileName ?? `${existing.title}.pdf`
-        : body.fileName,
-      sourceModified: isApproving ? false : body.sourceModified,
-      ...(body.submittedAt !== undefined ? { submittedAt: body.submittedAt } : {}),
+      fileFormat: body.fileFormat ?? existing.fileFormat,
+      fileName: body.fileName ?? (isApproving ? existing.fileName : undefined),
+      sourceModified: body.sourceModified ?? existing.sourceModified,
+      ...(isApproving
+        ? { submittedAt: undefined, reviewedAt: undefined, reviewedBy: undefined }
+        : {
+            ...(body.submittedAt !== undefined ? { submittedAt: body.submittedAt } : {}),
+            ...(body.reviewedAt !== undefined ? { reviewedAt: body.reviewedAt } : {}),
+            ...(body.reviewedBy !== undefined ? { reviewedBy: body.reviewedBy } : {}),
+          }),
       ...(body.rejectionReason !== undefined ? { rejectionReason: body.rejectionReason } : {}),
       ...(body.rejectedAt !== undefined ? { rejectedAt: body.rejectedAt } : {}),
       ...(body.rejectedBy !== undefined ? { rejectedBy: body.rejectedBy } : {}),
@@ -122,7 +140,6 @@ export async function PUT(
     }
 
     if (isApproving && existing.createdBy) {
-      await deleteDocumentSourceFile(id);
       const isCreatorAlsoOwner = await isDocumentOwnerSameAsEmail(document.owner, existing.createdBy);
 
       await createDocumentEvent({
@@ -139,8 +156,8 @@ export async function PUT(
         title: isCreatorAlsoOwner ? 'Document created and approved' : 'Document approved',
         actorName: auth.name,
         message: isCreatorAlsoOwner
-          ? `You created and approved "${document.title}" and published it as PDF.`
-          : `${auth.name} approved "${document.title}" and published it as PDF.`,
+          ? `You created and approved "${document.title}".`
+          : `${auth.name} approved "${document.title}".`,
       });
     } else {
       const contentChanged =

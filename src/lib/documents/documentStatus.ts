@@ -1,7 +1,7 @@
 import type { DocumentRecord } from '../../types/documents';
 
 type DocumentStatusInput = Pick<DocumentRecord, 'status'> &
-  Partial<Pick<DocumentRecord, 'submittedAt' | 'rejectionReason' | 'documentOrigin'>>;
+  Partial<Pick<DocumentRecord, 'submittedAt' | 'rejectionReason' | 'documentOrigin' | 'reviewedAt'>>;
 
 export function isInternalDraftDocument(document: DocumentStatusInput): boolean {
   return document.documentOrigin !== 'External' && document.status === 'Draft';
@@ -9,7 +9,14 @@ export function isInternalDraftDocument(document: DocumentStatusInput): boolean 
 
 /** Draft submitted and waiting for document owner (reviewer) action. */
 export function isPendingApprovalDocument(document: DocumentStatusInput): boolean {
-  return document.status === 'Draft' && Boolean(document.submittedAt);
+  return document.status === 'Draft' && Boolean(document.submittedAt) && !document.reviewedAt;
+}
+
+/** Reviewed and waiting for designated approver. */
+export function isPendingFinalApprovalDocument(
+  document: Pick<DocumentRecord, 'status' | 'reviewedAt'>,
+): boolean {
+  return document.status === 'Draft' && Boolean(document.reviewedAt);
 }
 
 export const isPendingReviewDocument = isPendingApprovalDocument;
@@ -22,7 +29,12 @@ export function isRejectedDocument(document: DocumentStatusInput): boolean {
   );
 }
 
-export function getDocumentStatusLabel(document: DocumentStatusInput): string {
+export function getDocumentStatusLabel(
+  document: DocumentStatusInput & Pick<DocumentRecord, 'reviewedAt'>,
+): string {
+  if (isPendingFinalApprovalDocument(document)) {
+    return 'Pending Approval';
+  }
   if (isPendingApprovalDocument(document)) {
     return 'Pending Review';
   }
@@ -32,8 +44,10 @@ export function getDocumentStatusLabel(document: DocumentStatusInput): string {
   return document.status;
 }
 
-export function getDocumentStatusBadgeClass(document: DocumentStatusInput): string {
-  if (isPendingApprovalDocument(document)) {
+export function getDocumentStatusBadgeClass(
+  document: DocumentStatusInput & Pick<DocumentRecord, 'reviewedAt'>,
+): string {
+  if (isPendingFinalApprovalDocument(document) || isPendingApprovalDocument(document)) {
     return 'badge-pending';
   }
   if (isRejectedDocument(document)) {
@@ -53,13 +67,15 @@ export function getDocumentStatusBadgeClass(document: DocumentStatusInput): stri
 }
 
 export function isPdfDocument(
-  _document: Pick<DocumentRecord, 'fileFormat' | 'status' | 'documentOrigin'>,
+  document: Pick<DocumentRecord, 'fileFormat' | 'fileName' | 'status' | 'documentOrigin'>,
 ): boolean {
-  return true;
+  if (document.fileFormat === 'pdf') return true;
+  if (document.fileName?.toLowerCase().endsWith('.pdf')) return true;
+  return false;
 }
 
 export function getDocumentFileLabel(
   document: Pick<DocumentRecord, 'fileName' | 'fileFormat' | 'status' | 'documentOrigin'>,
 ): string {
-  return document.fileName || 'PDF document';
+  return document.fileName || 'Attached file';
 }

@@ -11,7 +11,12 @@ import {
 } from 'react';
 import { api, type CreateDocumentPayload, type DocumentRecord } from '../../../lib/api';
 import { generateDocumentCode } from '../../../lib/documentCode';
-import { formatFileSize, verifyPdfFile } from '../../../lib/documentUpload';
+import {
+  DOCUMENT_UPLOAD_ACCEPT,
+  fileFormatFromUpload,
+  formatFileSize,
+  verifyDocumentFile,
+} from '../../../lib/documents';
 import { useTeamUsers } from '../../../context/TeamUsersContext';
 import { isDocumentOwnerSameAsUser } from '../../../lib/documentUsers';
 import { useAuth } from '../../../context/AuthContext';
@@ -31,6 +36,7 @@ const emptyInternalForm = {
   documentCode: '',
   title: '',
   owner: '',
+  approver: '',
 };
 
 const emptyExternalForm = {
@@ -58,7 +64,9 @@ const NEW_DOCUMENT_FIELD_HELP = {
   process:
     'The process or area this document applies to (for example Quality or Production). It shows where the document is used in the organisation and helps route review to the right person.',
   documentOwner:
-    'The person who will review this document after you submit it. They can approve it or send it back for changes. If you select yourself, you review and approve in one step when you submit.',
+    'The person who will review this document after you submit it. They use Review and Send for Approval when the document reaches them.',
+  finalApprover:
+    'The person who gives final approval after review. If you leave this empty, the reviewer is also the approver. To use three separate roles, pick a different person here.',
 } as const;
 
 function FieldHelpButton({ title, message }: { title: string; message: string }) {
@@ -129,10 +137,14 @@ interface NewDocumentViewProps {
   onSubmittedForApproval?: () => void;
 }
 
-function getFileCheckingMessage() {
+function getFileCheckingMessage(file: File) {
+  const isPdf =
+    file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
   return {
-    title: 'Checking PDF format...',
-    subtitle: 'Verifying that the file is a valid PDF document',
+    title: isPdf ? 'Checking PDF…' : 'Checking file…',
+    subtitle: isPdf
+      ? 'Verifying that the PDF can be opened'
+      : 'Verifying file type and size',
   };
 }
 
@@ -281,12 +293,12 @@ export function NewDocumentView({
   async function handleFileSelect(file: File | undefined) {
     if (!file || !activeDetailsEnabled) return;
 
-    setFileCheckingMessage(getFileCheckingMessage());
+    setFileCheckingMessage(getFileCheckingMessage(file));
     setFileUploadStatus('checking');
     setSelectedFile(null);
     setFileError('');
 
-    const validationError = await verifyPdfFile(file);
+    const validationError = await verifyDocumentFile(file);
 
     if (validationError) {
       setFileError(validationError);
@@ -384,7 +396,7 @@ export function NewDocumentView({
       origin === 'internal' && isDocumentOwnerSameAsUser(user, internalForm.owner.trim());
 
     if (!asDraft && isSelfOwner && !selectedFile) {
-      showFormError('Upload a PDF document before submitting for review.');
+      showFormError('Upload a document file before submitting for review.');
       return;
     }
 
@@ -438,6 +450,10 @@ export function NewDocumentView({
         documentOrigin: origin === 'internal' ? 'Internal' : 'External',
         status: origin === 'internal' ? 'Draft' : 'Active',
         owner: origin === 'internal' ? internalForm.owner.trim() : undefined,
+        approver:
+          origin === 'internal'
+            ? internalForm.approver.trim() || internalForm.owner.trim() || undefined
+            : undefined,
         department: origin === 'external' ? externalForm.department || undefined : undefined,
         externalRef:
           origin === 'external' ? externalForm.externalRef.trim() || undefined : undefined,
@@ -451,7 +467,7 @@ export function NewDocumentView({
       if (selectedFile) {
         await api.uploadDocumentFile(document.id, selectedFile);
         const { document: withFile } = await api.updateDocument(document.id, {
-          fileFormat: 'pdf',
+          fileFormat: fileFormatFromUpload(selectedFile),
           fileName: selectedFile.name,
         });
         savedDocument = withFile;
@@ -470,19 +486,12 @@ export function NewDocumentView({
 
       if (!asDraft && origin === 'internal') {
         const savedLabel = savedDocument.code || savedDocument.title;
-        if (isSelfOwner) {
-          await api.updateDocument(savedDocument.id, {
-            status: 'Active',
-            version: Math.max(Number(savedDocument.version) || 0, 1),
-            approvedBy: user?.name,
-            fileFormat: 'pdf',
-            fileName: savedDocument.fileName ?? selectedFile?.name,
-          });
-          setSuccess(`Document "${savedLabel}" reviewed and approved.`);
-        } else {
-          await api.submitDocumentForApproval(savedDocument.id);
-          setSuccess(`Document "${savedLabel}" submitted for review.`);
-        }
+        await api.submitDocumentForApproval(savedDocument.id);
+        setSuccess(
+          isSelfOwner
+            ? `Document "${savedLabel}" submitted. Open it to review and approve when ready.`
+            : `Document "${savedLabel}" submitted for review.`,
+        );
         onSubmittedForApproval?.();
         return;
       }
@@ -706,7 +715,7 @@ export function NewDocumentView({
                 </Field>
                 <div ref={ownerFieldRef}>
                   <Field
-                    label="Document Owner"
+                    label="Document Owner (Reviewer)"
                     required
                     helpMessage={NEW_DOCUMENT_FIELD_HELP.documentOwner}
                   >
@@ -722,6 +731,18 @@ export function NewDocumentView({
                     />
                   </Field>
                 </div>
+                <Field label="Final Approver" helpMessage={NEW_DOCUMENT_FIELD_HELP.finalApprover}>
+                  <OptionPickerMenu
+                    panelLabel="Final Approver"
+                    value={internalForm.approver}
+                    onChange={(value) => updateInternalField('approver', value)}
+                    options={ownerOptions}
+                    customOptions={customOwners}
+                    onAddCustomOption={(label) => appendCustomOption(setCustomOwners, label)}
+                    placeholder="Same as reviewer (default)"
+                    disabled={origin !== 'internal' || !internalDetailsEnabled}
+                  />
+                </Field>
               </div>
             </div>
 
@@ -810,7 +831,9 @@ export function NewDocumentView({
             <div className="nd-section-num">4</div>
             <div>
               <h2 className="nd-section-title">Document File</h2>
-              <p className="nd-section-desc">Upload the controlled document file (PDF only) once the information above is complete.</p>
+              <p className="nd-section-desc">
+                Upload the controlled document file once the information above is complete.
+              </p>
             </div>
           </div>
 
@@ -859,7 +882,7 @@ export function NewDocumentView({
                   </svg>
                 </div>
                 <p className="nd-upload-title">
-                  {selectedFile ? selectedFile.name : 'Drag and drop your PDF here'}
+                  {selectedFile ? selectedFile.name : 'Drag and drop your file here'}
                 </p>
                 <p className="nd-upload-sub">
                   {selectedFile
@@ -874,12 +897,12 @@ export function NewDocumentView({
                   !activeDetailsEnabled || fileUploadStatus === 'checking' ? 'disabled' : ''
                 }`}
               >
-                {selectedFile ? 'Replace File' : 'Browse PDF'}
+                {selectedFile ? 'Replace File' : 'Browse File'}
                 <input
                   type="file"
                   hidden
                   disabled={!activeDetailsEnabled || fileUploadStatus === 'checking'}
-                  accept=".pdf,application/pdf"
+                  accept={DOCUMENT_UPLOAD_ACCEPT}
                   onChange={(e) => {
                     void handleFileSelect(e.target.files?.[0]);
                     e.target.value = '';
@@ -898,7 +921,9 @@ export function NewDocumentView({
                 </button>
               )}
             </div>
-            <p className="nd-upload-formats">Accepted format: PDF · Max file size: 50 MB</p>
+            <p className="nd-upload-formats">
+              Common formats: PDF, Office, images, text, audio, and video · Max file size: 50 MB
+            </p>
             {fileError && <p className="nd-upload-error">{fileError}</p>}
           </div>
         </section>
@@ -940,12 +965,12 @@ export function NewDocumentView({
         title={
           ownerConfirmMode === 'owner'
             ? 'You are the reviewer'
-            : 'Submit for review and approve'
+            : 'Submit for your own review'
         }
         message={
           ownerConfirmMode === 'owner'
-            ? 'You selected yourself as the person who will review this document. When you submit, you will review and approve it in one step—the document becomes active immediately. Continue?'
-            : 'You are the document owner and reviewer for this draft. Submitting will review and approve this document immediately with no separate approval step. Continue?'
+            ? 'You selected yourself as the reviewer. After submit, open the document and use Review and Send for Approval. If you are also the final approver, approve it on the next step. Continue?'
+            : 'You are submitting this document to yourself for review. After submit, open it and use Review and Send for Approval, then Approve if you are the final approver. Continue?'
         }
         confirmLabel="Yes, continue"
         cancelLabel="Choose a different reviewer"

@@ -4,7 +4,7 @@
 
 - JWT signed with HS256 (`jose` library)
 - Users stored in `backend/data/users.json`
-- Demo users: daniel@daros.com, rodrigo@daros.com (password `1234`)
+- Users: daniel@daros.com, rodrigo@daros.com, admin@daros.com (password `1234`)
 - Frontend: `AuthContext`, `ProtectedRoute`, entry loading overlay
 - Token key: `daros_auth_token` in localStorage
 

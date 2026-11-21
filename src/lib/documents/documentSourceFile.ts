@@ -1,11 +1,13 @@
 import { api, type DocumentRecord } from '../api';
-import { verifyPdfFile } from './documentUpload';
+import { fileFormatFromUpload, verifyDocumentFile } from './documentUpload';
 
 export async function replaceDocumentSourceFile(
   documentId: string,
   file: File,
+  options?: { clearRejectionMetadata?: boolean },
 ): Promise<DocumentRecord> {
-  const verifyError = await verifyPdfFile(file);
+  const clearRejection = options?.clearRejectionMetadata !== false;
+  const verifyError = await verifyDocumentFile(file);
   if (verifyError) {
     throw new Error(verifyError);
   }
@@ -13,12 +15,12 @@ export async function replaceDocumentSourceFile(
   await api.uploadDocumentFile(documentId, file);
 
   const { document } = await api.updateDocument(documentId, {
-    fileFormat: 'pdf',
+    fileFormat: fileFormatFromUpload(file),
     fileName: file.name,
     sourceModified: false,
-    rejectionReason: '',
-    rejectedAt: '',
-    rejectedBy: '',
+    ...(clearRejection
+      ? { rejectionReason: '', rejectedAt: '', rejectedBy: '' }
+      : {}),
   });
 
   return document;

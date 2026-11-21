@@ -95,9 +95,26 @@
   color: #1d4ed8;
 }
 
+.doc-preview-format,
 .doc-preview-format-pdf {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.doc-preview-fullscreen-image-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: #0f172a;
+  overflow: auto;
+}
+
+.doc-preview-fullscreen-image {
+  max-width: 100%;
+  max-height: calc(100vh - 72px);
+  object-fit: contain;
 }
 
 .doc-preview-head-actions {

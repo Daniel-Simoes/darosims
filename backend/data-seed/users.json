@@ -1,1 +1,68 @@
-[]
+[
+  {
+    "email": "daniel@daros.com",
+    "password": "1234",
+    "name": "Daniel",
+    "firstName": "Daniel",
+    "lastName": "",
+    "role": "admin",
+    "permissions": [
+      "view_documents",
+      "create_documents",
+      "edit_documents",
+      "create_versions",
+      "submit_documents",
+      "approve_documents",
+      "reject_documents",
+      "archive_documents",
+      "manage_users",
+      "manage_companies",
+      "manage_settings",
+      "view_audit_logs"
+    ]
+  },
+  {
+    "email": "rodrigo@daros.com",
+    "password": "1234",
+    "name": "Rodrigo",
+    "firstName": "Rodrigo",
+    "lastName": "",
+    "role": "admin",
+    "permissions": [
+      "view_documents",
+      "create_documents",
+      "edit_documents",
+      "create_versions",
+      "submit_documents",
+      "approve_documents",
+      "reject_documents",
+      "archive_documents",
+      "manage_users",
+      "manage_companies",
+      "manage_settings",
+      "view_audit_logs"
+    ]
+  },
+  {
+    "email": "admin@daros.com",
+    "password": "1234",
+    "name": "Admin",
+    "firstName": "Admin",
+    "lastName": "",
+    "role": "admin",
+    "permissions": [
+      "view_documents",
+      "create_documents",
+      "edit_documents",
+      "create_versions",
+      "submit_documents",
+      "approve_documents",
+      "reject_documents",
+      "archive_documents",
+      "manage_users",
+      "manage_companies",
+      "manage_settings",
+      "view_audit_logs"
+    ]
+  }
+]

@@ -1,16 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { fetchDocumentFileBlob } from '../../../lib/api';
 import { documentTypeBadgeClass } from '../../../data/documentRegister';
 import { getDocumentFileLabel } from '../../../lib/documentStatus';
-import { PdfDocumentPreview } from './PdfDocumentPreview';
+import {
+  getDocumentFileFormatLabel,
+  inferDocumentFileFormat,
+} from '../../../lib/documents/documentFileKind';
+import type { DocumentRecord } from '../../../types/documents';
+import { DocumentFilePreview } from './DocumentFilePreview';
 import './DocumentPreview.css';
 
 interface DocumentPreviewProps {
   documentId: string;
   title: string;
   fileName?: string;
-  fileFormat?: 'word' | 'pdf';
+  fileFormat?: DocumentRecord['fileFormat'];
   status: 'Active' | 'Draft' | 'Obsolete';
   type: string;
   process: string;
@@ -27,24 +32,30 @@ export function DocumentPreview({
   process,
   origin,
 }: DocumentPreviewProps) {
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [fileMimeType, setFileMimeType] = useState('');
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [previewError, setPreviewError] = useState('');
   const [isFullSize, setIsFullSize] = useState(false);
 
   const isExternal = origin === 'External';
+  const resolvedFormat = useMemo(
+    () => (fileFormat === 'word' ? 'office' : fileFormat ?? (fileName ? inferDocumentFileFormat(fileName) : undefined)),
+    [fileFormat, fileName],
+  );
+  const formatLabel = getDocumentFileFormatLabel(resolvedFormat);
   const fileLabel = getDocumentFileLabel({
     fileName,
-    fileFormat,
+    fileFormat: resolvedFormat,
     status,
     documentOrigin: origin,
   });
-  const showPdfPreview = !!fileName;
-  const canFullSize = !!pdfUrl;
+  const showPreview = !!fileName;
+  const canFullSize = !!fileUrl && (resolvedFormat === 'pdf' || resolvedFormat === 'image');
 
   useEffect(() => {
-    if (!showPdfPreview) {
-      setPdfUrl(null);
+    if (!showPreview) {
+      setFileUrl(null);
       setPreviewError('');
       return;
     }
@@ -57,15 +68,16 @@ export function DocumentPreview({
       .then((blob) => {
         if (!active) return;
         const objectUrl = URL.createObjectURL(blob);
-        setPdfUrl((prev) => {
+        setFileMimeType(blob.type || '');
+        setFileUrl((prev) => {
           if (prev) URL.revokeObjectURL(prev);
           return objectUrl;
         });
       })
       .catch(() => {
         if (active) {
-          setPreviewError('Unable to load PDF preview.');
-          setPdfUrl(null);
+          setPreviewError('Unable to load document preview.');
+          setFileUrl(null);
         }
       })
       .finally(() => {
@@ -74,12 +86,12 @@ export function DocumentPreview({
 
     return () => {
       active = false;
-      setPdfUrl((prev) => {
+      setFileUrl((prev) => {
         if (prev) URL.revokeObjectURL(prev);
         return null;
       });
     };
-  }, [documentId, fileName, showPdfPreview]);
+  }, [documentId, fileName, showPreview]);
 
   useEffect(() => {
     if (!isFullSize) return;
@@ -97,13 +109,13 @@ export function DocumentPreview({
     };
   }, [isFullSize]);
 
-  async function handleOpenInNewTab() {
-    if (!pdfUrl) return;
-    window.open(pdfUrl, '_blank');
+  function handleOpenInNewTab() {
+    if (!fileUrl) return;
+    window.open(fileUrl, '_blank');
   }
 
   const fullscreenModal =
-    isFullSize && canFullSize ? (
+    isFullSize && canFullSize && fileUrl ? (
       <div
         className="doc-preview-fullscreen"
         role="dialog"
@@ -115,20 +127,18 @@ export function DocumentPreview({
             <span className={`doc-preview-status doc-preview-status-${status.toLowerCase()}`}>
               {status}
             </span>
-            <span className="doc-preview-format doc-preview-format-pdf">PDF</span>
+            <span className="doc-preview-format">{formatLabel}</span>
             <span className="doc-preview-fullscreen-title">{title}</span>
             <span className="doc-preview-fullscreen-file">{fileLabel}</span>
           </div>
           <div className="doc-preview-fullscreen-actions">
-            {pdfUrl ? (
-              <button
-                type="button"
-                className="doc-preview-fullscreen-action"
-                onClick={handleOpenInNewTab}
-              >
-                Open in New Tab
-              </button>
-            ) : null}
+            <button
+              type="button"
+              className="doc-preview-fullscreen-action"
+              onClick={handleOpenInNewTab}
+            >
+              Open in New Tab
+            </button>
             <button
               type="button"
               className="doc-preview-fullscreen-close"
@@ -141,16 +151,22 @@ export function DocumentPreview({
             </button>
           </div>
         </div>
-        <iframe
-          src={pdfUrl ?? undefined}
-          title={`Full size preview of ${title}`}
-          className="doc-preview-fullscreen-frame"
-        />
+        {resolvedFormat === 'image' ? (
+          <div className="doc-preview-fullscreen-image-wrap">
+            <img src={fileUrl} alt={title} className="doc-preview-fullscreen-image" />
+          </div>
+        ) : (
+          <iframe
+            src={fileUrl}
+            title={`Full size preview of ${title}`}
+            className="doc-preview-fullscreen-frame"
+          />
+        )}
       </div>
     ) : null;
 
   return (
-    <section className="doc-preview doc-preview-pdf">
+    <section className="doc-preview">
       <div className="doc-preview-head">
         <div>
           <h2>Document Preview</h2>
@@ -160,13 +176,13 @@ export function DocumentPreview({
           <span className={`doc-preview-status doc-preview-status-${status.toLowerCase()}`}>
             {status}
           </span>
-          <span className="doc-preview-format doc-preview-format-pdf">PDF</span>
+          <span className="doc-preview-format">{formatLabel}</span>
           <button
             type="button"
             className="doc-preview-fullsize-btn"
             disabled={!canFullSize}
-            title="View PDF full size"
-            aria-label="View PDF full size"
+            title="View document full size"
+            aria-label="View document full size"
             onClick={() => setIsFullSize(true)}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -186,7 +202,7 @@ export function DocumentPreview({
                 <path d="M14 2v6h6" />
               </svg>
             </div>
-            <p>No PDF uploaded for this document.</p>
+            <p>No file uploaded for this document.</p>
           </div>
         ) : isLoadingPreview ? (
           <div className="doc-preview-empty">
@@ -196,8 +212,14 @@ export function DocumentPreview({
           <div className="doc-preview-empty doc-preview-empty-error">
             <p>{previewError}</p>
           </div>
-        ) : pdfUrl ? (
-          <PdfDocumentPreview pdfUrl={pdfUrl} title={title} />
+        ) : fileUrl ? (
+          <DocumentFilePreview
+            fileUrl={fileUrl}
+            fileName={fileName}
+            fileFormat={resolvedFormat}
+            title={title}
+            mimeType={fileMimeType}
+          />
         ) : null}
       </div>
 
@@ -208,10 +230,10 @@ export function DocumentPreview({
           <p className="doc-preview-title">{title}</p>
           <p className="doc-preview-desc">
             {isExternal
-              ? 'External reference document · PDF'
+              ? `External reference document · ${formatLabel}`
               : status === 'Draft'
-                ? 'Draft internal document · PDF'
-                : 'Approved controlled document · PDF'}
+                ? `Draft internal document · ${formatLabel}`
+                : `Approved controlled document · ${formatLabel}`}
           </p>
         </div>
         <div className="doc-preview-tags">
@@ -225,7 +247,7 @@ export function DocumentPreview({
         <button
           type="button"
           className="doc-preview-btn"
-          disabled={!pdfUrl}
+          disabled={!fileUrl}
           onClick={handleOpenInNewTab}
         >
           Open in New Tab

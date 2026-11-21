@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   dashboardModules,
   dashboardStats,
@@ -25,8 +25,11 @@ import { NotificationHistoryView } from '../../features/notifications/components
 import { HomeCharts } from '../../features/dashboard/components/HomeCharts';
 import { ModuleCarousel } from '../../features/dashboard/components/ModuleCarousel';
 import { useDashboardModules } from '../../features/dashboard/hooks/useDashboardModules';
+import { useTeamUsers } from '../../context/TeamUsersContext';
 import { ModuleVisualizationView } from '../../features/dashboard/components/ModuleVisualizationView';
 import { useAuth } from '../../features/authentication/context/AuthContext';
+import { SessionReauthDialog } from '../../features/authentication/components/SessionReauthDialog';
+import { useDashboardInactivity } from '../../features/authentication/hooks/useDashboardInactivity';
 import { TeamUsersProvider } from '../../context/TeamUsersContext';
 import { ProfileSettingsView } from '../../features/users/components/ProfileSettingsView';
 import { DocumentChatsView } from '../../features/chat/components/DocumentChatsView';
@@ -42,13 +45,24 @@ function DashboardOverview({
   homeDataRefreshKey: number;
 }) {
   const { modules } = useDashboardModules(homeDataRefreshKey);
+  const teamUsers = useTeamUsers();
+
+  const stats = useMemo(
+    () =>
+      dashboardStats.map((stat) =>
+        stat.label === 'Active Users'
+          ? { ...stat, value: teamUsers.length, change: 'In the system' }
+          : stat,
+      ),
+    [teamUsers.length],
+  );
 
   return (
     <>
       <ModuleCarousel modules={modules} onModuleClick={onModuleClick} />
 
       <div className="stats-grid">
-        {dashboardStats.map((stat) => (
+        {stats.map((stat) => (
           <div key={stat.label} className="stat-card">
             <div className="stat-label">{stat.label}</div>
             <div className="stat-value">{stat.value}</div>
@@ -59,7 +73,7 @@ function DashboardOverview({
         ))}
       </div>
 
-      <HomeCharts />
+      <HomeCharts refreshKey={homeDataRefreshKey} />
 
       <div className="iso-section">
         <h2 className="iso-section-title">ISO Compliance Progress</h2>
@@ -96,7 +110,9 @@ function DashboardOverview({
 }
 
 export function DashboardPage() {
-  const { endEntryLoading } = useAuth();
+  const { user, login, lockSession, isSessionLocked, endEntryLoading } = useAuth();
+
+  useDashboardInactivity(!isSessionLocked, lockSession);
   const [activeNav, setActiveNav] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarHovered, setSidebarHovered] = useState(false);
@@ -252,8 +268,13 @@ export function DashboardPage() {
 
   return (
     <TeamUsersProvider>
+    <SessionReauthDialog
+      open={isSessionLocked}
+      defaultEmail={user?.email ?? ''}
+      onLogin={login}
+    />
     <div
-      className={`dashboard-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''} ${isChat ? 'dashboard-layout-chat' : ''}`}
+      className={`dashboard-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''} ${isChat ? 'dashboard-layout-chat' : ''} ${isSessionLocked ? 'dashboard-layout-session-locked' : ''}`}
     >
       <DashboardSidebar
         activeNav={sidebarActiveNav}

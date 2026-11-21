@@ -1,4 +1,6 @@
 import { findUserByEmail, findUserEmailByName } from '@/repositories/users/userRepository';
+import { isAuthUserDesignatedApprover } from '@/lib/documentApproval';
+import { isRejectedDocument } from '@/lib/documentWorkflow';
 import type { DocumentRecord } from '@/types';
 
 /** Resolve document owner field (display name or email) to a user email. */
@@ -25,14 +27,19 @@ export async function isAuthUserDocumentOwner(
 
 export async function canAuthUserEditDocument(
   auth: { email: string; name: string },
-  document: Pick<DocumentRecord, 'createdBy' | 'owner' | 'approvedBy'>,
+  document: Pick<DocumentRecord, 'createdBy' | 'owner' | 'approvedBy' | 'approver'>,
 ): Promise<boolean> {
   const email = auth.email.trim().toLowerCase();
   const name = auth.name.trim().toLowerCase();
   const createdBy = document.createdBy?.trim().toLowerCase() ?? '';
 
+  if (isRejectedDocument(document)) {
+    return Boolean(createdBy && email === createdBy);
+  }
+
   if (createdBy && email === createdBy) return true;
   if (await isAuthUserDocumentOwner(email, document.owner)) return true;
+  if (await isAuthUserDesignatedApprover(email, document)) return true;
 
   const approvedBy = document.approvedBy?.trim().toLowerCase();
   if (approvedBy && name === approvedBy) return true;

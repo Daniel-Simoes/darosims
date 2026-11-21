@@ -87,7 +87,10 @@ export async function updateDocument(
     sourceModified: input.sourceModified ?? existing.sourceModified,
     fileFormat: input.fileFormat ?? existing.fileFormat,
     fileName: input.fileName ?? existing.fileName,
+    approver: input.approver ?? existing.approver,
     approvedBy: input.approvedBy ?? existing.approvedBy,
+    reviewedAt: 'reviewedAt' in input ? input.reviewedAt || undefined : existing.reviewedAt,
+    reviewedBy: 'reviewedBy' in input ? input.reviewedBy || undefined : existing.reviewedBy,
     department: input.department ?? existing.department,
     reviewFrequency: input.reviewFrequency ?? existing.reviewFrequency,
     repository: input.repository ?? existing.repository,
@@ -113,12 +116,17 @@ export async function updateDocument(
 export async function setDocumentFileName(
   documentId: string,
   fileName: string,
+  fileFormat?: DocumentRecord['fileFormat'],
 ): Promise<DocumentRecord | null> {
   const documents = await readAllDocuments();
   const index = documents.findIndex((item) => item.id === documentId);
   if (index === -1) return null;
 
-  documents[index] = { ...documents[index], fileName };
+  documents[index] = {
+    ...documents[index],
+    fileName,
+    ...(fileFormat ? { fileFormat } : {}),
+  };
   await writeAllDocuments(documents);
   return documents[index];
 }
@@ -167,6 +175,7 @@ export async function createDocument(
     documentOrigin: input.documentOrigin,
     externalRef: input.externalRef,
     externalVersion: input.externalVersion,
+    approver: input.approver ?? input.owner,
     approvedBy: input.approvedBy,
     department: input.department,
     reviewFrequency: input.reviewFrequency,
@@ -212,6 +221,8 @@ export async function submitDocumentForApproval(
   const updated: DocumentRecord = {
     ...existing,
     submittedAt: new Date().toISOString(),
+    reviewedAt: undefined,
+    reviewedBy: undefined,
     rejectionReason: undefined,
     rejectedAt: undefined,
     rejectedBy: undefined,
@@ -239,7 +250,7 @@ export async function rejectDocumentForApproval(
   if (existing.status !== 'Draft') {
     throw new Error('Only draft documents can be rejected');
   }
-  if (!existing.submittedAt) {
+  if (!existing.submittedAt && !existing.reviewedAt) {
     throw new Error('Document is not pending approval');
   }
 
@@ -251,9 +262,42 @@ export async function rejectDocumentForApproval(
   const updated: DocumentRecord = {
     ...existing,
     submittedAt: undefined,
+    reviewedAt: undefined,
+    reviewedBy: undefined,
     rejectionReason: trimmedReason,
     rejectedAt: new Date().toISOString(),
     rejectedBy,
+  };
+  documents[index] = updated;
+  await writeAllDocuments(documents);
+  return updated;
+}
+
+export async function markDocumentReviewed(
+  id: string,
+  reviewerEmail: string,
+): Promise<DocumentRecord> {
+  const documents = await readAllDocuments();
+  const index = documents.findIndex((item) => item.id === id);
+  if (index === -1) {
+    throw new Error('Document not found');
+  }
+
+  const existing = documents[index];
+  if (existing.status !== 'Draft') {
+    throw new Error('Only draft documents can be reviewed');
+  }
+  if (!existing.submittedAt) {
+    throw new Error('Document is not awaiting review');
+  }
+  if (existing.reviewedAt) {
+    throw new Error('Document has already been reviewed');
+  }
+
+  const updated: DocumentRecord = {
+    ...existing,
+    reviewedAt: new Date().toISOString(),
+    reviewedBy: reviewerEmail.trim().toLowerCase(),
   };
   documents[index] = updated;
   await writeAllDocuments(documents);

@@ -27,6 +27,16 @@
   align-items: flex-start;
 }
 
+.home-chart-loading,
+.home-chart-empty {
+  margin: 0;
+  padding: 24px 8px;
+  width: 100%;
+  text-align: center;
+  font-size: 13px;
+  color: #64748b;
+}
+
 .home-chart-card-header {
   display: flex;
   align-items: flex-start;

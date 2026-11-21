@@ -21,16 +21,16 @@ export function getDocumentSourcePath(documentId: string, extension: string) {
   return repo().getDocumentSourcePath(documentId, extension);
 }
 
-export async function savePdfFile(documentId: string, data: Buffer) {
-  return repo().savePdfFile(documentId, data);
+export async function savePdfFile(documentId: string, data: Buffer, fileName: string) {
+  return repo().savePdfFile(documentId, data, fileName);
 }
 
 export async function saveSourceFile(documentId: string, data: Buffer, extension: string) {
   return repo().saveSourceFile(documentId, data, extension);
 }
 
-export async function readPdfFile(documentId: string) {
-  return repo().readPdfFile(documentId);
+export async function readPdfFile(documentId: string, fileName?: string) {
+  return repo().readPdfFile(documentId, fileName);
 }
 
 export async function readSourceFile(documentId: string) {

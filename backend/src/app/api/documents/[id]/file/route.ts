@@ -1,10 +1,12 @@
 import { requireAuth, jsonResponse, corsHeaders } from '@/lib/auth';
 import { getDocumentById, setDocumentFileName } from '@/lib/documents';
 import {
-  MAX_PDF_SIZE_BYTES,
-  readDocumentFile,
-  saveDocumentFile,
-} from '@/lib/documentFiles';
+  getContentTypeForFile,
+  inferDocumentFileFormat,
+  MAX_DOCUMENT_FILE_SIZE_BYTES,
+  validateUploadedDocumentFile,
+} from '@/lib/documentFileMeta';
+import { readDocumentFile, saveDocumentFile } from '@/lib/documentFiles';
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders() });
@@ -23,16 +25,18 @@ export async function GET(
     return jsonResponse({ error: 'Document file not found' }, 404);
   }
 
-  const file = await readDocumentFile(id);
+  const file = await readDocumentFile(id, document.fileName);
   if (!file) {
     return jsonResponse({ error: 'Document file not found' }, 404);
   }
+
+  const contentType = getContentTypeForFile(document.fileName, document.fileFormat === 'pdf' ? 'application/pdf' : undefined);
 
   return new Response(new Uint8Array(file), {
     status: 200,
     headers: {
       ...corsHeaders(),
-      'Content-Type': 'application/pdf',
+      'Content-Type': contentType,
       'Content-Disposition': `inline; filename="${document.fileName.replace(/"/g, '')}"`,
     },
   });
@@ -56,25 +60,23 @@ export async function POST(
     const file = formData.get('file');
 
     if (!(file instanceof File)) {
-      return jsonResponse({ error: 'PDF file is required' }, 400);
+      return jsonResponse({ error: 'A file is required' }, 400);
     }
 
-    const isPdf =
-      file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
-
-    if (!isPdf) {
-      return jsonResponse({ error: 'Only PDF files are allowed' }, 400);
+    const validationError = validateUploadedDocumentFile(file);
+    if (validationError) {
+      return jsonResponse({ error: validationError }, 400);
     }
 
-    if (file.size > MAX_PDF_SIZE_BYTES) {
+    if (file.size > MAX_DOCUMENT_FILE_SIZE_BYTES) {
       return jsonResponse({ error: 'File exceeds the 50 MB limit' }, 400);
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    await saveDocumentFile(id, buffer);
+    await saveDocumentFile(id, buffer, file.name);
 
-    const pdfFileName = isPdf ? file.name : `${file.name.replace(/\.[^.]+$/, '')}.pdf`;
-    const updated = await setDocumentFileName(id, pdfFileName);
+    const fileFormat = inferDocumentFileFormat(file.name, file.type);
+    const updated = await setDocumentFileName(id, file.name, fileFormat);
     if (!updated) {
       return jsonResponse({ error: 'Document not found' }, 404);
     }

@@ -18,10 +18,13 @@ export interface DocumentRecord {
   externalRef?: string;
   externalVersion?: string;
   fileName?: string;
-  fileFormat?: 'word' | 'pdf';
+  fileFormat?: 'pdf' | 'image' | 'text' | 'video' | 'audio' | 'office' | 'other' | 'word';
   sourceContent?: string;
   sourceModified?: boolean;
+  approver?: string;
   approvedBy?: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
   department?: string;
   reviewFrequency?: string;
   repository?: string;
@@ -49,7 +52,10 @@ export interface CreateDocumentPayload {
   externalRef?: string;
   externalVersion?: string;
   owner?: string;
+  approver?: string;
   approvedBy?: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
   department?: string;
   effectiveDate?: string;
   reviewFrequency?: string;
@@ -74,7 +80,10 @@ export interface UpdateDocumentPayload {
   externalRef?: string;
   externalVersion?: string;
   owner?: string;
+  approver?: string;
   approvedBy?: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
   department?: string;
   effectiveDate?: string;
   reviewFrequency?: string;
@@ -86,7 +95,7 @@ export interface UpdateDocumentPayload {
   disposition?: string;
   comments?: string;
   sourceContent?: string;
-  fileFormat?: 'word' | 'pdf';
+  fileFormat?: 'pdf' | 'image' | 'text' | 'video' | 'audio' | 'office' | 'other' | 'word';
   fileName?: string;
   sourceModified?: boolean;
   submittedAt?: string;

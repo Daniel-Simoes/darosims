@@ -181,6 +181,47 @@
   color: #b91c1c;
 }
 
+.dd-rejection-action {
+  margin-top: 12px;
+}
+
+.dd-rejection-edit-hint {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #7f1d1d;
+}
+
+.dd-revision-file {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dd-revision-file-current {
+  margin: 0;
+  font-size: 13px;
+  color: #334155;
+}
+
+.dd-revision-file-btn {
+  width: fit-content;
+  cursor: pointer;
+}
+
+.dd-revision-file-hint,
+.dd-revision-file-error {
+  margin: 0;
+  font-size: 12px;
+}
+
+.dd-revision-file-hint {
+  color: #64748b;
+}
+
+.dd-revision-file-error {
+  color: #b91c1c;
+}
+
 .dd-layout {
   display: grid;
   grid-template-columns: minmax(360px, 480px) minmax(360px, 1fr);

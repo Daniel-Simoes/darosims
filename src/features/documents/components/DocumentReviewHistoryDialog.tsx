@@ -86,8 +86,21 @@ export function DocumentReviewHistoryDialog({
                         <span className="doc-review-history-step-date">{step.date}</span>
                       </div>
                       <p className="doc-review-history-step-desc">{step.description}</p>
-                      {step.actor ? (
-                        <p className="doc-review-history-step-actor">By {step.actor}</p>
+                      {step.toEmail ? (
+                        <p className="doc-review-history-step-actor">
+                          To <span className="doc-review-history-email">{step.toEmail}</span>
+                        </p>
+                      ) : null}
+                      {step.byEmail ? (
+                        <p className="doc-review-history-step-actor">
+                          By <span className="doc-review-history-email">{step.byEmail}</span>
+                        </p>
+                      ) : null}
+                      {step.reviewMessage ? (
+                        <div className="doc-review-history-reason">
+                          <span className="doc-review-history-reason-label">Reason not approved</span>
+                          <p>{step.reviewMessage}</p>
+                        </div>
                       ) : null}
                     </div>
                   </li>

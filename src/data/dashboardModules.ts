@@ -121,7 +121,7 @@ export const dashboardStats: DashboardStat[] = [
   { label: 'Open Actions', value: 14, change: '-3 this week', trend: 'down' },
   { label: 'Compliance Score', value: '87%', change: '+2%', trend: 'up' },
   { label: 'Documents Due', value: 5, change: '2 overdue', trend: 'neutral' },
-  { label: 'Active Audits', value: 2, change: '1 scheduled', trend: 'neutral' },
+  { label: 'Active Users', value: 0, change: 'In the system', trend: 'neutral' },
 ];
 
 export const sidebarNav = [

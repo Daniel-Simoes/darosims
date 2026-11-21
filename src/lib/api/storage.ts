@@ -19,7 +19,7 @@ export async function uploadDocumentFile(id: string, file: File) {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(data.error ?? 'Failed to upload PDF');
+    throw new Error(data.error ?? 'Failed to upload file');
   }
 
   return data as DocumentResponse;
@@ -57,7 +57,7 @@ export async function fetchDocumentFileBlob(documentId: string): Promise<Blob> {
 
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
-    throw new Error(data.error ?? 'Failed to load PDF');
+    throw new Error(data.error ?? 'Failed to load file');
   }
 
   return response.blob();

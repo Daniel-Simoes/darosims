@@ -96,33 +96,117 @@ function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
   };
 }
 
-export function DonutChart({ data }: { data: ColoredChartPoint[] }) {
-  const total = data.reduce((sum, d) => sum + d.value, 0);
+function sliceAnglesForDonut(
+  data: ColoredChartPoint[],
+  total: number,
+  showAllCategories: boolean,
+): number[] {
+  if (!data.length) return [];
+
+  if (showAllCategories) {
+    if (total === 0) {
+      const each = 360 / data.length;
+      return data.map(() => each);
+    }
+
+    const minWeight = Math.max(total * 0.05, 0.35);
+    const weights = data.map((item) => (item.value > 0 ? item.value : minWeight));
+    const weightSum = weights.reduce((sum, weight) => sum + weight, 0);
+    return weights.map((weight) => (weight / weightSum) * 360);
+  }
+
+  if (total === 0) {
+    return data.map(() => 0);
+  }
+
+  return data.map((item) => (item.value / total) * 360);
+}
+
+function buildPieSlices(
+  data: ColoredChartPoint[],
+  angles: number[],
+  cx: number,
+  cy: number,
+  radius: number,
+) {
   let cumulative = 0;
+
+  return data.map((item, index) => {
+    const startAngle = cumulative;
+    cumulative += angles[index] ?? 0;
+    const endAngle = cumulative;
+    if (endAngle <= startAngle) {
+      return { ...item, path: '', dimmed: item.value === 0 };
+    }
+
+    const start = polarToCartesian(cx, cy, radius, endAngle);
+    const end = polarToCartesian(cx, cy, radius, startAngle);
+    const sweep = endAngle - startAngle;
+    const largeArc = sweep > 180 ? 1 : 0;
+    const path = `M ${cx} ${cy} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 0 ${end.x} ${end.y} Z`;
+    return { ...item, path, dimmed: item.value === 0 };
+  });
+}
+
+export function DonutChart({
+  data,
+  showAllCategories = false,
+}: {
+  data: ColoredChartPoint[];
+  showAllCategories?: boolean;
+}) {
+  const total = data.reduce((sum, d) => sum + d.value, 0);
   const radius = 54;
   const cx = 70;
   const cy = 70;
 
-  const slices = data.map((item) => {
-    const startAngle = (cumulative / total) * 360;
-    cumulative += item.value;
-    const endAngle = (cumulative / total) * 360;
-    const start = polarToCartesian(cx, cy, radius, endAngle);
-    const end = polarToCartesian(cx, cy, radius, startAngle);
-    const largeArc = endAngle - startAngle > 180 ? 1 : 0;
-    const path = `M ${cx} ${cy} L ${start.x} ${start.y} A ${radius} ${radius} 0 ${largeArc} 0 ${end.x} ${end.y} Z`;
-    return { ...item, path };
-  });
+  const angles = sliceAnglesForDonut(data, total, showAllCategories);
+  const slices = buildPieSlices(data, angles, cx, cy, radius).filter((slice) => slice.path);
+
+  if (!showAllCategories && total === 0) {
+    return (
+      <div className="chart-donut-wrap chart-donut-wrap-empty">
+        <svg viewBox="0 0 140 140" className="chart-donut-svg" aria-hidden="true">
+          <circle cx={cx} cy={cy} r={radius} fill="#f1f5f9" stroke="#e2e8f0" strokeWidth="8" />
+          <circle cx={cx} cy={cy} r="32" fill="white" />
+          <text x={cx} y={cy - 4} textAnchor="middle" className="chart-donut-total">
+            0
+          </text>
+          <text x={cx} y={cy + 12} textAnchor="middle" className="chart-donut-sub">
+            Total
+          </text>
+        </svg>
+        <ul className="chart-donut-legend">
+          {data.map((item) => (
+            <li key={item.label}>
+              <span className="chart-donut-swatch" style={{ background: item.color }} />
+              {item.label}
+              <span className="chart-donut-legend-value">{item.value}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
 
   return (
     <div className="chart-donut-wrap">
       <svg viewBox="0 0 140 140" className="chart-donut-svg" aria-hidden="true">
         {slices.map((slice) => (
-          <path key={slice.label} d={slice.path} fill={slice.color} />
+          <path
+            key={slice.label}
+            d={slice.path}
+            fill={slice.color}
+            className={slice.dimmed ? 'chart-donut-slice-dim' : undefined}
+          />
         ))}
         <circle cx={cx} cy={cy} r="32" fill="white" />
-        <text x={cx} y={cy - 4} textAnchor="middle" className="chart-donut-total">{total}</text>
-        <text x={cx} y={cy + 12} textAnchor="middle" className="chart-donut-sub">Total</text>
+        <text x={cx} y={cy - 4} textAnchor="middle" className="chart-donut-total">
+          {total}
+        </text>
+        <text x={cx} y={cy + 12} textAnchor="middle" className="chart-donut-sub">
+          Total
+        </text>
       </svg>
       <ul className="chart-donut-legend">
         {data.map((item) => (

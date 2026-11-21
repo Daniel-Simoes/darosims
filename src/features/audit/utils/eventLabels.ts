@@ -4,6 +4,8 @@ export function getDocumentEventLabel(type: DocumentEventRecord['type']) {
   switch (type) {
     case 'created':
       return 'Document created';
+    case 'reviewed':
+      return 'Review completed';
     case 'submitted':
       return 'Sent for approval';
     case 'resubmitted':
@@ -23,6 +25,10 @@ export function getDocumentEventDescription(event: DocumentEventRecord) {
   switch (event.type) {
     case 'created':
       return `${event.actorName} created this document.`;
+    case 'reviewed':
+      return event.metadata?.recipientEmail
+        ? `${event.actorName} reviewed this document and sent it for final approval.`
+        : `${event.actorName} reviewed this document.`;
     case 'submitted':
       return `${event.actorName} submitted this document for approval.`;
     case 'resubmitted':
@@ -39,7 +45,7 @@ export function getDocumentEventDescription(event: DocumentEventRecord) {
       }
       return `${event.actorName} edited the document content.`;
     case 'approved':
-      return `${event.actorName} approved this document and published it as PDF.`;
+      return `${event.actorName} approved this document.`;
     default:
       return event.actorName;
   }
@@ -49,6 +55,8 @@ export function getDocumentEventTone(type: DocumentEventRecord['type']) {
   switch (type) {
     case 'created':
       return 'created';
+    case 'reviewed':
+      return 'submitted';
     case 'submitted':
     case 'resubmitted':
       return 'submitted';

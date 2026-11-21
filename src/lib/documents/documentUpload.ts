@@ -1,28 +1,43 @@
+import { inferDocumentFileFormat, isBlockedDocumentExtension } from './documentFileKind';
+
 export const MAX_DOCUMENT_FILE_SIZE_BYTES = 50 * 1024 * 1024;
 
-export function validateDocumentPdfFile(file: File): string | null {
-  const isPdf =
-    file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+/** @deprecated Use MAX_DOCUMENT_FILE_SIZE_BYTES */
+export const MAX_PDF_SIZE_BYTES = MAX_DOCUMENT_FILE_SIZE_BYTES;
 
-  if (!isPdf) {
-    return 'Only PDF files are allowed.';
+export function validateDocumentFile(file: File): string | null {
+  if (!(file.name ?? '').trim()) {
+    return 'A file is required.';
+  }
+
+  if (isBlockedDocumentExtension(file.name)) {
+    return 'This file type is not allowed.';
   }
 
   if (file.size > MAX_DOCUMENT_FILE_SIZE_BYTES) {
     return 'File exceeds the 50 MB limit.';
   }
 
+  if (file.size === 0) {
+    return 'The file is empty.';
+  }
+
   return null;
 }
 
-/** @deprecated Use validateDocumentPdfFile */
-export function validateExternalDocumentFile(file: File): string | null {
-  return validateDocumentPdfFile(file);
+/** @deprecated Use validateDocumentFile */
+export function validateDocumentPdfFile(file: File): string | null {
+  return validateDocumentFile(file);
 }
 
-/** @deprecated Use validateDocumentPdfFile */
+/** @deprecated Use validateDocumentFile */
+export function validateExternalDocumentFile(file: File): string | null {
+  return validateDocumentFile(file);
+}
+
+/** @deprecated Use validateDocumentFile */
 export function validateInternalDocumentFile(file: File): string | null {
-  return validateDocumentPdfFile(file);
+  return validateDocumentFile(file);
 }
 
 export function formatFileSize(bytes: number): string {
@@ -31,23 +46,17 @@ export function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-const FILE_CHECK_MIN_MS = 1200;
+const FILE_CHECK_MIN_MS = 600;
 
 function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function verifyPdfFile(file: File): Promise<string | null> {
-  const basicError = validateDocumentPdfFile(file);
-  if (basicError) return basicError;
-
-  const [headerBytes] = await Promise.all([
-    file.slice(0, 5).text(),
-    delay(FILE_CHECK_MIN_MS),
-  ]);
+async function verifyPdfStructure(file: File): Promise<string | null> {
+  const [headerBytes] = await Promise.all([file.slice(0, 5).text(), delay(FILE_CHECK_MIN_MS)]);
 
   if (!headerBytes.startsWith('%PDF-')) {
-    return 'This file is not a valid PDF. Please upload a PDF document.';
+    return 'This file is not a valid PDF. Please check the file and try again.';
   }
 
   try {
@@ -72,7 +81,29 @@ export async function verifyPdfFile(file: File): Promise<string | null> {
   return null;
 }
 
-/** @deprecated Use verifyPdfFile */
+export async function verifyDocumentFile(file: File): Promise<string | null> {
+  const basicError = validateDocumentFile(file);
+  if (basicError) return basicError;
+
+  const format = inferDocumentFileFormat(file.name, file.type);
+  if (format !== 'pdf') {
+    await delay(FILE_CHECK_MIN_MS);
+    return null;
+  }
+
+  return verifyPdfStructure(file);
+}
+
+/** @deprecated Use verifyDocumentFile */
+export async function verifyPdfFile(file: File): Promise<string | null> {
+  return verifyDocumentFile(file);
+}
+
+/** @deprecated Use verifyDocumentFile */
 export async function verifyInternalDocumentFile(file: File): Promise<string | null> {
-  return verifyPdfFile(file);
+  return verifyDocumentFile(file);
+}
+
+export function fileFormatFromUpload(file: File) {
+  return inferDocumentFileFormat(file.name, file.type);
 }

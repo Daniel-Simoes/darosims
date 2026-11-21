@@ -13,8 +13,10 @@ interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
   isEntryLoading: boolean;
+  isSessionLocked: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  lockSession: () => void;
   updateUser: (user: AuthUser) => void;
   beginEntryLoading: () => void;
   endEntryLoading: () => void;
@@ -26,6 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEntryLoading, setIsEntryLoading] = useState(false);
+  const [isSessionLocked, setIsSessionLocked] = useState(false);
 
   useEffect(() => {
     const token = getStoredToken();
@@ -53,11 +56,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { token, user: loggedInUser } = await api.login(email, password);
     setStoredToken(token);
     setUser(loggedInUser);
+    setIsSessionLocked(false);
+  }, []);
+
+  const lockSession = useCallback(() => {
+    setStoredToken(null);
+    setIsSessionLocked(true);
   }, []);
 
   const logout = useCallback(() => {
     setStoredToken(null);
     setUser(null);
+    setIsSessionLocked(false);
   }, []);
 
   const updateUser = useCallback((nextUser: AuthUser) => {
@@ -69,13 +79,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isLoading,
       isEntryLoading,
+      isSessionLocked,
       login,
       logout,
+      lockSession,
       updateUser,
       beginEntryLoading,
       endEntryLoading,
     }),
-    [user, isLoading, isEntryLoading, login, logout, updateUser, beginEntryLoading, endEntryLoading],
+    [
+      user,
+      isLoading,
+      isEntryLoading,
+      isSessionLocked,
+      login,
+      logout,
+      lockSession,
+      updateUser,
+      beginEntryLoading,
+      endEntryLoading,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

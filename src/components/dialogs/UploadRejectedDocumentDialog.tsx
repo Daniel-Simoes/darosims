@@ -1,7 +1,8 @@
 import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState } from 'react';
 import type { DocumentRecord } from '../../types/documents';
-import { formatFileSize, verifyPdfFile } from '../../lib/documentUpload';
+import { DOCUMENT_UPLOAD_ACCEPT } from '../../lib/documents/documentFileKind';
+import { formatFileSize, verifyDocumentFile } from '../../lib/documentUpload';
 import './UploadRejectedDocumentDialog.css';
 
 interface UploadRejectedDocumentDialogProps {
@@ -41,7 +42,7 @@ export function UploadRejectedDocumentDialog({
     setSelectedFile(null);
     setFileError('');
 
-    const validationError = await verifyPdfFile(file);
+    const validationError = await verifyDocumentFile(file);
     if (validationError) {
       setFileError(validationError);
       setIsChecking(false);
@@ -105,7 +106,7 @@ export function UploadRejectedDocumentDialog({
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,application/pdf"
+            accept={DOCUMENT_UPLOAD_ACCEPT}
             className="upload-rejected-file-input"
             onChange={(e) => {
               void handleFileSelect(e.target.files?.[0]);
@@ -117,7 +118,7 @@ export function UploadRejectedDocumentDialog({
             <>
               <div className="upload-rejected-spinner" aria-hidden="true" />
               <p className="upload-rejected-zone-title">Checking document...</p>
-              <p className="upload-rejected-zone-sub">Verifying PDF format</p>
+              <p className="upload-rejected-zone-sub">Verifying file</p>
             </>
           ) : selectedFile ? (
             <>
@@ -126,7 +127,7 @@ export function UploadRejectedDocumentDialog({
             </>
           ) : (
             <>
-              <p className="upload-rejected-zone-title">Drag and drop PDF here</p>
+              <p className="upload-rejected-zone-title">Drag and drop file here</p>
               <p className="upload-rejected-zone-sub">or click to browse from your computer</p>
             </>
           )}

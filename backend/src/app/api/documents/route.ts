@@ -85,6 +85,7 @@ export async function POST(request: Request) {
       externalRef: body.externalRef,
       externalVersion: body.externalVersion,
       owner: body.owner,
+      approver: body.approver,
       approvedBy: body.approvedBy,
       department: body.department,
       effectiveDate: body.effectiveDate,

@@ -52,6 +52,12 @@ export const documentsApi = {
     });
   },
 
+  reviewDocument(id: string) {
+    return apiFetch<DocumentResponse>(`/api/documents/${id}/review`, {
+      method: 'POST',
+    });
+  },
+
   rejectDocumentForApproval(id: string, reason: string) {
     return apiFetch<DocumentResponse>(`/api/documents/${id}/reject`, {
       method: 'POST',

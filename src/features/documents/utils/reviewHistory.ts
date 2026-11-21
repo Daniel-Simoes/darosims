@@ -16,9 +16,16 @@ export interface DocumentReviewTimelineStep {
   title: string;
   description: string;
   date: string;
-  actor?: string;
   version?: number;
+  /** Email of the user who performed the action */
+  byEmail?: string;
+  /** Reviewer / recipient email (e.g. on submit) */
+  toEmail?: string;
+  /** Rejection reason or reviewer notes */
+  reviewMessage?: string;
 }
+
+export type ReviewHistoryTeamUser = { name: string; email: string };
 
 function formatReviewDate(iso?: string): string {
   if (!iso) return '—';
@@ -60,12 +67,52 @@ function dayLabel(days: number | null): string {
   return `${days} days later`;
 }
 
+function resolveEmail(
+  value: string | undefined,
+  teamUsers: ReviewHistoryTeamUser[],
+): string | undefined {
+  const raw = value?.trim();
+  if (!raw) return undefined;
+  if (raw.includes('@')) return raw.toLowerCase();
+  const match = teamUsers.find(
+    (user) =>
+      user.name.trim().toLowerCase() === raw.toLowerCase() ||
+      user.email.trim().toLowerCase() === raw.toLowerCase(),
+  );
+  return match?.email.toLowerCase();
+}
+
+function pickEmail(...candidates: (string | undefined)[]): string | undefined {
+  for (const candidate of candidates) {
+    if (candidate?.includes('@')) return candidate.trim().toLowerCase();
+  }
+  return undefined;
+}
+
+function reviewerEmailForDoc(
+  doc: DocumentRecord,
+  teamUsers: ReviewHistoryTeamUser[],
+  eventRecipient?: string,
+): string | undefined {
+  return (
+    pickEmail(eventRecipient) ||
+    resolveEmail(doc.owner, teamUsers) ||
+    pickEmail(doc.owner)
+  );
+}
+
+function approverEmailForDoc(doc: DocumentRecord, teamUsers: ReviewHistoryTeamUser[]): string | undefined {
+  const designated = doc.approver?.trim() || doc.owner?.trim();
+  return resolveEmail(designated, teamUsers) || pickEmail(designated);
+}
+
 function eventSection(event: DocumentEventRecord): string {
   switch (event.type) {
     case 'created':
       return 'Document register';
     case 'submitted':
     case 'resubmitted':
+    case 'reviewed':
       return 'Approval workflow';
     case 'approved':
       return 'Header / Document Review History';
@@ -88,6 +135,8 @@ function eventDescription(event: DocumentEventRecord, doc: DocumentRecord): stri
       return 'Submitted for approval.';
     case 'resubmitted':
       return 'Updated document submitted for approval again.';
+    case 'reviewed':
+      return 'Review completed and sent for final approval.';
     case 'rejected':
       return 'Document not approved — returned to creator for revision.';
     case 'edited':
@@ -124,8 +173,13 @@ function eventApprovedBy(event: DocumentEventRecord, doc: DocumentRecord): strin
   if (event.type === 'approved') {
     return doc.approvedBy?.trim() || event.actorName || '—';
   }
-  if (event.type === 'created' || event.type === 'submitted' || event.type === 'resubmitted') {
-    return doc.owner?.trim() || event.actorName || '—';
+  if (
+    event.type === 'created' ||
+    event.type === 'submitted' ||
+    event.type === 'resubmitted' ||
+    event.type === 'reviewed'
+  ) {
+    return event.actorName || doc.owner?.trim() || '—';
   }
   if (event.type === 'rejected') {
     return event.actorName || doc.approvedBy?.trim() || '—';
@@ -172,6 +226,7 @@ const TIMELINE_EVENT_TYPES = new Set<DocumentEventRecord['type']>([
   'created',
   'submitted',
   'resubmitted',
+  'reviewed',
   'approved',
   'rejected',
 ]);
@@ -179,6 +234,7 @@ const TIMELINE_EVENT_TYPES = new Set<DocumentEventRecord['type']>([
 export function buildDocumentReviewTimeline(
   doc: DocumentRecord,
   events: DocumentEventRecord[],
+  teamUsers: ReviewHistoryTeamUser[] = [],
 ): DocumentReviewTimelineStep[] {
   const sorted = [...events]
     .filter((event) => TIMELINE_EVENT_TYPES.has(event.type))
@@ -189,64 +245,96 @@ export function buildDocumentReviewTimeline(
   const createdAtLabel = formatReviewDate(createdAtIso);
   const steps: DocumentReviewTimelineStep[] = [];
 
-  const pushUniqueCreated = () => {
-    const createdEvent = sorted.find((event) => event.type === 'created');
-    const creator = doc.createdBy?.trim() || createdEvent?.actorName || '—';
+  const pushCreatedStep = (createdEvent?: DocumentEventRecord) => {
     const version = Math.max(doc.version, 1);
+    const creatorEmail =
+      pickEmail(doc.createdBy, createdEvent?.actorEmail) ||
+      resolveEmail(createdEvent?.actorName, teamUsers);
+
     steps.push({
       id: 'created',
       title: 'Document created',
       description: `Version ${version} · Created on ${createdAtLabel}`,
       date: formatReviewDateTime(createdEvent?.createdAt ?? createdAtIso),
-      actor: creator,
       version,
+      byEmail: creatorEmail,
     });
   };
 
   if (sorted.length === 0) {
-    pushUniqueCreated();
+    pushCreatedStep();
+
     if (doc.submittedAt) {
+      const reviewerEmail = reviewerEmailForDoc(doc, teamUsers);
+      const creatorEmail = pickEmail(doc.createdBy);
       steps.push({
         id: 'submitted-fallback',
         title: 'Submitted for review',
-        description: `Sent to ${doc.owner?.trim() || 'document owner'} for review`,
+        description: 'Submitted for approval.',
         date: formatReviewDateTime(doc.submittedAt),
-        actor: doc.createdBy?.trim() || '—',
+        byEmail: creatorEmail,
+        toEmail: reviewerEmail,
       });
     }
-    if (doc.approvedBy?.trim() && doc.status === 'Active') {
-      const days = createdAtIso ? daysBetween(createdAtIso, doc.effectiveDate || createdAtIso) : null;
-      const reviewer = doc.owner?.trim() || doc.approvedBy;
-      const approver = doc.approvedBy.trim();
-      if (reviewer && reviewer !== approver) {
-        steps.push({
-          id: 'reviewed-fallback',
-          title: 'Document reviewed',
-          description: `Created on ${createdAtLabel} · Reviewed ${dayLabel(days)}`,
-          date: formatReviewDateTime(doc.effectiveDate),
-          actor: reviewer,
-        });
-        steps.push({
-          id: 'approved-fallback',
-          title: 'Document approved',
-          description: `Approved for controlled use`,
-          date: formatReviewDateTime(doc.effectiveDate),
-          actor: approver,
-        });
-      } else {
-        steps.push({
-          id: 'approved-fallback',
-          title: 'Document reviewed and approved',
-          description: `Created on ${createdAtLabel} · ${dayLabel(days) ? dayLabel(days).charAt(0).toUpperCase() + dayLabel(days).slice(1) : 'Approved'}`,
-          date: formatReviewDateTime(doc.effectiveDate),
-          actor: approver,
-        });
-      }
+
+    if (doc.rejectionReason?.trim() && doc.rejectedAt) {
+      const rejectorEmail =
+        pickEmail(doc.rejectedBy) || resolveEmail(doc.rejectedBy, teamUsers);
+      steps.push({
+        id: 'rejected-fallback',
+        title: 'Not approved',
+        description: 'Returned to creator for revision.',
+        date: formatReviewDateTime(doc.rejectedAt),
+        byEmail: rejectorEmail,
+        reviewMessage: doc.rejectionReason.trim(),
+      });
     }
+
+    const pushReviewFallback = (reviewDate: string, extraDescription = '') => {
+      const reviewerEmail =
+        pickEmail(doc.reviewedBy) ||
+        resolveEmail(doc.reviewedBy, teamUsers) ||
+        reviewerEmailForDoc(doc, teamUsers);
+      const approverEmail = approverEmailForDoc(doc, teamUsers);
+      steps.push({
+        id: `reviewed-fallback-${steps.length}`,
+        title: 'Document reviewed',
+        description: extraDescription || 'Review completed.',
+        date: formatReviewDateTime(reviewDate),
+        byEmail: reviewerEmail,
+        toEmail: approverEmail,
+      });
+    };
+
+    if (doc.approvedBy?.trim() && doc.status === 'Active') {
+      const approverEmail =
+        resolveEmail(doc.approvedBy, teamUsers) || pickEmail(doc.approvedBy);
+      const approvalDate = doc.effectiveDate || doc.reviewedAt || createdAtIso;
+      const days = createdAtIso ? daysBetween(createdAtIso, approvalDate || createdAtIso) : null;
+      const reviewAlready = steps.some((step) => step.id.startsWith('reviewed-'));
+
+      if (!reviewAlready) {
+        pushReviewFallback(
+          doc.reviewedAt || approvalDate,
+          `Review completed${dayLabel(days) ? ` · ${dayLabel(days)} after creation` : ''}`,
+        );
+      }
+
+      steps.push({
+        id: 'approved-fallback',
+        title: 'Document approved',
+        description: 'Approved for controlled use.',
+        date: formatReviewDateTime(approvalDate),
+        byEmail: approverEmail,
+      });
+    } else if (doc.reviewedAt && !steps.some((step) => step.id.startsWith('reviewed-'))) {
+      pushReviewFallback(doc.reviewedAt);
+    }
+
     return steps;
   }
 
-  pushUniqueCreated();
+  pushCreatedStep(sorted.find((event) => event.type === 'created'));
 
   let lastSubmitAt: string | undefined;
 
@@ -255,70 +343,110 @@ export function buildDocumentReviewTimeline(
 
     if (event.type === 'submitted' || event.type === 'resubmitted') {
       lastSubmitAt = event.createdAt;
-      const reviewer = doc.owner?.trim() || 'document owner';
+      const reviewerEmail = reviewerEmailForDoc(doc, teamUsers, event.metadata?.recipientEmail);
+      const submitterEmail =
+        pickEmail(event.actorEmail, doc.createdBy) ||
+        resolveEmail(event.actorName, teamUsers);
+
       steps.push({
         id: `${event.type}-${event.id}`,
         title: event.type === 'resubmitted' ? 'Resubmitted for review' : 'Submitted for review',
-        description: `Sent to ${reviewer} for review`,
+        description: 'Submitted for approval.',
         date: formatReviewDateTime(event.createdAt),
-        actor: event.actorName,
+        byEmail: submitterEmail,
+        toEmail: reviewerEmail,
+      });
+      continue;
+    }
+
+    if (event.type === 'reviewed') {
+      const reviewerEmail =
+        pickEmail(event.actorEmail) || resolveEmail(event.actorName, teamUsers);
+      const toEmail = pickEmail(event.metadata?.recipientEmail);
+
+      steps.push({
+        id: `reviewed-${event.id}`,
+        title: 'Document reviewed',
+        description: toEmail ? 'Sent for final approval.' : 'Review completed.',
+        date: formatReviewDateTime(event.createdAt),
+        byEmail: reviewerEmail,
+        toEmail: toEmail,
       });
       continue;
     }
 
     if (event.type === 'rejected') {
-      const reason = event.metadata?.reason?.trim();
+      const reason = event.metadata?.reason?.trim() || doc.rejectionReason?.trim();
+      const rejectorEmail =
+        pickEmail(event.actorEmail, doc.rejectedBy) ||
+        resolveEmail(event.actorName, teamUsers) ||
+        resolveEmail(doc.rejectedBy, teamUsers);
+
       steps.push({
         id: `rejected-${event.id}`,
-        title: 'Document not approved',
-        description: reason || 'Returned to creator for revision',
+        title: 'Not approved',
+        description: 'Returned to creator for revision.',
         date: formatReviewDateTime(event.createdAt),
-        actor: event.actorName,
+        byEmail: rejectorEmail,
+        reviewMessage: reason,
       });
       continue;
     }
 
     if (event.type === 'approved') {
-      const approver = doc.approvedBy?.trim() || event.actorName || '—';
-      const reviewer = doc.owner?.trim();
+      const approverEmail =
+        pickEmail(event.actorEmail) ||
+        resolveEmail(doc.approvedBy, teamUsers) ||
+        resolveEmail(event.actorName, teamUsers);
+      const reviewAlreadyInTimeline = steps.some((step) => step.id.startsWith('reviewed-'));
+      const reviewerEmail =
+        pickEmail(doc.reviewedBy) ||
+        resolveEmail(doc.reviewedBy, teamUsers) ||
+        reviewerEmailForDoc(doc, teamUsers);
       const daysFromCreate = createdAtIso ? daysBetween(createdAtIso, event.createdAt) : null;
       const daysFromSubmit = lastSubmitAt ? daysBetween(lastSubmitAt, event.createdAt) : null;
 
-      if (reviewer && reviewer !== approver) {
+      const reviewTiming = [
+        dayLabel(daysFromCreate) ? `${dayLabel(daysFromCreate)} after creation` : '',
+        dayLabel(daysFromSubmit) && lastSubmitAt ? `${dayLabel(daysFromSubmit)} after submission` : '',
+      ]
+        .filter(Boolean)
+        .join(' · ');
+
+      if (!reviewAlreadyInTimeline && (lastSubmitAt || Boolean(doc.reviewedAt))) {
+        const matchingReviewEvent = sorted.find(
+          (entry) => entry.type === 'reviewed' && entry.createdAt <= event.createdAt,
+        );
+        const reviewDate = matchingReviewEvent?.createdAt ?? doc.reviewedAt ?? event.createdAt;
+        const reviewActorEmail =
+          pickEmail(matchingReviewEvent?.actorEmail) ||
+          resolveEmail(matchingReviewEvent?.actorName, teamUsers) ||
+          reviewerEmail ||
+          approverEmail;
+
         steps.push({
-          id: `reviewed-${event.id}`,
+          id: matchingReviewEvent
+            ? `reviewed-${matchingReviewEvent.id}`
+            : `reviewed-${event.id}-inferred`,
           title: 'Document reviewed',
-          description: [
-            `Created on ${createdAtLabel}`,
-            dayLabel(daysFromCreate) ? `· Reviewed ${dayLabel(daysFromCreate)}` : '',
-            dayLabel(daysFromSubmit) && lastSubmitAt ? `· ${dayLabel(daysFromSubmit)} after submission` : '',
-          ]
-            .filter(Boolean)
-            .join(' '),
-          date: formatReviewDateTime(event.createdAt),
-          actor: reviewer,
-        });
-        steps.push({
-          id: `approved-${event.id}`,
-          title: 'Document approved',
-          description: 'Approved for controlled use',
-          date: formatReviewDateTime(event.createdAt),
-          actor: approver,
-        });
-      } else {
-        steps.push({
-          id: `approved-${event.id}`,
-          title: 'Document reviewed and approved',
-          description: [
-            `Created on ${createdAtLabel}`,
-            dayLabel(daysFromCreate) ? `· ${dayLabel(daysFromCreate).charAt(0).toUpperCase() + dayLabel(daysFromCreate).slice(1)}` : '',
-          ]
-            .filter(Boolean)
-            .join(' '),
-          date: formatReviewDateTime(event.createdAt),
-          actor: approver,
+          description: reviewTiming
+            ? `Review completed · ${reviewTiming}`
+            : 'Review completed.',
+          date: formatReviewDateTime(reviewDate),
+          byEmail: reviewActorEmail,
+          toEmail: pickEmail(matchingReviewEvent?.metadata?.recipientEmail) ?? approverEmailForDoc(doc, teamUsers),
         });
       }
+
+      steps.push({
+        id: `approved-${event.id}`,
+        title: 'Document approved',
+        description: ['Approved for controlled use', reviewTiming ? `· ${reviewTiming}` : '']
+          .filter(Boolean)
+          .join(' '),
+        date: formatReviewDateTime(event.createdAt),
+        byEmail: approverEmail,
+      });
     }
   }
 

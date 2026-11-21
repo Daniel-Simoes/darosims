@@ -1,9 +1,6 @@
-import {
-  activityBreakdown,
-  complianceTrend,
-  documentsByType,
-  monthlyAudits,
-} from '../../../data/dashboardCharts';
+import { complianceTrend, monthlyAudits } from '../../../data/dashboardCharts';
+import { useDocumentsByType } from '../hooks/useDocumentsByType';
+import { useOpenActivity } from '../hooks/useOpenActivity';
 import {
   BarChart,
   DonutChart,
@@ -12,7 +9,15 @@ import {
 } from './ChartWidgets';
 import './HomeCharts.css';
 
-export function HomeCharts() {
+interface HomeChartsProps {
+  refreshKey?: number;
+}
+
+export function HomeCharts({ refreshKey = 0 }: HomeChartsProps) {
+  const { data: documentsByType, isLoading: documentsByTypeLoading } =
+    useDocumentsByType(refreshKey);
+  const { data: activityBreakdown, isLoading: activityLoading } = useOpenActivity(refreshKey);
+
   return (
     <div className="home-charts">
       <div className="home-chart-card">
@@ -36,7 +41,13 @@ export function HomeCharts() {
           </div>
         </div>
         <div className="home-chart-body home-chart-body-bars">
-          <BarChart data={documentsByType} />
+          {documentsByTypeLoading ? (
+            <p className="home-chart-loading">Loading document breakdown…</p>
+          ) : documentsByType.length === 0 ? (
+            <p className="home-chart-empty">No documents in the register yet.</p>
+          ) : (
+            <BarChart data={documentsByType} />
+          )}
         </div>
       </div>
 
@@ -48,7 +59,11 @@ export function HomeCharts() {
           </div>
         </div>
         <div className="home-chart-body">
-          <DonutChart data={activityBreakdown} />
+          {activityLoading ? (
+            <p className="home-chart-loading">Loading open activity…</p>
+          ) : (
+            <DonutChart data={activityBreakdown} showAllCategories />
+          )}
         </div>
       </div>
 

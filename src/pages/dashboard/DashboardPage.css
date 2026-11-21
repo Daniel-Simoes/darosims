@@ -9,6 +9,11 @@
   background: var(--color-bg-alt);
 }
 
+.dashboard-layout-session-locked {
+  pointer-events: none;
+  user-select: none;
+}
+
 .dashboard-layout.sidebar-collapsed {
   --sidebar-width: var(--sidebar-collapsed-width);
 }

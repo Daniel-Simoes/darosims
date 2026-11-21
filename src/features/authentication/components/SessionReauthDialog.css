@@ -1,0 +1,93 @@
+.session-reauth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.session-reauth-dialog {
+  width: min(100%, 420px);
+  padding: 28px;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.2);
+}
+
+.session-reauth-title {
+  margin: 0 0 10px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.session-reauth-message {
+  margin: 0 0 20px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #475569;
+}
+
+.session-reauth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.session-reauth-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+}
+
+.session-reauth-input {
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.session-reauth-input:focus {
+  outline: 2px solid rgba(26, 86, 219, 0.35);
+  border-color: #1a56db;
+}
+
+.session-reauth-input:disabled {
+  opacity: 0.7;
+  background: #f8fafc;
+}
+
+.session-reauth-error {
+  margin: 0;
+  font-size: 13px;
+  color: #b91c1c;
+}
+
+.session-reauth-submit {
+  margin-top: 4px;
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  background: #1a56db;
+  cursor: pointer;
+}
+
+.session-reauth-submit:hover:not(:disabled) {
+  background: #1648b8;
+}
+
+.session-reauth-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}

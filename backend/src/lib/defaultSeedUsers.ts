@@ -13,4 +13,11 @@ export const DEFAULT_SEED_USERS = [
     firstName: 'Rodrigo',
     lastName: '',
   },
+  {
+    email: 'admin@daros.com',
+    password: '1234',
+    role: 'admin' as const,
+    firstName: 'Admin',
+    lastName: '',
+  },
 ] as const;

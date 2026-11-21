@@ -4,6 +4,7 @@ import type { DocumentRecord } from '../../types/documents';
 export const DOCUMENT_USERS = [
   { name: 'Daniel', email: 'daniel@daros.com' },
   { name: 'Rodrigo', email: 'rodrigo@daros.com' },
+  { name: 'Admin', email: 'admin@daros.com' },
 ] as const;
 
 export function canUserApproveDocuments(user: AuthUser | null): boolean {
@@ -40,7 +41,10 @@ export function isDocumentOwnerSameAsUser(
 /** Creator, assigned reviewer (document owner), or approver (approvedBy) may edit. */
 export function canUserEditDocument(
   user: AuthUser | null,
-  document: Pick<DocumentRecord, 'createdBy' | 'owner' | 'approvedBy'>,
+  document: Pick<
+    DocumentRecord,
+    'createdBy' | 'owner' | 'approvedBy' | 'approver' | 'status' | 'submittedAt' | 'rejectionReason'
+  >,
 ): boolean {
   if (!user) return false;
 
@@ -48,8 +52,20 @@ export function canUserEditDocument(
   const userName = user.name.trim().toLowerCase();
   const createdBy = document.createdBy?.trim().toLowerCase() ?? '';
 
+  const rejected =
+    document.status === 'Draft' &&
+    !document.submittedAt &&
+    Boolean(document.rejectionReason?.trim());
+  if (rejected) {
+    return Boolean(createdBy && userEmail === createdBy);
+  }
+
   if (createdBy && userEmail === createdBy) return true;
   if (isDocumentOwnerSameAsUser(user, document.owner)) return true;
+
+  const designatedApprover = (document.approver?.trim() || document.owner?.trim() || '').toLowerCase();
+  if (designatedApprover && userName === designatedApprover) return true;
+  if (designatedApprover && userEmail === designatedApprover) return true;
 
   const approvedBy = document.approvedBy?.trim().toLowerCase();
   if (approvedBy && userName === approvedBy) return true;

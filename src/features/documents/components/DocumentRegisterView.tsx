@@ -2,11 +2,7 @@ import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useSta
 import { api, fetchDocumentFileBlob, type CreateDocumentPayload, type DocumentRecord } from '../../../lib/api';
 import { documentTypeBadgeClass } from '../../../data/documentRegister';
 import { useTeamUsers } from '../../../context/TeamUsersContext';
-import {
-  canUserDeleteDocument,
-  canUserEditDocument,
-  isDocumentOwnerSameAsUser,
-} from '../../../lib/documentUsers';
+import { canUserDeleteDocument, canUserEditDocument } from '../../../lib/documentUsers';
 import { useAuth } from '../../../context/AuthContext';
 import { generateDocumentCode } from '../../../lib/documentCode';
 import {
@@ -14,12 +10,10 @@ import {
   isPendingApprovalDocument,
   isRejectedDocument,
 } from '../../../lib/documentStatus';
-import { replaceDocumentSourceFile } from '../../../lib/documentSourceFile';
 import { DocumentTypeMenu } from './DocumentTypeMenu';
 import { ProcessMenu } from './ProcessMenu';
 import { EmptyDraftsLottie } from './EmptyDraftsLottie';
 import { ConfirmDialog } from '../../../components/dialogs/ConfirmDialog';
-import { UploadRejectedDocumentDialog } from '../../../components/dialogs/UploadRejectedDocumentDialog';
 import { ListSearchBar } from '../../../components/common/ListSearchBar';
 import { ListPaginationFooter } from '../../../components/common/ListPaginationFooter';
 import { ListPageSizeSelect } from '../../../components/common/ListPageSizeSelect';
@@ -140,7 +134,6 @@ export function DocumentRegisterView({
   mode = 'register',
   onNewDocument,
   onDocumentClick,
-  onSubmittedForApproval,
   refreshKey = 0,
 }: {
   mode?: 'new' | 'register';
@@ -162,11 +155,6 @@ export function DocumentRegisterView({
   const [success, setSuccess] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [viewingPdfId, setViewingPdfId] = useState<string | null>(null);
-  const [changingFileId, setChangingFileId] = useState<string | null>(null);
-  const [resubmittingId, setResubmittingId] = useState<string | null>(null);
-  const [pendingResubmit, setPendingResubmit] = useState<DocumentRecord | null>(null);
-  const [uploadDialogDoc, setUploadDialogDoc] = useState<DocumentRecord | null>(null);
-  const [pendingUploadResubmit, setPendingUploadResubmit] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [historyDocument, setHistoryDocument] = useState<DocumentRecord | null>(null);
@@ -216,103 +204,6 @@ export function DocumentRegisterView({
     loadDocuments();
   }, [loadDocuments, refreshKey]);
 
-  function isDocumentCreator(doc: DocumentRecord) {
-    return (user?.email?.toLowerCase() ?? '') === (doc.createdBy?.toLowerCase() ?? '');
-  }
-
-  function canManageRejectedDocument(doc: DocumentRecord) {
-    return isRejectedDocument(doc) && isDocumentCreator(doc) && doc.documentOrigin !== 'External';
-  }
-
-  function handleUploadNewDocumentClick(doc: DocumentRecord) {
-    setUploadDialogDoc(doc);
-  }
-
-  async function handleUploadRejectedDocument(file: File, resubmit: boolean) {
-    if (!uploadDialogDoc) return;
-
-    const doc = uploadDialogDoc;
-    setError('');
-    setSuccess('');
-    setChangingFileId(doc.id);
-
-    try {
-      const updated = await replaceDocumentSourceFile(doc.id, file);
-      let nextDocument = updated;
-
-      if (resubmit) {
-        if (isDocumentOwnerSameAsUser(user, doc.owner)) {
-          setPendingUploadResubmit(true);
-          setUploadDialogDoc(nextDocument);
-          setDocuments((prev) => prev.map((item) => (item.id === doc.id ? nextDocument : item)));
-          setSuccess(`New document uploaded for "${nextDocument.title}". Confirm resubmission to send it for approval.`);
-          return;
-        }
-
-        const { document: submitted } = await api.submitDocumentForApproval(doc.id);
-        nextDocument = submitted;
-        onSubmittedForApproval?.();
-        setSuccess(`New document uploaded and "${submitted.title}" resubmitted for approval.`);
-      } else {
-        setSuccess(`New document uploaded for "${updated.title}". You can resubmit for approval when ready.`);
-      }
-
-      setDocuments((prev) => prev.map((item) => (item.id === doc.id ? nextDocument : item)));
-      setUploadDialogDoc(null);
-      setPendingUploadResubmit(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload new document');
-    } finally {
-      setChangingFileId(null);
-    }
-  }
-
-  async function confirmUploadAndResubmit() {
-    if (!uploadDialogDoc) return;
-
-    setResubmittingId(uploadDialogDoc.id);
-    setError('');
-    setSuccess('');
-
-    try {
-      const { document: submitted } = await api.submitDocumentForApproval(uploadDialogDoc.id);
-      setDocuments((prev) => prev.map((item) => (item.id === submitted.id ? submitted : item)));
-      setSuccess(`"${submitted.title}" resubmitted for approval.`);
-      setUploadDialogDoc(null);
-      setPendingUploadResubmit(false);
-      onSubmittedForApproval?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to resubmit document');
-    } finally {
-      setResubmittingId(null);
-    }
-  }
-
-  async function resubmitDocument(doc: DocumentRecord) {
-    setError('');
-    setSuccess('');
-    setResubmittingId(doc.id);
-
-    try {
-      const { document: updated } = await api.submitDocumentForApproval(doc.id);
-      setDocuments((prev) => prev.map((item) => (item.id === doc.id ? updated : item)));
-      setSuccess(`"${updated.title}" resubmitted for approval.`);
-      onSubmittedForApproval?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to resubmit document');
-    } finally {
-      setResubmittingId(null);
-      setPendingResubmit(null);
-    }
-  }
-
-  function handleResubmitClick(doc: DocumentRecord) {
-    if (isDocumentOwnerSameAsUser(user, doc.owner)) {
-      setPendingResubmit(doc);
-      return;
-    }
-    void resubmitDocument(doc);
-  }
 
   function updateField<K extends keyof typeof emptyForm>(key: K, value: (typeof emptyForm)[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -332,7 +223,7 @@ export function DocumentRegisterView({
   async function handleViewDocumentPdf(doc: DocumentRecord) {
     if (!doc.fileName) {
       setSuccess('');
-      setError('This document has no PDF file attached yet.');
+      setError('This document has no file attached yet.');
       return;
     }
 
@@ -346,11 +237,11 @@ export function DocumentRegisterView({
       const opened = window.open(objectUrl, '_blank', 'noopener,noreferrer');
       if (!opened) {
         URL.revokeObjectURL(objectUrl);
-        setError('Allow pop-ups in your browser to view the PDF.');
+        setError('Allow pop-ups in your browser to view the document.');
         return;
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to open the document PDF.');
+      setError(err instanceof Error ? err.message : 'Unable to open the document file.');
     } finally {
       setViewingPdfId(null);
     }
@@ -476,9 +367,9 @@ export function DocumentRegisterView({
   const reviewHistorySteps = useMemo(
     () =>
       historyDocument
-        ? buildDocumentReviewTimeline(historyDocument, historyEvents)
+        ? buildDocumentReviewTimeline(historyDocument, historyEvents, teamUsers)
         : [],
-    [historyDocument, historyEvents],
+    [historyDocument, historyEvents, teamUsers],
   );
 
   function toggleSelectRow(id: string) {
@@ -848,10 +739,7 @@ export function DocumentRegisterView({
                         </span>
                       </td>
                       <td>
-                        <span
-                          className={`doc-reg-pill ${getRegisterStatusClass(doc)}`}
-                          title={doc.rejectionReason || undefined}
-                        >
+                        <span className={`doc-reg-pill ${getRegisterStatusClass(doc)}`}>
                           {getRegisterStatusLabel(doc)}
                         </span>
                       </td>
@@ -905,31 +793,6 @@ export function DocumentRegisterView({
                         </div>
                       </td>
                       <td className="doc-reg-col-actions">
-                        {canManageRejectedDocument(doc) ? (
-                          <div className="doc-resubmit-actions" onClick={(e) => e.stopPropagation()}>
-                            {doc.rejectionReason ? (
-                              <p className="doc-rejection-hint" title={doc.rejectionReason}>
-                                {doc.rejectionReason}
-                              </p>
-                            ) : null}
-                            <button
-                              type="button"
-                              className="doc-resubmit-btn"
-                              disabled={changingFileId === doc.id || resubmittingId === doc.id}
-                              onClick={() => handleUploadNewDocumentClick(doc)}
-                            >
-                              {changingFileId === doc.id ? 'Uploading...' : 'Upload new document'}
-                            </button>
-                            <button
-                              type="button"
-                              className="doc-resubmit-btn doc-resubmit-btn-primary"
-                              disabled={changingFileId === doc.id || resubmittingId === doc.id}
-                              onClick={() => handleResubmitClick(doc)}
-                            >
-                              {resubmittingId === doc.id ? 'Sending...' : 'Resubmit'}
-                            </button>
-                          </div>
-                        ) : (
                           <div className="doc-reg-action-grid" onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
@@ -983,8 +846,8 @@ export function DocumentRegisterView({
                               className="doc-reg-round-btn"
                               title={
                                 doc.fileName
-                                  ? 'View document — open the uploaded PDF only'
-                                  : 'No PDF file attached'
+                                  ? 'View document — open the uploaded file'
+                                  : 'No file attached'
                               }
                               disabled={!doc.fileName || viewingPdfId === doc.id}
                               onClick={() => void handleViewDocumentPdf(doc)}
@@ -1006,7 +869,6 @@ export function DocumentRegisterView({
                               </svg>
                             </button>
                           </div>
-                        )}
                       </td>
                     </tr>
                   );
@@ -1025,49 +887,6 @@ export function DocumentRegisterView({
         />
       </section>
       )}
-
-      <UploadRejectedDocumentDialog
-        open={Boolean(uploadDialogDoc) && !pendingUploadResubmit}
-        documentRecord={uploadDialogDoc}
-        onUpload={handleUploadRejectedDocument}
-        onCancel={() => setUploadDialogDoc(null)}
-        isSubmitting={Boolean(uploadDialogDoc && changingFileId === uploadDialogDoc.id)}
-      />
-
-      <ConfirmDialog
-        open={Boolean(uploadDialogDoc && pendingUploadResubmit)}
-        title="Confirm resubmission"
-        message={
-          uploadDialogDoc
-            ? `You are both the document creator and the document owner. Upload complete for "${uploadDialogDoc.title}". Send it for approval now?`
-            : ''
-        }
-        confirmLabel="Resubmit"
-        cancelLabel="Not now"
-        onConfirm={() => {
-          void confirmUploadAndResubmit();
-        }}
-        onCancel={() => {
-          setPendingUploadResubmit(false);
-          setUploadDialogDoc(null);
-        }}
-      />
-
-      <ConfirmDialog
-        open={Boolean(pendingResubmit)}
-        title="Confirm resubmission"
-        message={
-          pendingResubmit
-            ? `You are both the document creator and the document owner. Are you sure "${pendingResubmit.title}" is ready to be submitted for approval again?`
-            : ''
-        }
-        confirmLabel="Resubmit"
-        cancelLabel="Cancel"
-        onConfirm={() => {
-          if (pendingResubmit) void resubmitDocument(pendingResubmit);
-        }}
-        onCancel={() => setPendingResubmit(null)}
-      />
 
       <DocumentReviewHistoryDialog
         open={Boolean(historyDocument)}
