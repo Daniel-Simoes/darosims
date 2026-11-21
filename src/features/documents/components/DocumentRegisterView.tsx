@@ -151,14 +151,19 @@ function FormField({
   );
 }
 
+const DRAFTS_LIST_CACHE_KEY = 'drafts:list';
+
 export function DocumentRegisterView({
   mode = 'register',
+  listScope = 'register',
   onNewDocument,
   onDocumentClick,
   onOpenArchives,
   refreshKey = 0,
 }: {
   mode?: 'new' | 'register';
+  /** When `drafts`, lists only the logged-in user's unsubmitted drafts (same table UI as Document Control). */
+  listScope?: 'register' | 'drafts';
   onNewDocument?: () => void;
   onDocumentClick?: (documentId: string, options?: { edit?: boolean; beginRevision?: boolean }) => void;
   onOpenArchives?: () => void;
@@ -168,12 +173,16 @@ export function DocumentRegisterView({
   const { user } = useAuth();
   const teamUsers = useTeamUsers();
   const ownerNames = teamUsers.map((entry) => entry.name);
-  const showForm = mode === 'new';
-  const showRegister = mode === 'register';
+  const isDraftsScope = listScope === 'drafts';
+  const showForm = mode === 'new' && !isDraftsScope;
+  const showRegister = mode === 'register' || isDraftsScope;
   const registerCache = getCachedData<RegisterListCache>(REGISTER_LIST_CACHE_KEY);
-  const [documents, setDocuments] = useState<DocumentRecord[]>(registerCache?.documents ?? []);
+  const draftsCache = getCachedData<DocumentRecord[]>(DRAFTS_LIST_CACHE_KEY);
+  const [documents, setDocuments] = useState<DocumentRecord[]>(
+    isDraftsScope ? (draftsCache ?? []) : (registerCache?.documents ?? []),
+  );
   const [archives, setArchives] = useState<DocumentArchiveRecord[]>(registerCache?.archives ?? []);
-  const [showSkeleton, setShowSkeleton] = useState(!registerCache);
+  const [showSkeleton, setShowSkeleton] = useState(isDraftsScope ? !draftsCache : !registerCache);
   const [form, setForm] = useState(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
   const { error, success, successFadingOut, showSuccess, showError } = useFlashMessages();
@@ -217,6 +226,19 @@ export function DocumentRegisterView({
 
   const loadDocuments = useCallback(async () => {
     try {
+      if (isDraftsScope) {
+        await runCachedScreenLoad<DocumentRecord[]>({
+          cacheKey: DRAFTS_LIST_CACHE_KEY,
+          fetcher: async () => {
+            const { documents: data } = await api.getMyDrafts();
+            return data;
+          },
+          onData: setDocuments,
+          setShowSkeleton,
+        });
+        return;
+      }
+
       await runCachedScreenLoad<RegisterListCache>({
         cacheKey: REGISTER_LIST_CACHE_KEY,
         fetcher: async () => {
@@ -233,10 +255,16 @@ export function DocumentRegisterView({
         setShowSkeleton,
       });
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'Failed to load documents');
+      showError(
+        err instanceof Error
+          ? err.message
+          : isDraftsScope
+            ? 'Failed to load drafts'
+            : 'Failed to load documents',
+      );
       setShowSkeleton(false);
     }
-  }, [showError]);
+  }, [isDraftsScope, showError]);
 
   useEffect(() => {
     loadDocuments();
@@ -362,7 +390,8 @@ export function DocumentRegisterView({
       return;
     }
     const stem =
-      typeFilter.trim().replace(/\s+/g, '-').toLowerCase() || 'document-register';
+      typeFilter.trim().replace(/\s+/g, '-').toLowerCase() ||
+      (isDraftsScope ? 'my-drafts' : 'document-control');
     downloadDocumentRegisterCsv(exportRows, stem);
     showSuccess(`Exported ${exportRows.length} document(s) to CSV.`);
   }
@@ -413,15 +442,21 @@ export function DocumentRegisterView({
     setHistoryError('');
 
     try {
-      await runCachedScreenLoad({
-        cacheKey: historyCacheKey,
-        fetcher: async () => {
-          const { timelines } = await api.getDocumentEvents(doc.id);
-          return timelines[0]?.events ?? [];
-        },
-        onData: setHistoryEvents,
-        setShowSkeleton: setHistoryLoading,
-      });
+      const [events] = await Promise.all([
+        runCachedScreenLoad({
+          cacheKey: historyCacheKey,
+          fetcher: async () => {
+            const { timelines } = await api.getDocumentEvents(doc.id);
+            return timelines[0]?.events ?? [];
+          },
+          onData: setHistoryEvents,
+          setShowSkeleton: setHistoryLoading,
+        }),
+        api.getDocumentArchives().then(({ archives: nextArchives }) => {
+          setArchives(nextArchives);
+        }).catch(() => undefined),
+      ]);
+      void events;
     } catch (err) {
       setHistoryError(err instanceof Error ? err.message : 'Failed to load review history');
       setHistoryLoading(false);
@@ -435,18 +470,28 @@ export function DocumentRegisterView({
     setHistoryLoading(false);
   }
 
+  const historyArchives = useMemo(
+    () =>
+      historyDocument
+        ? archives.filter((row) => row.sourceDocumentId === historyDocument.id)
+        : [],
+    [archives, historyDocument],
+  );
+
   const reviewHistorySteps = useMemo(
     () =>
       historyDocument
-        ? buildDocumentReviewTimeline(historyDocument, historyEvents, teamUsers)
+        ? buildDocumentReviewTimeline(historyDocument, historyEvents, teamUsers, historyArchives)
         : [],
-    [historyDocument, historyEvents, teamUsers],
+    [historyDocument, historyEvents, teamUsers, historyArchives],
   );
 
   const reviewHistoryTableRows = useMemo(
     () =>
-      historyDocument ? buildDocumentReviewHistoryRows(historyDocument, historyEvents) : [],
-    [historyDocument, historyEvents],
+      historyDocument
+        ? buildDocumentReviewHistoryRows(historyDocument, historyEvents, historyArchives)
+        : [],
+    [historyDocument, historyEvents, historyArchives],
   );
 
   function toggleSelectRow(id: string) {
@@ -692,14 +737,19 @@ export function DocumentRegisterView({
       {showRegister && (
       <>
         <header className="doc-reg-page-hero">
-          <h1 className="doc-reg-hero-title">Document Register</h1>
-          <p className="doc-reg-hero-subtitle">Manage and track all your documents in one place</p>
+          <h1 className="doc-reg-hero-title">{isDraftsScope ? 'My Drafts' : 'Document Control'}</h1>
+          <p className="doc-reg-hero-subtitle">
+            {isDraftsScope
+              ? 'Documents saved as draft and have not submitted yet'
+              : 'Manage and track all your documents in one place'}
+          </p>
         </header>
-        {showSkeleton ? (
-          <RegisterStatsSkeleton />
-        ) : (
-          <DocumentRegisterStats documents={documents} archives={archives} onOpenArchives={onOpenArchives} />
-        )}
+        {!isDraftsScope &&
+          (showSkeleton ? (
+            <RegisterStatsSkeleton />
+          ) : (
+            <DocumentRegisterStats documents={documents} archives={archives} onOpenArchives={onOpenArchives} />
+          ))}
 
       <section className="doc-card doc-reg-card">
         <div className="doc-reg-toolbar doc-reg-toolbar-top">
@@ -774,20 +824,37 @@ export function DocumentRegisterView({
           ) : documents.length === 0 ? (
             <div className="doc-register-empty-state">
               <EmptyDraftsLottie />
-              <h3 className="doc-register-empty-title">No documents yet</h3>
+              <h3 className="doc-register-empty-title">
+                {isDraftsScope ? 'You have no draft documents yet' : 'No documents yet'}
+              </h3>
               <p className="doc-register-empty-text">
-                When you create or submit a document, it will appear here in the register.
+                {isDraftsScope
+                  ? 'When you save a document as draft, it will appear here ready for you to continue editing.'
+                  : 'When you create or submit a document, it will appear here in the register.'}
               </p>
             </div>
           ) : filteredDocuments.length === 0 ? (
             <div className="doc-register-empty-state">
-              <h3 className="doc-register-empty-title">No matching documents</h3>
+              <h3 className="doc-register-empty-title">
+                {isDraftsScope ? 'No matching drafts' : 'No matching documents'}
+              </h3>
               <p className="doc-register-empty-text">
                 Try a different search, document type filter, or code.
               </p>
             </div>
           ) : (
-            <table className="doc-reg-table">
+            <table className="doc-reg-table doc-control-table">
+              <colgroup>
+                <col className="doc-reg-col-check-col" />
+                <col />
+                <col className="doc-reg-col-status" />
+                <col className="doc-reg-col-code" />
+                <col />
+                <col />
+                <col className="doc-reg-col-process" />
+                <col className="doc-reg-col-owner" />
+                <col className="doc-reg-col-actions-col" />
+              </colgroup>
               <thead>
                 <tr>
                   <th className="doc-reg-col-check">
@@ -800,12 +867,12 @@ export function DocumentRegisterView({
                     />
                   </th>
                   <th>Origin <SortIcon /></th>
-                  <th>Status <SortIcon /></th>
-                  <th>Document Code <SortIcon /></th>
+                  <th className="doc-reg-col-status">Status <SortIcon /></th>
+                  <th className="doc-reg-col-code">Document Code <SortIcon /></th>
                   <th>Document Title <SortIcon /></th>
                   <th>Document Type <SortIcon /></th>
-                  <th>Process <SortIcon /></th>
-                  <th>Owner <SortIcon /></th>
+                  <th className="doc-reg-col-process">Process <SortIcon /></th>
+                  <th className="doc-reg-col-owner">Owner <SortIcon /></th>
                   <th className="doc-reg-col-actions">Actions</th>
                 </tr>
               </thead>
@@ -854,12 +921,12 @@ export function DocumentRegisterView({
                           </span>
                         </div>
                       </td>
-                      <td>
+                      <td className="doc-reg-col-status">
                         <span className={`doc-reg-pill ${getRegisterStatusClass(doc)}`}>
                           {getRegisterStatusLabel(doc)}
                         </span>
                       </td>
-                      <td>
+                      <td className="doc-reg-col-code">
                         <div className="doc-reg-code-cell">
                           <span className={`doc-reg-avatar ${getRegisterTypeAvatarClass(doc.type)}`}>
                             {getTypeAvatarLetter(doc)}
@@ -895,7 +962,7 @@ export function DocumentRegisterView({
                           {doc.type}
                         </span>
                       </td>
-                      <td className="doc-reg-process-cell">
+                      <td className="doc-reg-process-cell doc-reg-col-process">
                         <span className="doc-reg-process-inner">
                           <span className="doc-reg-process-icon" aria-hidden="true">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
@@ -906,7 +973,7 @@ export function DocumentRegisterView({
                           {doc.process || '—'}
                         </span>
                       </td>
-                      <td>
+                      <td className="doc-reg-col-owner">
                         <div className="doc-reg-stack">
                           <span className="doc-reg-stack-primary">{ownerDisplay.primary}</span>
                           {ownerDisplay.secondary ? (
@@ -948,7 +1015,7 @@ export function DocumentRegisterView({
           page={page}
           pageSize={pageSize}
           onPageChange={setPage}
-          itemLabel="entries"
+          itemLabel={isDraftsScope ? 'drafts' : 'entries'}
         />
       </section>
       </>

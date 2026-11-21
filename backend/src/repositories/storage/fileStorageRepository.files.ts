@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-import { UPLOAD_DIR } from '@/config/paths';
+import { ARCHIVE_UPLOAD_DIR, REVISION_BASELINE_DIR, UPLOAD_DIR } from '@/config/paths';
 import {
   getFileExtension,
   isMainDocumentStorageObject,
@@ -123,4 +123,81 @@ export async function deleteSourceFiles(documentId: string) {
 export async function deleteAllDocumentFiles(documentId: string) {
   await deletePdfFile(documentId);
   await deleteSourceFiles(documentId);
+}
+
+function revisionBaselineKey(version: number): string {
+  return String(version).replace('.', '_');
+}
+
+function revisionBaselinePath(documentId: string, version: number, fileName: string) {
+  const safeName = fileName.replace(/[/\\]/g, '_');
+  return path.join(
+    REVISION_BASELINE_DIR,
+    documentId,
+    `v${revisionBaselineKey(version)}-${safeName}`,
+  );
+}
+
+export async function stageRevisionBaselineFile(
+  documentId: string,
+  version: number,
+  data: Buffer,
+  fileName: string,
+) {
+  const targetPath = revisionBaselinePath(documentId, version, fileName);
+  await fs.mkdir(path.dirname(targetPath), { recursive: true });
+  await fs.writeFile(targetPath, data);
+}
+
+export async function readRevisionBaselineFile(
+  documentId: string,
+  version: number,
+  fileName?: string,
+): Promise<Buffer | null> {
+  if (fileName?.trim()) {
+    try {
+      return await fs.readFile(revisionBaselinePath(documentId, version, fileName));
+    } catch {
+      // fall through
+    }
+  }
+  try {
+    const dir = path.join(REVISION_BASELINE_DIR, documentId);
+    const prefix = `v${revisionBaselineKey(version)}-`;
+    const entries = await fs.readdir(dir);
+    const match = entries.find((name) => name.startsWith(prefix));
+    if (!match) return null;
+    return await fs.readFile(path.join(dir, match));
+  } catch {
+    return null;
+  }
+}
+
+async function ensureArchiveUploadDir(archiveId: string) {
+  const dir = path.join(ARCHIVE_UPLOAD_DIR, archiveId);
+  await fs.mkdir(dir, { recursive: true });
+  return dir;
+}
+
+export async function writeArchiveStoredFile(
+  archiveId: string,
+  fileName: string,
+  data: Buffer,
+) {
+  const dir = await ensureArchiveUploadDir(archiveId);
+  const safeName = fileName.replace(/[/\\]/g, '_');
+  await fs.writeFile(path.join(dir, safeName), data);
+}
+
+export async function readArchiveStoredFile(
+  archiveId: string,
+  fileName: string,
+): Promise<Buffer | null> {
+  const safeName = fileName.replace(/[/\\]/g, '_');
+  const targetPath = path.join(ARCHIVE_UPLOAD_DIR, archiveId, safeName);
+  try {
+    return await fs.readFile(targetPath);
+  } catch {
+    return null;
+  }
 }

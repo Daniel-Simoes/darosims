@@ -19,14 +19,14 @@ function documentCode(doc: DocumentRecord): string {
 }
 
 function safeFileToken(value: string): string {
-  return value.replace(/[^\w.-]+/g, '_').replace(/_+/g, '_').slice(0, 48) || 'document-register';
+  return value.replace(/[^\w.-]+/g, '_').replace(/_+/g, '_').slice(0, 48) || 'document-control';
 }
 
 export function downloadDocumentRegisterCsv(documents: DocumentRecord[], fileStem = 'document-register') {
   const exportedAt = new Date().toLocaleString();
   const lines: string[] = [];
 
-  lines.push(joinCsvRow(['Document Register Export']));
+  lines.push(joinCsvRow(['Document Control Export']));
   lines.push(joinCsvRow(['Exported at', exportedAt]));
   lines.push(joinCsvRow(['Row count', documents.length]));
   lines.push('');

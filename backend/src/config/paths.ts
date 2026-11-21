@@ -17,4 +17,5 @@ export const DOCUMENT_CHAT_PRESENCE_FILE = joinPath(DATA_DIR, 'document_chat_pre
 export const USERS_FILE = joinPath(DATA_DIR, 'users.json');
 export const UPLOAD_DIR = joinPath(DATA_DIR, 'uploads');
 export const ARCHIVE_UPLOAD_DIR = joinPath(DATA_DIR, 'archive-uploads');
+export const REVISION_BASELINE_DIR = joinPath(DATA_DIR, 'revision-baselines');
 export const USER_PHOTOS_DIR = joinPath(DATA_DIR, 'user-photos');

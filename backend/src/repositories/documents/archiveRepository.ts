@@ -1,12 +1,10 @@
 import { getDatabaseProvider } from '@/database/provider';
 import * as files from '@/repositories/documents/archiveRepository.files';
+import * as supabase from '@/repositories/documents/archiveRepository.supabase';
 import type { DocumentArchiveRecord } from '@/types/documentArchive';
 
 function repo() {
-  if (getDatabaseProvider() === 'supabase') {
-    return files;
-  }
-  return files;
+  return getDatabaseProvider() === 'supabase' ? supabase : files;
 }
 
 export async function readAllArchives(): Promise<DocumentArchiveRecord[]> {

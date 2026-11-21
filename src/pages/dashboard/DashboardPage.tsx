@@ -20,7 +20,6 @@ import { DocumentRegisterView } from '../../features/documents/components/Docume
 import { DocumentArchivesView } from '../../features/documents/components/DocumentArchivesView';
 import { DocumentDetailView } from '../../features/documents/components/DocumentDetailView';
 import { NewDocumentView } from '../../features/documents/components/NewDocumentView';
-import { MyDraftsView } from '../../features/documents/components/MyDraftsView';
 import { NotificationsView } from '../../features/notifications/components/NotificationsView';
 import { NotificationHistoryView } from '../../features/notifications/components/NotificationHistoryView';
 import { HomeCharts } from '../../features/dashboard/components/HomeCharts';
@@ -173,6 +172,7 @@ export function DashboardPage() {
   const isNewDocument = activeNav === 'document-register';
   const isMyDrafts = activeNav === 'my-drafts';
   const isDocumentArchives = activeNav === 'document-archives';
+  const isDocumentRegisterShell = activeNav === 'documents' || isDocumentArchives || isMyDrafts;
   const isChat = activeNav === 'chat';
   const isNotifications = activeNav === 'notifications';
   const isNotificationHistory = activeNav === 'notification-history';
@@ -302,7 +302,7 @@ export function DashboardPage() {
       }}
     />
     <div
-      className={`dashboard-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''} ${isChat ? 'dashboard-layout-chat' : ''} ${isSessionLocked ? 'dashboard-layout-session-locked' : ''} ${needsLegalAcceptance ? 'dashboard-layout-legal-pending' : ''} ${activeNav === 'documents' ? 'dashboard-layout-register' : ''}`}
+      className={`dashboard-layout ${isSidebarCollapsed ? 'sidebar-collapsed' : ''} ${isChat ? 'dashboard-layout-chat' : ''} ${isSessionLocked ? 'dashboard-layout-session-locked' : ''} ${needsLegalAcceptance ? 'dashboard-layout-legal-pending' : ''} ${isDocumentRegisterShell ? 'dashboard-layout-register' : ''}`}
     >
       <DashboardSidebar
         activeNav={sidebarActiveNav}
@@ -317,7 +317,7 @@ export function DashboardPage() {
       <div className="dashboard-main">
         {!isDocumentDetail && (
         <header
-          className={`dashboard-header ${isChat ? 'dashboard-header-chat' : ''} ${activeNav === 'documents' ? 'dashboard-header-register' : ''}`}
+          className={`dashboard-header ${isChat ? 'dashboard-header-chat' : ''} ${isDocumentRegisterShell ? 'dashboard-header-register' : ''}`}
         >
           <div className="dashboard-header-left">
             <button
@@ -330,7 +330,7 @@ export function DashboardPage() {
                 <path d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            {activeNav === 'documents' ? (
+            {isDocumentRegisterShell ? (
               <p className="dashboard-register-ims">Integrated Management System</p>
             ) : (
               <h1 className="dashboard-header-title">
@@ -362,7 +362,7 @@ export function DashboardPage() {
         </header>
         )}
 
-        <main className={`dashboard-content ${isDocumentView || isDocumentDetail || isChat || isNotifications || isNotificationHistory || isProfileSettings || isLegalPrivacy || isLegalAccessibility ? 'dashboard-content-full' : ''} ${isChat ? 'dashboard-content-chat' : ''} ${activeNav === 'documents' ? 'dashboard-content-register' : ''}`}>
+        <main className={`dashboard-content ${isDocumentView || isDocumentDetail || isChat || isNotifications || isNotificationHistory || isProfileSettings || isLegalPrivacy || isLegalAccessibility ? 'dashboard-content-full' : ''} ${isChat ? 'dashboard-content-chat' : ''} ${isDocumentRegisterShell ? 'dashboard-content-register' : ''}`}>
           {isLegalPrivacy ? (
             <DashboardLegalView slug="privacy" />
           ) : isLegalAccessibility ? (
@@ -408,7 +408,8 @@ export function DashboardPage() {
               onOpenCurrentDocument={(id) => openDocument(id, undefined, 'document-archives')}
             />
           ) : isMyDrafts ? (
-            <MyDraftsView
+            <DocumentRegisterView
+              listScope="drafts"
               refreshKey={draftsRefreshKey}
               onNewDocument={() => setActiveNav('document-register')}
               onDocumentClick={(id, options) => openDocument(id, options, 'my-drafts')}

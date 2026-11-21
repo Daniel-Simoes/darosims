@@ -150,3 +150,87 @@ export async function deleteAllDocumentFiles(documentId: string) {
   await deletePdfFile(documentId);
   await deleteSourceFiles(documentId);
 }
+
+function revisionBaselineObjectName(documentId: string, version: number, fileName: string) {
+  const safeName = fileName.replace(/[/\\]/g, '_');
+  const versionKey = String(version).replace('.', '_');
+  return `revision-baseline/${documentId}/v${versionKey}-${safeName}`;
+}
+
+function revisionBaselinePrefix(documentId: string, version: number) {
+  const versionKey = String(version).replace('.', '_');
+  return `revision-baseline/${documentId}/v${versionKey}-`;
+}
+
+export async function stageRevisionBaselineFile(
+  documentId: string,
+  version: number,
+  data: Buffer,
+  fileName: string,
+) {
+  const objectName = revisionBaselineObjectName(documentId, version, fileName);
+  const contentType =
+    getFileExtension(fileName) === 'pdf' ? 'application/pdf' : 'application/octet-stream';
+  const { error } = await getSupabaseAdmin()
+    .storage.from(BUCKET)
+    .upload(objectName, data, { upsert: true, contentType });
+  if (error) throw new Error(error.message);
+}
+
+export async function readRevisionBaselineFile(
+  documentId: string,
+  version: number,
+  fileName?: string,
+): Promise<Buffer | null> {
+  const supabase = getSupabaseAdmin();
+  if (fileName?.trim()) {
+    const objectName = revisionBaselineObjectName(documentId, version, fileName);
+    const { data, error } = await supabase.storage.from(BUCKET).download(objectName);
+    if (!error && data) return Buffer.from(await data.arrayBuffer());
+  }
+
+  const prefix = revisionBaselinePrefix(documentId, version);
+  try {
+    const folder = `revision-baseline/${documentId}`;
+    const { data, error } = await supabase.storage.from(BUCKET).list(folder, { limit: 1000 });
+    if (error || !data) return null;
+    const suffix = prefix.slice(prefix.lastIndexOf('/') + 1);
+    const match = data.find((item) => item.name.startsWith(suffix));
+    if (!match) return null;
+    const objectPath = `${folder}/${match.name}`;
+    const download = await supabase.storage.from(BUCKET).download(objectPath);
+    if (download.error || !download.data) return null;
+    return Buffer.from(await download.data.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
+function archiveObjectName(archiveId: string, fileName: string) {
+  const safeName = fileName.replace(/[/\\]/g, '_');
+  return `archives/${archiveId}/${safeName}`;
+}
+
+export async function writeArchiveStoredFile(
+  archiveId: string,
+  fileName: string,
+  data: Buffer,
+) {
+  const objectName = archiveObjectName(archiveId, fileName);
+  const contentType =
+    getFileExtension(fileName) === 'pdf' ? 'application/pdf' : 'application/octet-stream';
+  const { error } = await getSupabaseAdmin()
+    .storage.from(BUCKET)
+    .upload(objectName, data, { upsert: true, contentType });
+  if (error) throw new Error(error.message);
+}
+
+export async function readArchiveStoredFile(
+  archiveId: string,
+  fileName: string,
+): Promise<Buffer | null> {
+  const objectName = archiveObjectName(archiveId, fileName);
+  const { data, error } = await getSupabaseAdmin().storage.from(BUCKET).download(objectName);
+  if (error || !data) return null;
+  return Buffer.from(await data.arrayBuffer());
+}

@@ -48,3 +48,28 @@ export async function deleteSourceFiles(documentId: string) {
 export async function deleteAllDocumentFiles(documentId: string) {
   return repo().deleteAllDocumentFiles(documentId);
 }
+
+export async function stageRevisionBaselineFile(
+  documentId: string,
+  version: number,
+  data: Buffer,
+  fileName: string,
+) {
+  return repo().stageRevisionBaselineFile(documentId, version, data, fileName);
+}
+
+export async function readRevisionBaselineFile(
+  documentId: string,
+  version: number,
+  fileName?: string,
+) {
+  return repo().readRevisionBaselineFile(documentId, version, fileName);
+}
+
+export async function writeArchiveStoredFile(archiveId: string, fileName: string, data: Buffer) {
+  return repo().writeArchiveStoredFile(archiveId, fileName, data);
+}
+
+export async function readArchiveStoredFile(archiveId: string, fileName: string) {
+  return repo().readArchiveStoredFile(archiveId, fileName);
+}

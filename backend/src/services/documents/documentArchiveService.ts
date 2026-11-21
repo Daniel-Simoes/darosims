@@ -1,29 +1,20 @@
-import { ARCHIVE_UPLOAD_DIR } from '@/config/paths';
 import { readDocumentFile } from '@/lib/documentFiles';
 import { readAllArchives, writeAllArchives } from '@/repositories/documents/archiveRepository';
+import {
+  readArchiveStoredFile,
+  readRevisionBaselineFile,
+  stageRevisionBaselineFile,
+  writeArchiveStoredFile,
+} from '@/repositories/storage/fileStorageRepository';
 import type { DocumentArchiveRecord } from '@/types/documentArchive';
-import type { DocumentRecord } from '@/types';
-import { promises as fs } from 'fs';
-import { joinPath } from '@/lib/joinPath';
+import type { DocumentPublishedBaseline, DocumentRecord } from '@/types';
 
-async function ensureArchiveDir(archiveId: string) {
-  const dir = joinPath(ARCHIVE_UPLOAD_DIR, archiveId);
-  await fs.mkdir(dir, { recursive: true });
-  return dir;
-}
-
-async function copyDocumentFileToArchive(
-  sourceDocumentId: string,
-  archiveId: string,
-  fileName: string | undefined,
-): Promise<string | undefined> {
-  if (!fileName?.trim()) return undefined;
-  const source = await readDocumentFile(sourceDocumentId, fileName);
-  if (!source) return undefined;
-  const dir = await ensureArchiveDir(archiveId);
-  const targetPath = joinPath(dir, fileName);
-  await fs.writeFile(targetPath, source);
-  return fileName;
+/** Preserves the approved file when a new revision draft may replace it. */
+export async function stagePublishedRevisionFile(document: DocumentRecord): Promise<void> {
+  if (document.status !== 'Active' || !document.fileName?.trim()) return;
+  const source = await readDocumentFile(document.id, document.fileName);
+  if (!source) return;
+  await stageRevisionBaselineFile(document.id, document.version, source, document.fileName);
 }
 
 export async function listDocumentArchives(): Promise<DocumentArchiveRecord[]> {
@@ -36,6 +27,80 @@ export async function listDocumentArchives(): Promise<DocumentArchiveRecord[]> {
 export async function getDocumentArchiveById(id: string): Promise<DocumentArchiveRecord | null> {
   const all = await readAllArchives();
   return all.find((item) => item.id === id) ?? null;
+}
+
+function documentRecordFromPublishedBaseline(
+  document: DocumentRecord,
+  baseline: DocumentPublishedBaseline,
+): DocumentRecord {
+  return {
+    ...document,
+    status: 'Active',
+    version: baseline.version,
+    title: baseline.title,
+    type: baseline.type,
+    process: baseline.process,
+    owner: baseline.owner,
+    approver: baseline.approver ?? baseline.owner,
+    approvedBy: baseline.approvedBy,
+    department: baseline.department ?? document.department,
+    effectiveDate: baseline.effectiveDate,
+    nextReviewDate: baseline.nextReviewDate,
+    fileName: baseline.fileName,
+    fileFormat: baseline.fileFormat,
+    sourceContent: baseline.sourceContent,
+    reviewFrequency: baseline.reviewFrequency ?? document.reviewFrequency,
+    repository: baseline.repository ?? document.repository,
+    distribution: baseline.distribution ?? document.distribution,
+    retentionPeriod: baseline.retentionPeriod ?? document.retentionPeriod,
+    retentionNotes: baseline.retentionNotes ?? document.retentionNotes,
+    disposition: baseline.disposition ?? document.disposition,
+    comments: baseline.comments ?? document.comments,
+    publishedBaseline: undefined,
+    revisionStartedBy: undefined,
+    submittedAt: undefined,
+    reviewedAt: undefined,
+    reviewedBy: undefined,
+    rejectedAt: undefined,
+    rejectedBy: undefined,
+    rejectionReason: undefined,
+  };
+}
+
+/** Archives the superseded published version when a new revision is approved. */
+export async function ensureSupersededVersionArchived(
+  document: DocumentRecord,
+  auth: { email: string; name: string },
+  supersededByVersion: number,
+): Promise<DocumentArchiveRecord | null> {
+  const baseline = document.publishedBaseline;
+  if (!baseline) return null;
+  const snapshot = documentRecordFromPublishedBaseline(document, baseline);
+  return archiveSupersededDocumentVersion(snapshot, auth, supersededByVersion);
+}
+
+async function resolveSupersededFileBuffer(
+  documentId: string,
+  version: number,
+  fileName?: string,
+): Promise<Buffer | null> {
+  const staged = await readRevisionBaselineFile(documentId, version, fileName);
+  if (staged) return staged;
+  if (fileName?.trim()) return readDocumentFile(documentId, fileName);
+  return readDocumentFile(documentId);
+}
+
+async function copySupersededFileToArchive(
+  documentId: string,
+  version: number,
+  archiveId: string,
+  fileName: string | undefined,
+): Promise<string | undefined> {
+  if (!fileName?.trim()) return undefined;
+  const source = await resolveSupersededFileBuffer(documentId, version, fileName);
+  if (!source) return undefined;
+  await writeArchiveStoredFile(archiveId, fileName, source);
+  return fileName;
 }
 
 export async function archiveSupersededDocumentVersion(
@@ -76,7 +141,12 @@ export async function archiveSupersededDocumentVersion(
     archivedByName: auth.name,
   };
 
-  const copiedFile = await copyDocumentFileToArchive(document.id, archiveId, document.fileName);
+  const copiedFile = await copySupersededFileToArchive(
+    document.id,
+    document.version,
+    archiveId,
+    document.fileName,
+  );
   archive.fileName = copiedFile;
 
   all.push(archive);
@@ -85,10 +155,5 @@ export async function archiveSupersededDocumentVersion(
 }
 
 export async function readArchiveFile(archiveId: string, fileName: string): Promise<Buffer | null> {
-  const path = joinPath(ARCHIVE_UPLOAD_DIR, archiveId, fileName);
-  try {
-    return await fs.readFile(path);
-  } catch {
-    return null;
-  }
+  return readArchiveStoredFile(archiveId, fileName);
 }

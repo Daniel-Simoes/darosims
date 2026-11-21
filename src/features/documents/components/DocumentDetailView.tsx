@@ -43,6 +43,7 @@ import {
 import { DarosActionLoadingOverlay } from '../../../components/common/DarosActionLoadingOverlay';
 import '../../../components/common/FlashAlert.css';
 import { useFlashMessages } from '../../../hooks/useFlashMessages';
+import { invalidateCachedData } from '../../../lib/data/clientDataCache';
 import { runWithMinDuration } from '../../../lib/ui/runWithMinDuration';
 import './DocumentDetailView.css';
 
@@ -269,6 +270,8 @@ export function DocumentDetailView({
         setForm(documentToForm(updated));
         setIsEditing(true);
       });
+      invalidateCachedData('register:list');
+      invalidateCachedData('archives:list');
       showSuccess(
         `New draft started at version ${formatRevisionVersionLabel(nextVersion)}. Update the content and submit for review.`,
       );
@@ -361,6 +364,8 @@ export function DocumentDetailView({
         isApproving ? 'Document approved successfully.' : 'Document updated successfully.',
       );
       if (isApproving) {
+        invalidateCachedData('register:list');
+        invalidateCachedData('archives:list');
         onApproved?.();
       }
     } catch (err) {

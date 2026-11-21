@@ -1,6 +1,11 @@
 import type { DocumentEventRecord } from '../../../types/audit';
+import type { DocumentArchiveRecord } from '../../../types/documentArchive';
 import type { DocumentRecord } from '../../../types/documents';
 import { getDocumentEventDescription } from '../../../lib/documentEvents';
+import {
+  formatRevisionVersionLabel,
+  getPreviousDocumentVersion,
+} from '../../../lib/documents/documentVersionRevision';
 import { normalizeTeamEmail } from '../../../lib/legacyEmails';
 
 export interface DocumentReviewHistoryRow {
@@ -122,6 +127,55 @@ function revisionVersionLabel(event: DocumentEventRecord, doc: DocumentRecord): 
   return String(doc.version);
 }
 
+function revisionPreviousVersionLabel(event: DocumentEventRecord): string | undefined {
+  const fromMeta = event.metadata?.previousVersion?.trim();
+  if (fromMeta) return fromMeta;
+  const next = Number.parseFloat(revisionVersionLabel(event, {} as DocumentRecord));
+  if (Number.isFinite(next)) {
+    return formatRevisionVersionLabel(getPreviousDocumentVersion(next));
+  }
+  return undefined;
+}
+
+function resolveInitialDocumentVersion(
+  doc: DocumentRecord,
+  events: DocumentEventRecord[],
+  archives: DocumentArchiveRecord[],
+): number {
+  if (archives.length > 0) {
+    return Math.min(...archives.map((item) => item.version));
+  }
+
+  const firstRevision = events.find(isRevisionStartedEvent);
+  if (firstRevision) {
+    const previous = revisionPreviousVersionLabel(firstRevision);
+    if (previous) {
+      const parsed = Number.parseFloat(previous);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+    const target = Number.parseFloat(revisionVersionLabel(firstRevision, doc));
+    if (Number.isFinite(target)) return getPreviousDocumentVersion(target);
+  }
+
+  const firstApproved = events.find((event) => event.type === 'approved');
+  if (firstApproved?.metadata?.version?.trim()) {
+    const parsed = Number.parseFloat(firstApproved.metadata.version);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+
+  if (doc.publishedBaseline?.version != null) {
+    return doc.publishedBaseline.version;
+  }
+
+  const current = Number.isFinite(doc.version) ? doc.version : 1;
+  const hasRevision = events.some(isRevisionStartedEvent);
+  if (hasRevision && current > 1) {
+    return getPreviousDocumentVersion(current);
+  }
+
+  return Math.max(current, 1);
+}
+
 type RejectionStage = 'review' | 'approval';
 
 function resolveRejectionStage(
@@ -165,7 +219,8 @@ function eventSection(event: DocumentEventRecord): string {
     case 'resubmitted':
     case 'reviewed':
     case 'revision_started':
-      return 'Approval workflow';
+    case 'version_archived':
+      return event.type === 'version_archived' ? 'Document Archives' : 'Approval workflow';
     case 'approved':
       return 'Header / Document Review History';
     case 'rejected':
@@ -210,7 +265,15 @@ function eventDescription(event: DocumentEventRecord, doc: DocumentRecord): stri
       return 'Document content or metadata updated.';
     case 'revision_started': {
       const version = revisionVersionLabel(event, doc);
-      return `Document update started for version ${version}.`;
+      return `New version update opened for version ${version} (draft).`;
+    }
+    case 'version_archived': {
+      const version = event.metadata?.version?.trim();
+      const next = event.metadata?.supersededByVersion?.trim();
+      if (version && next) {
+        return `Version ${version} archived after version ${next} was approved.`;
+      }
+      return version ? `Version ${version} archived to Document Archives.` : 'Prior version archived.';
     }
     default:
       if (isRevisionStartedEvent(event)) {
@@ -278,6 +341,7 @@ function fallbackRow(doc: DocumentRecord): DocumentReviewHistoryRow {
 export function buildDocumentReviewHistoryRows(
   doc: DocumentRecord,
   events: DocumentEventRecord[],
+  archives: DocumentArchiveRecord[] = [],
 ): DocumentReviewHistoryRow[] {
   const sorted = [...events].sort(
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
@@ -287,14 +351,25 @@ export function buildDocumentReviewHistoryRows(
     return [fallbackRow(doc)];
   }
 
-  return sorted.map((event, index) => ({
-    versionNumber: index + 1,
-    date: formatReviewDate(event.createdAt),
-    section: eventSectionFromEvent(event),
-    descriptionOfChange: eventDescription(event, doc),
-    justificationForChange: eventJustification(event, doc),
-    approvedBy: eventApprovedBy(event, doc),
-  }));
+  return sorted.map((event) => {
+    let versionNumber = resolveInitialDocumentVersion(doc, sorted, archives);
+    if (event.type === 'approved' && event.metadata?.version?.trim()) {
+      const parsed = Number.parseFloat(event.metadata.version);
+      if (Number.isFinite(parsed)) versionNumber = parsed;
+    } else if (isRevisionStartedEvent(event)) {
+      const parsed = Number.parseFloat(revisionVersionLabel(event, doc));
+      if (Number.isFinite(parsed)) versionNumber = parsed;
+    }
+
+    return {
+      versionNumber,
+      date: formatReviewDate(event.createdAt),
+      section: eventSectionFromEvent(event),
+      descriptionOfChange: eventDescription(event, doc),
+      justificationForChange: eventJustification(event, doc),
+      approvedBy: eventApprovedBy(event, doc),
+    };
+  });
 }
 
 const TIMELINE_EVENT_TYPES = new Set<DocumentEventRecord['type']>([
@@ -303,6 +378,7 @@ const TIMELINE_EVENT_TYPES = new Set<DocumentEventRecord['type']>([
   'resubmitted',
   'reviewed',
   'revision_started',
+  'version_archived',
   'approved',
   'rejected',
   'edited',
@@ -312,6 +388,7 @@ export function buildDocumentReviewTimeline(
   doc: DocumentRecord,
   events: DocumentEventRecord[],
   teamUsers: ReviewHistoryTeamUser[] = [],
+  archives: DocumentArchiveRecord[] = [],
 ): DocumentReviewTimelineStep[] {
   const sorted = [...events]
     .filter((event) => TIMELINE_EVENT_TYPES.has(event.type))
@@ -322,8 +399,9 @@ export function buildDocumentReviewTimeline(
   const createdAtLabel = formatReviewDate(createdAtIso);
   const steps: DocumentReviewTimelineStep[] = [];
 
+  const initialVersion = resolveInitialDocumentVersion(doc, sorted, archives);
+
   const pushCreatedStep = (createdEvent?: DocumentEventRecord) => {
-    const version = Math.max(doc.version, 1);
     const creatorEmail =
       pickEmail(doc.createdBy, createdEvent?.actorEmail) ||
       resolveEmail(createdEvent?.actorName, teamUsers);
@@ -331,9 +409,9 @@ export function buildDocumentReviewTimeline(
     steps.push({
       id: 'created',
       title: 'Document created',
-      description: `Version ${version} · Created on ${createdAtLabel}`,
+      description: `Version ${formatRevisionVersionLabel(initialVersion)} · Created on ${createdAtLabel}`,
       date: formatReviewDateTime(createdEvent?.createdAt ?? createdAtIso),
-      version,
+      version: initialVersion,
       byEmail: creatorEmail,
     });
   };
@@ -422,6 +500,26 @@ export function buildDocumentReviewTimeline(
   for (const event of sorted) {
     if (event.type === 'created') continue;
 
+    if (event.type === 'version_archived') {
+      const versionLabel = event.metadata?.version?.trim();
+      const nextLabel = event.metadata?.supersededByVersion?.trim();
+      const parsedVersion = versionLabel ? Number.parseFloat(versionLabel) : Number.NaN;
+      const actorEmail =
+        pickEmail(event.actorEmail) || resolveEmail(event.actorName, teamUsers);
+
+      steps.push({
+        id: `archived-${event.id}`,
+        title: versionLabel ? `Version ${versionLabel} archived` : 'Prior version archived',
+        description: nextLabel
+          ? `Version ${versionLabel ?? '—'} moved to Document Archives after version ${nextLabel} was approved.`
+          : `Prior approved version moved to Document Archives and remains available for download.`,
+        date: formatReviewDateTime(event.createdAt),
+        version: Number.isFinite(parsedVersion) ? parsedVersion : undefined,
+        byEmail: actorEmail,
+      });
+      continue;
+    }
+
     if (isRevisionStartedEvent(event)) {
       const version = revisionVersionLabel(event, doc);
       const parsedVersion = Number.parseFloat(version);
@@ -430,8 +528,8 @@ export function buildDocumentReviewTimeline(
 
       steps.push({
         id: `revision-${event.id}`,
-        title: `Document update to version ${version}`,
-        description: `Revision started. The document was returned to draft — submit for review and approval when ready (version ${version}).`,
+        title: `Version update — v${version}`,
+        description: `New update for version ${version} opened in draft. Submit for review and approval when ready.`,
         date: formatReviewDateTime(event.createdAt),
         version: Number.isFinite(parsedVersion) ? parsedVersion : doc.version,
         byEmail: actorEmail,
@@ -544,14 +642,24 @@ export function buildDocumentReviewTimeline(
         });
       }
 
+      const approvedVersionLabel = event.metadata?.version?.trim();
+      const approvedVersion = approvedVersionLabel
+        ? Number.parseFloat(approvedVersionLabel)
+        : Number.NaN;
+
       steps.push({
         id: `approved-${event.id}`,
-        title: 'Document approved',
+        title: approvedVersionLabel
+          ? `Version ${formatRevisionVersionLabel(
+              Number.isFinite(approvedVersion) ? approvedVersion : doc.version,
+            )} approved`
+          : 'Document approved',
         description: ['Approved for controlled use', reviewTiming ? `· ${reviewTiming}` : '']
           .filter(Boolean)
           .join(' '),
         date: formatReviewDateTime(event.createdAt),
         byEmail: approverEmail,
+        version: Number.isFinite(approvedVersion) ? approvedVersion : undefined,
       });
     }
   }

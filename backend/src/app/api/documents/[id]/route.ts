@@ -29,7 +29,10 @@ import {
 } from '@/lib/documentPublishedBaseline';
 import { normalizeTeamEmail } from '@/lib/legacyEmails';
 import { canAuthUserViewDocument } from '@/lib/documentVisibility';
-import { archiveSupersededDocumentVersion } from '@/services/documents/documentArchiveService';
+import {
+  ensureSupersededVersionArchived,
+  stagePublishedRevisionFile,
+} from '@/services/documents/documentArchiveService';
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders() });
@@ -152,13 +155,15 @@ export async function PUT(
       }
     }
 
+    let archivedOnApprove: Awaited<ReturnType<typeof ensureSupersededVersionArchived>> = null;
+
     let input = buildClientDocumentUpdate(body, existing, {
       isApproving,
       approverName: auth.name,
     });
 
     if (isBeginningRevision) {
-      await archiveSupersededDocumentVersion(existing, auth, Number(body.version));
+      await stagePublishedRevisionFile(existing);
       input = {
         ...input,
         status: 'Draft',
@@ -179,6 +184,11 @@ export async function PUT(
     }
 
     if (isApproving && existing.publishedBaseline) {
+      archivedOnApprove = await ensureSupersededVersionArchived(
+        existing,
+        auth,
+        Number(existing.version),
+      );
       input = {
         ...input,
         publishedBaseline: undefined,
@@ -219,6 +229,7 @@ export async function PUT(
         actorName: auth.name,
         metadata: {
           version: String(document.version),
+          previousVersion: String(existing.version),
         },
       });
     }
@@ -229,7 +240,23 @@ export async function PUT(
         type: 'approved',
         actorEmail: auth.email,
         actorName: auth.name,
+        metadata: {
+          version: String(document.version),
+        },
       });
+
+      if (archivedOnApprove) {
+        await createDocumentEvent({
+          documentId: document.id,
+          type: 'version_archived',
+          actorEmail: auth.email,
+          actorName: auth.name,
+          metadata: {
+            version: String(archivedOnApprove.version),
+            supersededByVersion: String(archivedOnApprove.supersededByVersion),
+          },
+        });
+      }
 
       const selfService = await isSelfServiceDocumentWorkflow(document);
       if (

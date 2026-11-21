@@ -6,6 +6,7 @@ export type DocumentEventType =
   | 'rejected'
   | 'edited'
   | 'revision_started'
+  | 'version_archived'
   | 'approved';
 
 export interface DocumentEventMetadata {
@@ -13,6 +14,8 @@ export interface DocumentEventMetadata {
   fileName?: string;
   action?: string;
   version?: string;
+  previousVersion?: string;
+  supersededByVersion?: string;
   recipientEmail?: string;
   rejectionStage?: 'review' | 'approval';
 }

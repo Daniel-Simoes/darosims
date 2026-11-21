@@ -18,7 +18,7 @@ export const dashboardSidebarSections: SidebarSection[] = [
       { id: 'dashboard', label: 'Home', icon: 'home' },
       { id: 'document-register', label: 'New Document', icon: 'file' },
       { id: 'documents', label: 'Document Control', icon: 'clipboard' },
-      { id: 'document-archives', label: 'Arquivos', icon: 'archive' },
+      { id: 'document-archives', label: 'Document Archives', icon: 'archive' },
       { id: 'my-drafts', label: 'My Drafts', icon: 'file' },
       { id: 'chat', label: 'Chat', icon: 'message' },
       { id: 'notifications', label: 'Notifications', icon: 'bell' },
@@ -64,8 +64,8 @@ export const documentViews = ['document-register', 'documents', 'document-archiv
 
 export const documentPageTitles: Record<string, string> = {
   'document-register': 'New Document',
-  documents: 'Document Register',
-  'document-archives': 'Arquivos',
+  documents: 'Document Control',
+  'document-archives': 'Document Archives',
   'my-drafts': 'My Drafts',
   chat: 'Chat',
   notifications: 'Notifications',

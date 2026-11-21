@@ -16,6 +16,8 @@ export function getDocumentEventLabel(type: DocumentEventRecord['type']) {
       return 'Edited by creator';
     case 'revision_started':
       return 'Revision started';
+    case 'version_archived':
+      return 'Version archived';
     case 'approved':
       return 'Approved';
     default:
@@ -57,8 +59,18 @@ export function getDocumentEventDescription(event: DocumentEventRecord) {
     case 'revision_started': {
       const version = event.metadata?.version?.trim();
       return version
-        ? `${event.actorName} started an update to version ${version}. The document returned to draft for review and approval.`
+        ? `${event.actorName} opened a new update for version ${version} (draft). Submit for review when ready.`
         : `${event.actorName} started a new document revision for review and approval.`;
+    }
+    case 'version_archived': {
+      const version = event.metadata?.version?.trim();
+      const next = event.metadata?.supersededByVersion?.trim();
+      if (version && next) {
+        return `Version ${version} was archived after version ${next} was approved.`;
+      }
+      return version
+        ? `Version ${version} was archived to Document Archives.`
+        : `${event.actorName} archived a prior approved version.`;
     }
     case 'approved':
       return `${event.actorName} approved this document.`;

@@ -1,3 +1,5 @@
+import { TYPE_PREFIX } from '../../../data/documentTypes';
+
 const TYPE_AVATAR_CLASS: Record<string, string> = {
   Report: 'doc-reg-avatar-report',
   Procedure: 'doc-reg-avatar-procedure',
@@ -12,6 +14,13 @@ const TYPE_AVATAR_CLASS: Record<string, string> = {
 export function getRegisterTypeAvatarClass(type: string | undefined): string {
   if (!type) return 'doc-reg-avatar-default';
   return TYPE_AVATAR_CLASS[type] ?? 'doc-reg-avatar-default';
+}
+
+export function getTypeAvatarLetterForType(type: string | undefined): string {
+  const prefix = type ? TYPE_PREFIX[type] : undefined;
+  if (prefix?.trim()) return prefix.trim().charAt(0).toUpperCase();
+  const trimmed = type?.trim();
+  return trimmed ? trimmed.charAt(0).toUpperCase() : '?';
 }
 
 export function DocumentTypeIcon({ type }: { type: string }) {

@@ -30,6 +30,16 @@ If Supabase was set up **before** the chat feature, the `document_comments` tabl
 
 Run **`backend/supabase/patch-document-chat-presence.sql`** in Supabase (in addition to `document_comments` if needed). Without it, chat works but presence dots and “is typing…” stay disabled.
 
+## Arquivos (document version archives)
+
+The sidebar **Arquivos** list and the register **Archive** KPI use the `document_archives` table when `DATABASE_PROVIDER=supabase`. If the table is missing, archives stay empty even after approvals.
+
+1. Supabase → **SQL Editor**.
+2. Run **`backend/supabase/patch-document-archives.sql`** (one time).
+3. Redeploy Vercel after backend code that writes archives is live.
+
+Archived PDFs are stored in the **`darosims-files`** bucket under `archives/{archiveId}/...`.
+
 ## Vercel environment (required for shared data)
 
 In **Vercel → darosims → Settings → Environment Variables** (Production):
