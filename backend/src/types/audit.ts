@@ -12,6 +12,7 @@ export interface DocumentEventMetadata {
   fileName?: string;
   action?: string;
   recipientEmail?: string;
+  rejectionStage?: 'review' | 'approval';
 }
 
 export interface DocumentEventRecord {

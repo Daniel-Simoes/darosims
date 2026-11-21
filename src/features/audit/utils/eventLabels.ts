@@ -11,7 +11,7 @@ export function getDocumentEventLabel(type: DocumentEventRecord['type']) {
     case 'resubmitted':
       return 'Resent for approval';
     case 'rejected':
-      return 'Not approved';
+      return 'Rejection recorded';
     case 'edited':
       return 'Edited by creator';
     case 'approved':
@@ -33,10 +33,18 @@ export function getDocumentEventDescription(event: DocumentEventRecord) {
       return `${event.actorName} submitted this document for approval.`;
     case 'resubmitted':
       return `${event.actorName} uploaded changes and sent the document for approval again.`;
-    case 'rejected':
+    case 'rejected': {
+      const stage = event.metadata?.rejectionStage;
+      const stageLabel =
+        stage === 'approval'
+          ? 'rejected final approval'
+          : stage === 'review'
+            ? 'rejected the document at review'
+            : 'did not approve this document';
       return event.metadata?.reason
-        ? `${event.actorName} did not approve this document. Reason: ${event.metadata.reason}`
-        : `${event.actorName} did not approve this document.`;
+        ? `${event.actorName} ${stageLabel}. Reason: ${event.metadata.reason}`
+        : `${event.actorName} ${stageLabel}.`;
+    }
     case 'edited':
       if (event.metadata?.action === 'file_replaced') {
         return event.metadata.fileName

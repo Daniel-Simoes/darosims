@@ -21,6 +21,8 @@ export interface DocumentEventRecord {
     fileName?: string;
     action?: string;
     recipientEmail?: string;
+    /** Set on reject: owner declined at review vs approver declined at final approval. */
+    rejectionStage?: 'review' | 'approval';
   };
 }
 

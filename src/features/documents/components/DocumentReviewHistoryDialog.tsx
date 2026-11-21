@@ -96,9 +96,21 @@ export function DocumentReviewHistoryDialog({
                           By <span className="doc-review-history-email">{step.byEmail}</span>
                         </p>
                       ) : null}
+                      {step.rejectionStage ? (
+                        <p className="doc-review-history-step-stage">
+                          Stage:{' '}
+                          <span className="doc-review-history-stage-badge">
+                            {step.rejectionStage === 'approval'
+                              ? 'Final approval'
+                              : 'Document review'}
+                          </span>
+                        </p>
+                      ) : null}
                       {step.reviewMessage ? (
                         <div className="doc-review-history-reason">
-                          <span className="doc-review-history-reason-label">Reason not approved</span>
+                          <span className="doc-review-history-reason-label">
+                            {step.reasonLabel ?? 'Reason not approved'}
+                          </span>
                           <p>{step.reviewMessage}</p>
                         </div>
                       ) : null}

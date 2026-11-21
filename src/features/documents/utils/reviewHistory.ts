@@ -23,6 +23,8 @@ export interface DocumentReviewTimelineStep {
   toEmail?: string;
   /** Rejection reason or reviewer notes */
   reviewMessage?: string;
+  rejectionStage?: 'review' | 'approval';
+  reasonLabel?: string;
 }
 
 export type ReviewHistoryTeamUser = { name: string; email: string };
@@ -106,6 +108,41 @@ function approverEmailForDoc(doc: DocumentRecord, teamUsers: ReviewHistoryTeamUs
   return resolveEmail(designated, teamUsers) || pickEmail(designated);
 }
 
+type RejectionStage = 'review' | 'approval';
+
+function resolveRejectionStage(
+  event: DocumentEventRecord,
+  sortedEvents: DocumentEventRecord[],
+): RejectionStage {
+  const meta = event.metadata?.rejectionStage;
+  if (meta === 'approval' || meta === 'review') return meta;
+
+  const eventTime = new Date(event.createdAt).getTime();
+  const reviewedBefore = sortedEvents.some(
+    (entry) =>
+      entry.type === 'reviewed' &&
+      new Date(entry.createdAt).getTime() <= eventTime &&
+      entry.id !== event.id,
+  );
+  return reviewedBefore ? 'approval' : 'review';
+}
+
+function rejectionTimelineCopy(stage: RejectionStage) {
+  if (stage === 'approval') {
+    return {
+      title: 'Approval rejected',
+      description:
+        'Final approval was rejected. The document was returned to the creator for revision.',
+      reasonLabel: 'Reason approval was rejected',
+    };
+  }
+  return {
+    title: 'Review rejected',
+    description: 'Review was rejected. The document was returned to the creator for revision.',
+    reasonLabel: 'Reason review was rejected',
+  };
+}
+
 function eventSection(event: DocumentEventRecord): string {
   switch (event.type) {
     case 'created':
@@ -138,7 +175,11 @@ function eventDescription(event: DocumentEventRecord, doc: DocumentRecord): stri
     case 'reviewed':
       return 'Review completed and sent for final approval.';
     case 'rejected':
-      return 'Document not approved — returned to creator for revision.';
+      return event.metadata?.rejectionStage === 'approval'
+        ? 'Final approval rejected — returned to creator for revision.'
+        : event.metadata?.rejectionStage === 'review'
+          ? 'Review rejected — returned to creator for revision.'
+          : 'Document not approved — returned to creator for revision.';
     case 'edited':
       if (event.metadata?.action === 'file_replaced' && event.metadata.fileName) {
         return `Replaced document file (${event.metadata.fileName}).`;
@@ -280,13 +321,17 @@ export function buildDocumentReviewTimeline(
     if (doc.rejectionReason?.trim() && doc.rejectedAt) {
       const rejectorEmail =
         pickEmail(doc.rejectedBy) || resolveEmail(doc.rejectedBy, teamUsers);
+      const stage: RejectionStage = 'review';
+      const copy = rejectionTimelineCopy(stage);
       steps.push({
         id: 'rejected-fallback',
-        title: 'Not approved',
-        description: 'Returned to creator for revision.',
+        title: copy.title,
+        description: copy.description,
         date: formatReviewDateTime(doc.rejectedAt),
         byEmail: rejectorEmail,
         reviewMessage: doc.rejectionReason.trim(),
+        rejectionStage: stage,
+        reasonLabel: copy.reasonLabel,
       });
     }
 
@@ -381,14 +426,18 @@ export function buildDocumentReviewTimeline(
         pickEmail(event.actorEmail, doc.rejectedBy) ||
         resolveEmail(event.actorName, teamUsers) ||
         resolveEmail(doc.rejectedBy, teamUsers);
+      const stage = resolveRejectionStage(event, sorted);
+      const copy = rejectionTimelineCopy(stage);
 
       steps.push({
         id: `rejected-${event.id}`,
-        title: 'Not approved',
-        description: 'Returned to creator for revision.',
+        title: copy.title,
+        description: copy.description,
         date: formatReviewDateTime(event.createdAt),
         byEmail: rejectorEmail,
         reviewMessage: reason,
+        rejectionStage: stage,
+        reasonLabel: copy.reasonLabel,
       });
       continue;
     }

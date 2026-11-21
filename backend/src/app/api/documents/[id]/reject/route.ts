@@ -38,11 +38,11 @@ export async function POST(
       return jsonResponse({ error: 'Document not found' }, 404);
     }
 
-    const pendingApproval = isPendingDocumentApproval(existing);
+    const pendingFinalApproval = isPendingDocumentApproval(existing);
     const canRejectAsReviewer = await isAuthUserDocumentOwner(auth.email, existing.owner);
     const canRejectAsApprover = await isAuthUserDesignatedApprover(auth.email, existing);
 
-    if (pendingApproval) {
+    if (pendingFinalApproval) {
       if (!canRejectAsApprover) {
         return jsonResponse({ error: 'Only the designated approver can reject at this stage' }, 403);
       }
@@ -55,12 +55,14 @@ export async function POST(
 
     const document = await rejectDocumentForApproval(id, auth.name, reason);
 
+    const rejectionStage: 'review' | 'approval' = pendingFinalApproval ? 'approval' : 'review';
+
     await createDocumentEvent({
       documentId: document.id,
       type: 'rejected',
       actorEmail: auth.email,
       actorName: auth.name,
-      metadata: { reason },
+      metadata: { reason, rejectionStage },
     });
 
     if (existing.createdBy) {
@@ -70,11 +72,12 @@ export async function POST(
         recipientEmail: existing.createdBy,
         documentId: document.id,
         type: 'document_rejected',
-        title: 'Document not approved',
+        title:
+          rejectionStage === 'approval' ? 'Document approval rejected' : 'Document review rejected',
         actorName: auth.name,
         message: isCreatorAlsoOwner
-          ? `You did not approve "${document.title}". Reason: ${reason}`
-          : `${auth.name} did not approve "${document.title}". Reason: ${reason}`,
+          ? `You rejected "${document.title}" at the ${rejectionStage} stage. Reason: ${reason}`
+          : `${auth.name} rejected "${document.title}" at the ${rejectionStage} stage. Reason: ${reason}`,
       });
     }
 
