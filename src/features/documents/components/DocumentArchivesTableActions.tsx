@@ -4,15 +4,21 @@ import type { DocumentArchiveRecord } from '../../../types/documentArchive';
 interface DocumentArchivesTableActionsProps {
   row: DocumentArchiveRecord;
   viewingArchiveId: string | null;
+  canDelete?: boolean;
+  deleting?: boolean;
   onOpenCurrentDocument?: () => void;
   onOpenArchiveFile: () => void;
+  onDelete?: () => void;
 }
 
 export function DocumentArchivesTableActions({
   row,
   viewingArchiveId,
+  canDelete = false,
+  deleting = false,
   onOpenCurrentDocument,
   onOpenArchiveFile,
+  onDelete,
 }: DocumentArchivesTableActionsProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -96,6 +102,20 @@ export function DocumentArchivesTableActions({
             >
               Open archived file
             </button>
+            {canDelete && onDelete ? (
+              <button
+                type="button"
+                role="menuitem"
+                className="danger"
+                disabled={deleting}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onDelete();
+                }}
+              >
+                Delete archived version
+              </button>
+            ) : null}
           </div>
         ) : null}
       </div>

@@ -4,6 +4,7 @@ import type {
   PostDocumentCommentResponse,
 } from '../../types/documentComments';
 import type { DocumentChatPresenceResponse } from '../../types/documentChatPresence';
+import type { DocumentArchiveRecord } from '../../types/documentArchive';
 import type {
   CreateDocumentPayload,
   CreateDocumentResponse,
@@ -36,6 +37,12 @@ export const documentsApi = {
   deleteDocument(id: string) {
     return apiFetch<DeleteDocumentResponse>(`/api/documents/${id}`, {
       method: 'DELETE',
+    });
+  },
+
+  archiveDocument(id: string) {
+    return apiFetch<{ archive: DocumentArchiveRecord }>(`/api/documents/${id}/archive`, {
+      method: 'POST',
     });
   },
 

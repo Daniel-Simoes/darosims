@@ -4,6 +4,7 @@ import type { DocumentArchiveRecord } from '../../../types/documentArchive';
 import { documentTypeBadgeClass } from '../../../data/documentRegister';
 import { DOCUMENT_TYPES } from '../../../data/documentTypes';
 import { formatRevisionVersionLabel } from '../../../lib/documents/documentVersionRevision';
+import { formatDocumentCodeWithVersion } from '../../../lib/documents/documentCode';
 import { ListSearchBar } from '../../../components/common/ListSearchBar';
 import { ListPaginationFooter } from '../../../components/common/ListPaginationFooter';
 import { ListPageSizeSelect } from '../../../components/common/ListPageSizeSelect';
@@ -16,7 +17,10 @@ import {
 import { DocumentArchivesTableActions } from './DocumentArchivesTableActions';
 import { DocumentTableSkeleton } from '../../../components/common/skeletons/DashboardSkeletons';
 import { EmptyDraftsLottie } from './EmptyDraftsLottie';
-import { getCachedData } from '../../../lib/data/clientDataCache';
+import { useAuth } from '../../../context/AuthContext';
+import { canUserDeleteDocumentArchive } from '../../../lib/documentUsers';
+import { getCachedData, invalidateCachedData } from '../../../lib/data/clientDataCache';
+import { runWithMinDuration } from '../../../lib/ui/runWithMinDuration';
 import { runCachedScreenLoad } from '../../../lib/ui/skeletonLoading';
 import { useFlashMessages } from '../../../hooks/useFlashMessages';
 import { downloadDocumentArchivesCsv } from '../utils/documentArchivesExport';
@@ -35,11 +39,17 @@ function formatDate(value?: string) {
   return new Date(value).toLocaleDateString();
 }
 
+function archiveDisplayCode(row: DocumentArchiveRecord): string {
+  return formatDocumentCodeWithVersion(row.code, row.version) || row.code?.trim() || '—';
+}
+
 function matchesArchiveSearch(query: string, row: DocumentArchiveRecord): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
+  const code = archiveDisplayCode(row).toLowerCase();
   return (
     row.title.toLowerCase().includes(q) ||
+    code.includes(q) ||
     row.code.toLowerCase().includes(q) ||
     row.type.toLowerCase().includes(q) ||
     row.process.toLowerCase().includes(q)
@@ -64,6 +74,8 @@ export function DocumentArchivesView({
   const [typeFilter, setTypeFilter] = useState('');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [viewingArchiveId, setViewingArchiveId] = useState<string | null>(null);
+  const [deletingArchiveId, setDeletingArchiveId] = useState<string | null>(null);
+  const { user } = useAuth();
 
   const loadArchives = useCallback(async () => {
     setError('');
@@ -137,6 +149,32 @@ export function DocumentArchivesView({
       showSuccess('Copied to clipboard.');
     } catch {
       showError('Could not copy to clipboard.');
+    }
+  }
+
+  async function handleDeleteArchive(row: DocumentArchiveRecord) {
+    const code = archiveDisplayCode(row);
+    const label = code !== '—' ? code : row.title;
+    if (
+      !window.confirm(
+        `Delete archived version "${label}" (v${formatRevisionVersionLabel(row.version)})? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+
+    setDeletingArchiveId(row.id);
+    try {
+      await runWithMinDuration(async () => {
+        await api.deleteDocumentArchive(row.id);
+        setArchives((prev) => prev.filter((item) => item.id !== row.id));
+      });
+      invalidateCachedData(ARCHIVES_CACHE_KEY);
+      showSuccess(`Archived version "${label}" deleted.`);
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to delete archived version');
+    } finally {
+      setDeletingArchiveId(null);
     }
   }
 
@@ -281,7 +319,7 @@ export function DocumentArchivesView({
               </thead>
               <tbody>
                 {pagedArchives.map((row) => {
-                  const registerCode = row.code || '—';
+                  const registerCode = archiveDisplayCode(row);
                   const isExternal = row.documentOrigin === 'External';
 
                   return (
@@ -292,9 +330,13 @@ export function DocumentArchivesView({
                         </span>
                       </td>
                       <td className="doc-reg-col-arch-superseded">
-                        <span className="doc-reg-pill doc-reg-pill-sent">
-                          V{formatRevisionVersionLabel(row.supersededByVersion)}
-                        </span>
+                        {row.supersededByVersion > 0 ? (
+                          <span className="doc-reg-pill doc-reg-pill-sent">
+                            V{formatRevisionVersionLabel(row.supersededByVersion)}
+                          </span>
+                        ) : (
+                          '—'
+                        )}
                       </td>
                       <td className="doc-reg-col-arch-origin">
                         <div className="doc-reg-origin-cell">
@@ -377,12 +419,15 @@ export function DocumentArchivesView({
                         <DocumentArchivesTableActions
                           row={row}
                           viewingArchiveId={viewingArchiveId}
+                          canDelete={canUserDeleteDocumentArchive(user, row)}
+                          deleting={deletingArchiveId === row.id}
                           onOpenCurrentDocument={
                             onOpenCurrentDocument
                               ? () => onOpenCurrentDocument(row.sourceDocumentId)
                               : undefined
                           }
                           onOpenArchiveFile={() => void handleViewFile(row)}
+                          onDelete={() => void handleDeleteArchive(row)}
                         />
                       </td>
                     </tr>

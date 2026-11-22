@@ -1,3 +1,4 @@
+import { formatDocumentCodeForRecord } from '@/lib/documentCode';
 import { requireAuth, jsonResponse, corsHeaders } from '@/lib/auth';
 import { listAllDocumentEvents } from '@/lib/documentEvents';
 import { listDocumentsForUser } from '@/lib/documents';
@@ -42,9 +43,7 @@ export async function GET(request: Request) {
         return {
           documentId: id,
           documentTitle: document?.title ?? 'Unknown document',
-          documentCode: document?.documentOrigin === 'External'
-            ? document.externalRef ?? ''
-            : document?.code ?? '',
+          documentCode: document ? formatDocumentCodeForRecord(document) : '',
           documentStatus: document?.status ?? 'Draft',
           events: timelineEvents.sort(
             (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),

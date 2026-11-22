@@ -73,3 +73,7 @@ export async function writeArchiveStoredFile(archiveId: string, fileName: string
 export async function readArchiveStoredFile(archiveId: string, fileName: string) {
   return repo().readArchiveStoredFile(archiveId, fileName);
 }
+
+export async function deleteArchiveStoredFiles(archiveId: string) {
+  return repo().deleteArchiveStoredFiles(archiveId);
+}

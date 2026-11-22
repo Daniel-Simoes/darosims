@@ -1,3 +1,4 @@
+import { formatDocumentCodeForRecord } from '@/lib/documentCode';
 import { readAllDocuments } from '@/repositories/documents/documentRepository';
 import { canAuthUserViewDocument } from '@/lib/documentVisibility';
 import { readAllDocumentComments } from '@/repositories/comments/documentCommentRepository';
@@ -25,10 +26,7 @@ export function isUserInvolvedInDocumentChat(
 }
 
 function documentCodeLabel(document: DocumentRecord): string {
-  if (document.documentOrigin === 'External') {
-    return document.externalRef?.trim() || 'External';
-  }
-  return document.code?.trim() || '—';
+  return formatDocumentCodeForRecord(document);
 }
 
 export async function listDocumentChatsForUser(

@@ -1,5 +1,6 @@
 import type { AuthUser } from '../../types/auth';
 import type { DocumentRecord } from '../../types/documents';
+import { isRejectedDocument } from '../documentStatus';
 
 export const DOCUMENT_USERS = [
   { name: 'Daniel', email: 'daniel@daros.com' },
@@ -13,17 +14,66 @@ export function canUserApproveDocuments(user: AuthUser | null): boolean {
   return DOCUMENT_USERS.some((entry) => entry.email.toLowerCase() === normalizedEmail);
 }
 
+function matchesApproverIdentity(
+  user: AuthUser,
+  approverLabel: string | undefined,
+): boolean {
+  if (!approverLabel?.trim()) return false;
+  const ref = approverLabel.trim().toLowerCase();
+  if (user.name.trim().toLowerCase() === ref) return true;
+  if (user.email.trim().toLowerCase() === ref) return true;
+  const byName = DOCUMENT_USERS.find(
+    (entry) => entry.name.trim().toLowerCase() === ref,
+  );
+  if (byName && user.email.trim().toLowerCase() === byName.email.toLowerCase()) return true;
+  return false;
+}
+
+/** Live records in Document Control: only never-approved drafts (creator). Approved → delete only from Archives. */
 export function canUserDeleteDocument(
   user: AuthUser | null,
-  document: { approvedBy?: string; createdBy?: string },
+  document: {
+    status?: string;
+    approvedBy?: string;
+    createdBy?: string;
+    publishedBaseline?: { approvedBy?: string };
+  },
 ): boolean {
   if (!user) return false;
 
-  if (document.approvedBy?.trim()) {
-    return user.name.trim().toLowerCase() === document.approvedBy.trim().toLowerCase();
-  }
+  const lockedInControl =
+    document.status === 'Active' ||
+    Boolean(document.publishedBaseline) ||
+    Boolean(document.approvedBy?.trim());
+
+  if (lockedInControl) return false;
 
   return user.email.trim().toLowerCase() === (document.createdBy?.trim().toLowerCase() ?? '');
+}
+
+export function canUserDeleteDocumentArchive(
+  user: AuthUser | null,
+  archive: { approvedBy?: string },
+): boolean {
+  if (!user) return false;
+  return matchesApproverIdentity(user, archive.approvedBy?.trim());
+}
+
+/** Retire an approved live document into Document Archives (approver only). */
+export function canUserArchiveDocument(
+  user: AuthUser | null,
+  document: {
+    status?: string;
+    approvedBy?: string;
+    publishedBaseline?: unknown;
+    documentOrigin?: string;
+  },
+): boolean {
+  if (!user) return false;
+  if (document.status !== 'Active') return false;
+  if (document.publishedBaseline) return false;
+  if (document.documentOrigin === 'External') return false;
+  return matchesApproverIdentity(user, document.approvedBy?.trim());
 }
 
 export function getDocumentUserLabel(user: { name: string; email: string }) {
@@ -101,9 +151,13 @@ export function canUserEditDocument(
 ): boolean {
   if (document.status === 'Active') return false;
 
+  if (document.submittedAt && !isRejectedDocument(document)) return false;
+
   const userEmail = user?.email.trim().toLowerCase() ?? '';
   const starter = document.revisionStartedBy?.trim().toLowerCase() ?? '';
-  if (document.publishedBaseline && starter && userEmail === starter) return true;
+  if (document.publishedBaseline) {
+    return Boolean(starter && userEmail === starter);
+  }
 
   if (!isUserInvolvedInDocumentWorkflow(user, document)) return false;
   return true;

@@ -66,6 +66,10 @@ export interface DocumentRecord {
   createdBy: string;
   publishedBaseline?: DocumentPublishedBaseline;
   revisionStartedBy?: string;
+  /** Next version number; applied when the revision is submitted for review. */
+  revisionTargetVersion?: number;
+  /** Set after a new file upload during an open revision (required before submit). */
+  revisionFileUpdated?: boolean;
   /** Email of the user who last submitted the document for review. */
   lastSubmittedBy?: string;
 }
@@ -133,6 +137,8 @@ export interface UpdateDocumentInput {
   rejectedBy?: string;
   publishedBaseline?: DocumentPublishedBaseline;
   revisionStartedBy?: string;
+  revisionTargetVersion?: number;
+  revisionFileUpdated?: boolean;
   /** Email of the user who last submitted the document for review. */
   lastSubmittedBy?: string;
 }

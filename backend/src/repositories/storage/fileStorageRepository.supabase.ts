@@ -234,3 +234,14 @@ export async function readArchiveStoredFile(
   if (error || !data) return null;
   return Buffer.from(await data.arrayBuffer());
 }
+
+export async function deleteArchiveStoredFiles(archiveId: string): Promise<void> {
+  const prefix = `archives/${archiveId}/`;
+  const supabase = getSupabaseAdmin().storage.from(BUCKET);
+  const { data: items, error: listError } = await supabase.list(`archives/${archiveId}`, {
+    limit: 200,
+  });
+  if (listError || !items?.length) return;
+  const paths = items.map((item) => `${prefix}${item.name}`);
+  await supabase.remove(paths);
+}

@@ -175,6 +175,182 @@
   }
 }
 
+.dd-workflow-stepper {
+  position: relative;
+  margin: 0 0 16px;
+  padding: 16px 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  overflow: hidden;
+}
+
+.dd-workflow-progress-track {
+  position: absolute;
+  top: 26px;
+  left: 12%;
+  right: 12%;
+  height: 3px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  z-index: 0;
+}
+
+.dd-workflow-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #22c55e, #16a34a);
+  transition: width 0.85s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: dd-workflow-fill-glow 2s ease-in-out infinite;
+}
+
+@keyframes dd-workflow-fill-glow {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.08);
+  }
+}
+
+.dd-workflow-stepper-steps {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dd-workflow-step {
+  animation: dd-workflow-step-in 0.5s ease both;
+}
+
+@keyframes dd-workflow-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dd-workflow-step {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  text-align: center;
+}
+
+.dd-workflow-step-dot {
+  position: relative;
+  z-index: 1;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.dd-workflow-step-complete .dd-workflow-step-dot {
+  border-color: #22c55e;
+  background: #22c55e;
+  box-shadow: inset 0 0 0 3px #f0fdf4;
+  animation: dd-workflow-dot-complete 0.45s ease both;
+}
+
+@keyframes dd-workflow-dot-complete {
+  from {
+    transform: scale(0.65);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.dd-workflow-step-current .dd-workflow-step-dot {
+  border-color: #2563eb;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  animation: dd-workflow-dot-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes dd-workflow-dot-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgba(37, 99, 235, 0.12);
+    transform: scale(1.06);
+  }
+}
+
+.dd-workflow-step-title {
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.dd-workflow-step-complete .dd-workflow-step-title {
+  color: #15803d;
+}
+
+.dd-workflow-step-current .dd-workflow-step-title {
+  color: #1d4ed8;
+}
+
+.dd-workflow-step-caption {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #475569;
+  max-width: 140px;
+}
+
+.dd-workflow-step-current .dd-workflow-step-caption {
+  font-weight: 600;
+  color: #1e40af;
+}
+
+.dd-revision-warning {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #78350f;
+}
+
+.dd-revision-warning strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: #92400e;
+}
+
+.dd-revision-warning p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.dd-revision-warning-note {
+  margin-top: 8px !important;
+  font-weight: 600;
+}
+
 .dd-rejection-notice {
   margin-bottom: 16px;
   padding: 14px 16px;

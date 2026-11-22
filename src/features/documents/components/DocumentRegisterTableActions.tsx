@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { DocumentRecord } from '../../../types/documents';
 import type { AuthUser } from '../../../types/auth';
 import {
+  canUserArchiveDocument,
   canUserDeleteDocument,
   canUserEditDocument,
   canUserStartApprovedDocumentRevision,
@@ -11,6 +12,7 @@ interface DocumentRegisterTableActionsProps {
   doc: DocumentRecord;
   user: AuthUser | null;
   deletingId: string | null;
+  archivingId: string | null;
   viewingPdfId: string | null;
   onView: () => void;
   onChat: () => void;
@@ -19,12 +21,14 @@ interface DocumentRegisterTableActionsProps {
   onHistory: () => void;
   onOpenFile: () => void;
   onDelete: () => void;
+  onArchive: () => void;
 }
 
 export function DocumentRegisterTableActions({
   doc,
   user,
   deletingId,
+  archivingId,
   viewingPdfId,
   onView,
   onChat,
@@ -33,6 +37,7 @@ export function DocumentRegisterTableActions({
   onHistory,
   onOpenFile,
   onDelete,
+  onArchive,
 }: DocumentRegisterTableActionsProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -40,6 +45,7 @@ export function DocumentRegisterTableActions({
   const canEdit = canUserEditDocument(user, doc);
   const canRevision = canUserStartApprovedDocumentRevision(user, doc);
   const canDelete = canUserDeleteDocument(user, doc);
+  const canArchive = canUserArchiveDocument(user, doc);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -122,6 +128,19 @@ export function DocumentRegisterTableActions({
             {canRevision && !canEdit ? (
               <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onBeginRevision(); }}>
                 New version
+              </button>
+            ) : null}
+            {canArchive ? (
+              <button
+                type="button"
+                role="menuitem"
+                disabled={archivingId === doc.id}
+                onClick={() => {
+                  setMenuOpen(false);
+                  onArchive();
+                }}
+              >
+                Archive
               </button>
             ) : null}
             {canDelete ? (

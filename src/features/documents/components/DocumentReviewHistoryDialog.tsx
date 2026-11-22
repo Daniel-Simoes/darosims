@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { DocumentRecord } from '../../../types/documents';
+import { getDocumentDisplayCode } from '../../../lib/search/documentSearch';
 import type {
   DocumentReviewHistoryRow,
   DocumentReviewTimelineStep,
@@ -41,10 +42,7 @@ export function DocumentReviewHistoryDialog({
 
   if (!open || !documentRecord) return null;
 
-  const displayCode =
-    documentRecord.documentOrigin === 'External'
-      ? documentRecord.externalRef || '—'
-      : documentRecord.code || '—';
+  const displayCode = getDocumentDisplayCode(documentRecord) || '—';
 
   return createPortal(
     <div className="doc-review-history-overlay" onClick={onClose}>

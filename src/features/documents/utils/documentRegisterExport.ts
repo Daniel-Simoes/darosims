@@ -1,5 +1,6 @@
 import type { DocumentRecord } from '../../../types/documents';
 import { getDocumentStatusLabel } from '../../../lib/documentStatus';
+import { getDocumentDisplayCode } from '../../../lib/search/documentSearch';
 import { getDocumentRegisterOwnerDisplay } from './registerOwnerDisplay';
 import { DOCUMENT_USERS } from '../../../lib/permissions/documentPermissions';
 
@@ -15,7 +16,7 @@ function joinCsvRow(cells: (string | number | undefined)[]): string {
 }
 
 function documentCode(doc: DocumentRecord): string {
-  return doc.documentOrigin === 'External' ? doc.externalRef?.trim() || '' : doc.code?.trim() || '';
+  return getDocumentDisplayCode(doc);
 }
 
 function safeFileToken(value: string): string {

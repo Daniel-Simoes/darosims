@@ -201,3 +201,8 @@ export async function readArchiveStoredFile(
     return null;
   }
 }
+
+export async function deleteArchiveStoredFiles(archiveId: string): Promise<void> {
+  const dir = path.join(ARCHIVE_UPLOAD_DIR, archiveId);
+  await fs.rm(dir, { recursive: true, force: true });
+}

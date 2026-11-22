@@ -1,17 +1,26 @@
+import { formatDocumentCodeForRecord } from '../documents/documentCode';
+
 export function getDocumentDisplayCode(doc: {
   code?: string;
   externalRef?: string;
   documentOrigin?: string;
+  version?: number;
+  revisionTargetVersion?: number;
+  publishedBaseline?: unknown;
+  submittedAt?: string;
 }): string {
-  if (doc.documentOrigin === 'External') {
-    return doc.externalRef?.trim() ?? '';
-  }
-  return doc.code?.trim() ?? '';
+  return formatDocumentCodeForRecord(doc);
 }
 
 export function matchesTitleOrCode(
   query: string,
-  item: { title?: string; code?: string; externalRef?: string; documentOrigin?: string },
+  item: {
+    title?: string;
+    code?: string;
+    externalRef?: string;
+    documentOrigin?: string;
+    version?: number;
+  },
 ): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;

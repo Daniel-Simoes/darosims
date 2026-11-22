@@ -11,6 +11,7 @@ import {
 import { deleteAllDocumentFiles } from '@/repositories/storage/fileStorageRepository';
 import { filterDocumentsForViewer } from '@/lib/documentVisibility';
 import { isAuthUserInvolvedInOpenRevision } from '@/lib/documentPublishedBaseline';
+import { getNextDocumentVersion } from '@/lib/documentVersionRevision';
 import { findUserByEmail } from '@/repositories/users/userRepository';
 import type { CreateDocumentInput, DocumentRecord, UpdateDocumentInput } from '@/types';
 
@@ -119,6 +120,10 @@ export async function updateDocument(
       'publishedBaseline' in input ? input.publishedBaseline : existing.publishedBaseline,
     revisionStartedBy:
       'revisionStartedBy' in input ? input.revisionStartedBy : existing.revisionStartedBy,
+    revisionTargetVersion:
+      'revisionTargetVersion' in input ? input.revisionTargetVersion : existing.revisionTargetVersion,
+    revisionFileUpdated:
+      'revisionFileUpdated' in input ? input.revisionFileUpdated : existing.revisionFileUpdated,
     lastSubmittedBy: 'lastSubmittedBy' in input ? input.lastSubmittedBy : existing.lastSubmittedBy,
     code: nextCode,
     version: isExternal ? 0 : (input.version ?? existing.version),
@@ -138,10 +143,14 @@ export async function setDocumentFileName(
   const index = documents.findIndex((item) => item.id === documentId);
   if (index === -1) return null;
 
+  const current = documents[index];
+  const markRevisionFile =
+    current.publishedBaseline && !current.submittedAt ? true : current.revisionFileUpdated;
   documents[index] = {
-    ...documents[index],
+    ...current,
     fileName,
     ...(fileFormat ? { fileFormat } : {}),
+    revisionFileUpdated: markRevisionFile,
   };
   await writeAllDocuments(documents);
   return documents[index];
@@ -248,6 +257,40 @@ export async function submitDocumentForApproval(
     if (!(await isAuthUserInvolvedInOpenRevision(auth, existing))) {
       throw new Error('You are not allowed to submit this revision');
     }
+    const starter = existing.revisionStartedBy?.trim().toLowerCase() ?? '';
+    if (starter && starter !== submitter) {
+      throw new Error('Only the user who started this revision can submit it for review');
+    }
+
+    const baselineFile = existing.publishedBaseline?.fileName?.trim();
+    const fileName = existing.fileName?.trim();
+    const hasNewFile =
+      existing.revisionFileUpdated === true ||
+      Boolean(fileName && baselineFile && fileName !== baselineFile);
+    if (!hasNewFile) {
+      throw new Error('Upload a new document file before submitting this revision for review.');
+    }
+
+    const targetVersion =
+      existing.revisionTargetVersion ??
+      getNextDocumentVersion(existing.publishedBaseline?.version ?? existing.version);
+
+    const updated: DocumentRecord = {
+      ...existing,
+      version: targetVersion,
+      revisionTargetVersion: undefined,
+      revisionFileUpdated: undefined,
+      submittedAt: new Date().toISOString(),
+      lastSubmittedBy: submittedByEmail.trim().toLowerCase(),
+      reviewedAt: undefined,
+      reviewedBy: undefined,
+      rejectionReason: undefined,
+      rejectedAt: undefined,
+      rejectedBy: undefined,
+    };
+    documents[index] = updated;
+    await writeAllDocuments(documents);
+    return updated;
   }
 
   const updated: DocumentRecord = {

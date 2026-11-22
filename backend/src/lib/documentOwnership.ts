@@ -78,8 +78,11 @@ export async function canAuthUserEditDocument(
 
   if (document.status === 'Active') return false;
 
+  if (document.submittedAt) return false;
+
   if (document.publishedBaseline) {
-    return isAuthUserInvolvedInOpenRevision(auth, document as DocumentRecord);
+    const starter = document.revisionStartedBy?.trim().toLowerCase() ?? '';
+    return Boolean(starter && email === starter);
   }
 
   return isAuthUserInvolvedInDocument(auth, document);

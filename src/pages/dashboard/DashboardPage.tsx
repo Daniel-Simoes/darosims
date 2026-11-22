@@ -401,6 +401,11 @@ export function DashboardPage() {
                 bumpHomeDataRefresh();
               }}
               onDeleted={bumpHomeDataRefresh}
+              onArchived={() => {
+                bumpHomeDataRefresh();
+                setNotificationsRefreshKey((key) => key + 1);
+                setActiveNav('document-archives');
+              }}
             />
           ) : isDocumentArchives ? (
             <DocumentArchivesView

@@ -33,6 +33,7 @@ import {
   ensureSupersededVersionArchived,
   stagePublishedRevisionFile,
 } from '@/services/documents/documentArchiveService';
+import { canAuthUserDeleteDocument } from '@/lib/documentDelete';
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders() });
@@ -120,19 +121,18 @@ export async function PUT(
       if (!(await isAuthUserInvolvedInDocument(auth, existing))) {
         return jsonResponse({ error: 'You are not allowed to revise this document' }, 403);
       }
-      const nextVersion = Number(body.version);
-      const expected = getNextDocumentVersion(existing.version);
+      const nextVersion = getNextDocumentVersion(existing.version);
       if (!isValidRevisionTargetVersion(existing.version, nextVersion)) {
         return jsonResponse({ error: 'Invalid revision version number' }, 400);
       }
-      if (Math.abs(nextVersion - expected) > 0.001) {
-        return jsonResponse(
-          { error: `Next version must be ${expected} for this document` },
-          400,
-        );
+    } else {
+      const approvalOnly =
+        isApproving &&
+        isPendingDocumentApproval(existing) &&
+        (await isAuthUserDesignatedApprover(auth.email, existing));
+      if (!approvalOnly && !(await canAuthUserEditDocument(auth, existing))) {
+        return jsonResponse({ error: 'You are not allowed to edit this document' }, 403);
       }
-    } else if (!(await canAuthUserEditDocument(auth, existing))) {
-      return jsonResponse({ error: 'You are not allowed to edit this document' }, 403);
     }
 
     if (isApproving && !(await isDocumentApprover(auth.email))) {
@@ -164,10 +164,13 @@ export async function PUT(
 
     if (isBeginningRevision) {
       await stagePublishedRevisionFile(existing);
+      const nextRevisionVersion = getNextDocumentVersion(existing.version);
       input = {
         ...input,
         status: 'Draft',
-        version: Number(body.version),
+        version: existing.version,
+        revisionTargetVersion: nextRevisionVersion,
+        revisionFileUpdated: false,
         publishedBaseline: capturePublishedBaseline(existing),
         revisionStartedBy: normalizeTeamEmail(auth.email) ?? auth.email.trim().toLowerCase(),
         lastSubmittedBy: undefined,
@@ -193,6 +196,8 @@ export async function PUT(
         ...input,
         publishedBaseline: undefined,
         revisionStartedBy: undefined,
+        revisionTargetVersion: undefined,
+        revisionFileUpdated: undefined,
         lastSubmittedBy: undefined,
       };
     }
@@ -205,7 +210,10 @@ export async function PUT(
       version: isExternal
         ? undefined
         : isApproving
-          ? Math.max(Number(existing.version) || 0, 1)
+          ? Math.max(
+              Number(existing.revisionTargetVersion ?? existing.version) || 0,
+              1,
+            )
           : input.version !== undefined
             ? Number(input.version)
             : undefined,
@@ -228,7 +236,7 @@ export async function PUT(
         actorEmail: auth.email,
         actorName: auth.name,
         metadata: {
-          version: String(document.version),
+          version: String(document.revisionTargetVersion ?? document.version),
           previousVersion: String(existing.version),
         },
       });
@@ -318,18 +326,15 @@ export async function DELETE(
     return jsonResponse({ error: 'Document not found' }, 404);
   }
 
-  const isApprover =
-    !!document.approvedBy?.trim() &&
-    auth.name.trim().toLowerCase() === document.approvedBy.trim().toLowerCase();
-  const isCreator =
-    auth.email.trim().toLowerCase() === (document.createdBy?.trim().toLowerCase() ?? '');
-  const canDelete = document.approvedBy?.trim() ? isApprover : isCreator;
-
-  if (!canDelete) {
+  if (!canAuthUserDeleteDocument(auth, document)) {
+    const lockedInControl =
+      document.status === 'Active' ||
+      Boolean(document.publishedBaseline) ||
+      Boolean(document.approvedBy?.trim());
     return jsonResponse(
       {
-        error: document.approvedBy?.trim()
-          ? 'Only the person who approved this document can delete it.'
+        error: lockedInControl
+          ? 'Approved documents cannot be deleted here. Remove superseded versions from Document Archives.'
           : 'You are not authorized to delete this document.',
       },
       403,

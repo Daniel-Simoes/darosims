@@ -3,9 +3,17 @@ import type { DocumentArchivesResponse } from '../../types/documentArchive';
 
 const apiBase = import.meta.env.VITE_API_URL ?? '';
 
+export type DeleteDocumentArchiveResponse = { success: boolean };
+
 export const documentArchivesApi = {
   getDocumentArchives() {
     return apiFetch<DocumentArchivesResponse>('/api/document-archives');
+  },
+
+  deleteDocumentArchive(id: string) {
+    return apiFetch<DeleteDocumentArchiveResponse>(`/api/document-archives/${id}`, {
+      method: 'DELETE',
+    });
   },
 };
 

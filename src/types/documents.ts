@@ -64,6 +64,8 @@ export interface DocumentRecord {
   rejectedBy?: string;
   publishedBaseline?: DocumentPublishedBaseline;
   revisionStartedBy?: string;
+  revisionTargetVersion?: number;
+  revisionFileUpdated?: boolean;
   lastSubmittedBy?: string;
 }
 

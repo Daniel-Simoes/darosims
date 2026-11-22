@@ -43,6 +43,80 @@ export function generateDocumentCode(
   return `${prefix} ${String(maxNumber + 1).padStart(2, '0')}`;
 }
 
+/**
+ * Version number used when rendering the document code (same rules everywhere as Document Control).
+ * During an open revision before submit, show the target revision on the code.
+ */
+export function resolveDocumentVersionForCode(doc: {
+  version?: number;
+  revisionTargetVersion?: number;
+  publishedBaseline?: unknown;
+  submittedAt?: string;
+}): number {
+  const current = Number(doc.version);
+  const target = doc.revisionTargetVersion;
+  if (doc.publishedBaseline && target != null && Number.isFinite(target) && !doc.submittedAt) {
+    return target;
+  }
+  return Number.isFinite(current) ? current : 1;
+}
+
+/**
+ * DAROS internal code with revision suffix (e.g. `FR AD 01` + v1.1 → `FR AD 01.1`).
+ * Base stored code stays the series number; minor revisions append `.1`, `.2`, …
+ * Version `1` keeps the base code without a suffix.
+ */
+export function formatDocumentCodeWithVersion(
+  code: string | undefined,
+  version: number | undefined,
+): string {
+  const base = code?.trim();
+  if (!base) return '';
+
+  const v = Number(version);
+  if (!Number.isFinite(v) || v <= 1) {
+    return base;
+  }
+
+  let minorDigit: number;
+  if (Number.isInteger(v)) {
+    minorDigit = v;
+  } else {
+    const fractional = v - Math.floor(v);
+    if (fractional < 0.001) {
+      return base;
+    }
+    minorDigit = Math.round(fractional * 10);
+  }
+
+  if (minorDigit <= 0) {
+    return base;
+  }
+
+  const match = base.match(/^(.+\s)(\d+)$/);
+  if (match) {
+    return `${match[1]}${match[2]}.${minorDigit}`;
+  }
+
+  return `${base}.${minorDigit}`;
+}
+
+export function formatDocumentCodeForRecord(doc: {
+  code?: string;
+  version?: number;
+  revisionTargetVersion?: number;
+  publishedBaseline?: unknown;
+  submittedAt?: string;
+  documentOrigin?: string;
+  externalRef?: string;
+}): string {
+  if (doc.documentOrigin === 'External') {
+    return doc.externalRef?.trim() || '—';
+  }
+  const version = resolveDocumentVersionForCode(doc);
+  return formatDocumentCodeWithVersion(doc.code, version) || doc.code?.trim() || '—';
+}
+
 /** Keep the numeric suffix when type/process changes; fall back if that code is taken. */
 export function recalculateDocumentCodeForTypeProcessChange(
   type: string,

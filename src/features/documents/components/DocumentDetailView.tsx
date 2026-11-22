@@ -22,6 +22,7 @@ import { getCachedData } from '../../../lib/data/clientDataCache';
 import { runCachedScreenLoad } from '../../../lib/ui/skeletonLoading';
 import {
   canUserApproveDocuments,
+  canUserArchiveDocument,
   canUserDeleteDocument,
   canUserEditDocument,
   canUserStartApprovedDocumentRevision,
@@ -35,7 +36,10 @@ import { ConfirmDialog } from '../../../components/dialogs/ConfirmDialog';
 import { DocumentWorkflowPeopleDialog } from '../../../components/dialogs/DocumentWorkflowPeopleDialog';
 import { hasOpenDocumentRevision } from '../../../lib/documents/documentPublishedBaseline';
 import { RejectDocumentDialog } from '../../../components/dialogs/RejectDocumentDialog';
-import { recalculateDocumentCodeForTypeProcessChange } from '../../../lib/documentCode';
+import {
+  recalculateDocumentCodeForTypeProcessChange,
+} from '../../../lib/documentCode';
+import { getDocumentDisplayCode } from '../../../lib/search/documentSearch';
 import {
   formatRevisionVersionLabel,
   getNextDocumentVersion,
@@ -45,6 +49,7 @@ import '../../../components/common/FlashAlert.css';
 import { useFlashMessages } from '../../../hooks/useFlashMessages';
 import { invalidateCachedData } from '../../../lib/data/clientDataCache';
 import { runWithMinDuration } from '../../../lib/ui/runWithMinDuration';
+import { DocumentWorkflowStepper } from './DocumentWorkflowStepper';
 import './DocumentDetailView.css';
 
 const STATUSES: DocumentRecord['status'][] = ['Active', 'Draft', 'Obsolete'];
@@ -55,6 +60,7 @@ interface DocumentDetailViewProps {
   autoBeginRevision?: boolean;
   onBack: () => void;
   onDeleted?: () => void;
+  onArchived?: () => void;
   onApproved?: () => void;
   onSubmittedForApproval?: () => void;
 }
@@ -131,6 +137,7 @@ export function DocumentDetailView({
   autoBeginRevision = false,
   onBack,
   onDeleted,
+  onArchived,
   onApproved,
   onSubmittedForApproval,
 }: DocumentDetailViewProps) {
@@ -148,6 +155,7 @@ export function DocumentDetailView({
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isArchiving, setIsArchiving] = useState(false);
   const { error, success, successFadingOut, setError, showSuccess, showError } = useFlashMessages();
   const [showOwnerConfirmDialog, setShowOwnerConfirmDialog] = useState(false);
   const [showResubmitConfirmDialog, setShowResubmitConfirmDialog] = useState(false);
@@ -159,7 +167,7 @@ export function DocumentDetailView({
   const autoBeginRevisionAttempted = useRef(false);
   const [revisionFileError, setRevisionFileError] = useState('');
   const [isUploadingRevisionFile, setIsUploadingRevisionFile] = useState(false);
-  const actionBusy = isSaving || isDeleting || isUploadingRevisionFile;
+  const actionBusy = isSaving || isDeleting || isArchiving || isUploadingRevisionFile;
   const ownerFieldRef = useRef<HTMLDivElement>(null);
   const [registerCodes, setRegisterCodes] = useState<string[]>([]);
   const ownerNames = teamUsers.map((entry) => entry.name);
@@ -256,7 +264,6 @@ export function DocumentDetailView({
   async function handleStartVersionUpdate() {
     if (!document || document.status !== 'Active' || isExternal) return;
 
-    const nextVersion = getNextDocumentVersion(document.version);
     setError('');
     setIsSaving(true);
     try {
@@ -264,7 +271,6 @@ export function DocumentDetailView({
         const { document: updated } = await api.updateDocument(documentId, {
           beginRevision: true,
           status: 'Draft',
-          version: nextVersion,
         });
         setDocument(updated);
         setForm(documentToForm(updated));
@@ -272,9 +278,6 @@ export function DocumentDetailView({
       });
       invalidateCachedData('register:list');
       invalidateCachedData('archives:list');
-      showSuccess(
-        `New draft started at version ${formatRevisionVersionLabel(nextVersion)}. Update the content and submit for review.`,
-      );
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to start document revision');
     } finally {
@@ -289,20 +292,25 @@ export function DocumentDetailView({
     approverOverride?: string;
   }): Promise<DocumentRecord | null> {
     if (!document) return null;
-    if (!canUserEditDocument(user, document)) {
-      setError('You are not allowed to edit this document.');
-      return null;
-    }
 
     const nextStatus = options?.status ?? form.status;
     const isExternal = form.documentOrigin === 'External';
+    const isApproving =
+      !isExternal && document.status === 'Draft' && nextStatus === 'Active';
+    const mayApproveOnly =
+      isApproving &&
+      isPendingDocumentApproval(document) &&
+      canApprove &&
+      isUserDesignatedApprover(user, document, teamUsers);
+
+    if (!canUserEditDocument(user, document) && !mayApproveOnly) {
+      setError('You are not allowed to edit this document.');
+      return null;
+    }
     if (isExternal && !form.externalVersion.trim()) {
       setError('Version / Edition is required for external documents.');
       return null;
     }
-
-    const isApproving =
-      !isExternal && document.status === 'Draft' && nextStatus === 'Active';
 
     if (isApproving && !canApprove) {
       setError('You are not authorized to approve documents.');
@@ -340,7 +348,10 @@ export function DocumentDetailView({
       version: isExternal
         ? undefined
         : isApproving
-          ? Math.max(Number(form.version) || document.version || 0, 1)
+          ? Math.max(
+              Number(document.revisionTargetVersion ?? form.version ?? document.version) || 0,
+              1,
+            )
           : Number(form.version) || document.version,
       ...(isApproving ? { fileName: document.fileName } : {}),
     };
@@ -393,7 +404,7 @@ export function DocumentDetailView({
       );
       setDocument(updated);
       setForm(documentToForm(updated));
-      showSuccess('New file attached. Save your changes, then resubmit for review.');
+      showSuccess('New file attached. Submit for review when you are ready.');
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to upload document file');
     } finally {
@@ -539,6 +550,13 @@ export function DocumentDetailView({
         if (!saved.fileName) {
           throw new Error('Upload a document file before submitting for review.');
         }
+        if (
+          hasOpenDocumentRevision(saved) &&
+          !saved.revisionFileUpdated &&
+          saved.fileName === saved.publishedBaseline?.fileName
+        ) {
+          throw new Error('Upload a new document file before submitting this revision for review.');
+        }
         await api.submitDocumentForApproval(documentId);
         const { document: updated } = await api.getDocument(documentId);
         setDocument(updated);
@@ -617,6 +635,32 @@ export function DocumentDetailView({
     }
   }
 
+  async function handleArchive() {
+    if (!document) return;
+    const label = getDocumentDisplayCode(document) || document.title;
+    if (
+      !window.confirm(
+        `Archive document "${label}"? It will be removed from Document Control and kept in Document Archives.`,
+      )
+    ) {
+      return;
+    }
+
+    setIsArchiving(true);
+    try {
+      await runWithMinDuration(async () => {
+        await api.archiveDocument(documentId);
+        invalidateCachedData('register:list');
+        invalidateCachedData('archives:list');
+      });
+      showSuccess('Document archived.');
+      onArchived?.();
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to archive document');
+      setIsArchiving(false);
+    }
+  }
+
   if (showSkeleton) {
     return (
       <div className="dd-page">
@@ -650,18 +694,45 @@ export function DocumentDetailView({
     (user?.email?.toLowerCase() ?? '') === (document.createdBy?.toLowerCase() ?? '');
   const isRejected = isRejectedDocument(document);
   const canReviseRejected = isRejected && isCreator && isDraftInternal;
-  const canSubmitForReview =
-    isDraftInternal && !document.submittedAt && isCreator && !isRejected;
+  const openRevision = hasOpenDocumentRevision(document);
+  const isRevisionStarter =
+    (user?.email?.trim().toLowerCase() ?? '') === (document.revisionStartedBy?.trim().toLowerCase() ?? '');
+  const revisionHasNewFile =
+    document.revisionFileUpdated === true ||
+    Boolean(
+      document.fileName?.trim() &&
+        document.publishedBaseline?.fileName?.trim() &&
+        document.fileName.trim() !== document.publishedBaseline.fileName.trim(),
+    );
+  const canSubmitOpenRevision =
+    openRevision && isDraftInternal && !document.submittedAt && !isRejected && isRevisionStarter;
+  const canSubmitNewDocument =
+    !openRevision && isDraftInternal && !document.submittedAt && isCreator && !isRejected;
+  const canSubmitForReview = canSubmitNewDocument || canSubmitOpenRevision;
   const canDelete = canUserDeleteDocument(user, document);
+  const showDeleteButton = canDelete && !pendingReview && !pendingFinalApproval;
+  const canArchive = canUserArchiveDocument(user, document);
+  const showArchiveButton = canArchive && !pendingReview && !pendingFinalApproval;
   const canEditDocument = canUserEditDocument(user, document);
-  const canStartVersionUpdate = canUserStartApprovedDocumentRevision(user, document);
-  const nextRevisionVersion = !isExternal ? getNextDocumentVersion(document.version) : null;
-  const displayCode = isExternal ? document.externalRef || '—' : document.code || '—';
+  const canStartVersionUpdate =
+    canUserStartApprovedDocumentRevision(user, document) && !openRevision;
+  const pendingRevisionVersion =
+    document.revisionTargetVersion ??
+    (openRevision && !isExternal ? getNextDocumentVersion(document.version) : null);
+  const nextRevisionVersion = !isExternal ? pendingRevisionVersion : null;
+  const showBackToControl =
+    !isEditing && (Boolean(document.submittedAt) || pendingReview || pendingFinalApproval);
+  const displayCode = getDocumentDisplayCode(document) || document.code || '—';
   const displayVersion = isExternal
     ? document.externalVersion || '—'
     : Number.isInteger(document.version)
       ? String(document.version).padStart(2, '0')
       : formatRevisionVersionLabel(document.version);
+
+  const showWorkflowStepper =
+    !isEditing &&
+    (isCreator || (openRevision && isRevisionStarter)) &&
+    (pendingReview || pendingFinalApproval);
 
   return (
     <div className="dd-page">
@@ -720,26 +791,34 @@ export function DocumentDetailView({
                   </button>
                 </>
               ) : null}
+              {showBackToControl ? (
+                <button type="button" className="dd-btn dd-btn-outline" onClick={onBack}>
+                  Back to Document Control
+                </button>
+              ) : null}
               {canSubmitForReview ? (
                 <button
                   type="button"
                   className="dd-btn dd-btn-primary"
                   onClick={handleSubmitForReview}
-                  disabled={isSaving}
+                  disabled={isSaving || (canSubmitOpenRevision && !revisionHasNewFile)}
+                  title={
+                    canSubmitOpenRevision && !revisionHasNewFile
+                      ? 'Upload a new document file before submitting for review'
+                      : undefined
+                  }
                 >
                   {isSaving ? 'Submitting...' : 'Submit for Review'}
                 </button>
               ) : null}
-              {canStartVersionUpdate && nextRevisionVersion !== null ? (
+              {canStartVersionUpdate ? (
                 <button
                   type="button"
                   className="dd-btn dd-btn-outline"
                   onClick={() => void handleStartVersionUpdate()}
                   disabled={isSaving}
                 >
-                  {isSaving
-                    ? 'Starting revision...'
-                    : `Update document to version ${formatRevisionVersionLabel(nextRevisionVersion)}`}
+                  {isSaving ? 'Starting...' : 'Start new version update'}
                 </button>
               ) : null}
               {canEditDocument ? (
@@ -747,7 +826,17 @@ export function DocumentDetailView({
                   {canReviseRejected ? 'Revise & resubmit' : 'Edit Document'}
                 </button>
               ) : null}
-              {canDelete ? (
+              {showArchiveButton ? (
+                <button
+                  type="button"
+                  className="dd-btn dd-btn-outline"
+                  onClick={() => void handleArchive()}
+                  disabled={isArchiving}
+                >
+                  {isArchiving ? 'Archiving...' : 'Archive'}
+                </button>
+              ) : null}
+              {showDeleteButton ? (
                 <button
                   type="button"
                   className="dd-btn dd-btn-danger"
@@ -797,6 +886,26 @@ export function DocumentDetailView({
           {error || success}
         </div>
       )}
+
+      {showWorkflowStepper ? <DocumentWorkflowStepper document={document} /> : null}
+
+      {openRevision && !document.submittedAt && isRevisionStarter ? (
+        <div className="dd-revision-warning" role="status">
+          <strong>New version in progress</strong>
+          <p>
+            Edit the document and upload an updated PDF, then submit for review. The version will change to{' '}
+            <strong>
+              {nextRevisionVersion !== null
+                ? formatRevisionVersionLabel(nextRevisionVersion)
+                : 'the next revision'}
+            </strong>{' '}
+            only after you submit—not before.
+          </p>
+          {!revisionHasNewFile ? (
+            <p className="dd-revision-warning-note">Upload a new file to unlock Submit for Review.</p>
+          ) : null}
+        </div>
+      ) : null}
 
       {document.rejectionReason && !document.submittedAt && isCreator ? (
         <div className="dd-rejection-notice">

@@ -1,4 +1,5 @@
 import { readDocumentFile } from '@/lib/documentFiles';
+import { deleteArchiveStoredFiles } from '@/repositories/storage/fileStorageRepository';
 import { readAllArchives, writeAllArchives } from '@/repositories/documents/archiveRepository';
 import {
   readArchiveStoredFile,
@@ -156,4 +157,37 @@ export async function archiveSupersededDocumentVersion(
 
 export async function readArchiveFile(archiveId: string, fileName: string): Promise<Buffer | null> {
   return readArchiveStoredFile(archiveId, fileName);
+}
+
+/** Moves the current approved record into Archives and removes it from Document Control. */
+export async function archiveRetiredActiveDocument(
+  document: DocumentRecord,
+  auth: { email: string; name: string },
+): Promise<DocumentArchiveRecord> {
+  if (document.status !== 'Active') {
+    throw new Error('Only active documents can be archived');
+  }
+  if (document.publishedBaseline) {
+    throw new Error('Finish or cancel the open revision before archiving this document');
+  }
+  if (document.documentOrigin === 'External') {
+    throw new Error('External documents cannot be archived this way');
+  }
+
+  const archive = await archiveSupersededDocumentVersion(document, auth, 0);
+  if (!archive) {
+    throw new Error('This version is already archived');
+  }
+  return archive;
+}
+
+export async function deleteDocumentArchive(id: string): Promise<boolean> {
+  const all = await readAllArchives();
+  const index = all.findIndex((item) => item.id === id);
+  if (index === -1) return false;
+  const archive = all[index];
+  await deleteArchiveStoredFiles(archive.id);
+  all.splice(index, 1);
+  await writeAllArchives(all);
+  return true;
 }

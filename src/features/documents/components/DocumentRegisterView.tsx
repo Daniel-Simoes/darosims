@@ -6,6 +6,8 @@ import { downloadDocumentRegisterCsv } from '../utils/documentRegisterExport';
 import { useTeamUsers } from '../../../context/TeamUsersContext';
 import { useAuth } from '../../../context/AuthContext';
 import { generateDocumentCode } from '../../../lib/documentCode';
+import { getDocumentDisplayCode } from '../../../lib/search/documentSearch';
+import { invalidateCachedData } from '../../../lib/data/clientDataCache';
 import {
   getDocumentStatusLabel,
   isPendingApprovalDocument,
@@ -187,7 +189,8 @@ export function DocumentRegisterView({
   const [isSaving, setIsSaving] = useState(false);
   const { error, success, successFadingOut, showSuccess, showError } = useFlashMessages();
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const registerActionBusy = isSaving || Boolean(deletingId);
+  const [archivingId, setArchivingId] = useState<string | null>(null);
+  const registerActionBusy = isSaving || Boolean(deletingId) || Boolean(archivingId);
   const [viewingPdfId, setViewingPdfId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
@@ -323,6 +326,33 @@ export function DocumentRegisterView({
       showError(err instanceof Error ? err.message : 'Failed to delete document');
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function handleArchive(doc: DocumentRecord) {
+    const label = getDocumentDisplayCode(doc) || getDocumentLabel(doc);
+    if (
+      !window.confirm(
+        `Archive document "${label}"? It will be removed from Document Control and kept in Document Archives.`,
+      )
+    ) {
+      return;
+    }
+
+    setArchivingId(doc.id);
+    try {
+      await runWithMinDuration(async () => {
+        await api.archiveDocument(doc.id);
+        setDocuments((prev) => prev.filter((item) => item.id !== doc.id));
+      });
+      invalidateCachedData('register:list');
+      invalidateCachedData('archives:list');
+      showSuccess(`Document "${label}" archived.`);
+      onOpenArchives?.();
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to archive document');
+    } finally {
+      setArchivingId(null);
     }
   }
 
@@ -878,8 +908,7 @@ export function DocumentRegisterView({
               </thead>
               <tbody>
                 {pagedDocuments.map((doc) => {
-                  const registerCode =
-                    doc.documentOrigin === 'External' ? doc.externalRef || '—' : doc.code || '—';
+                  const registerCode = getDocumentDisplayCode(doc) || '—';
                   const ownerDisplay = getDocumentRegisterOwnerDisplay(doc, teamUsers);
 
                   return (
@@ -976,15 +1005,16 @@ export function DocumentRegisterView({
                       <td className="doc-reg-col-owner">
                         <div className="doc-reg-stack">
                           <span className="doc-reg-stack-primary">{ownerDisplay.primary}</span>
-                          {ownerDisplay.secondary ? (
+                          {ownerDisplay.metaLines.map((line) => (
                             <span
+                              key={line}
                               className={`doc-reg-stack-secondary${
-                                isRegisterOwnerMetaPositive(ownerDisplay.secondary) ? ' is-positive' : ''
+                                isRegisterOwnerMetaPositive(line) ? ' is-positive' : ''
                               }`}
                             >
-                              {ownerDisplay.secondary}
+                              {line}
                             </span>
-                          ) : null}
+                          ))}
                         </div>
                       </td>
                       <td className="doc-reg-col-actions">
@@ -992,6 +1022,7 @@ export function DocumentRegisterView({
                           doc={doc}
                           user={user}
                           deletingId={deletingId}
+                          archivingId={archivingId}
                           viewingPdfId={viewingPdfId}
                           onView={() => onDocumentClick?.(doc.id)}
                           onChat={() => handleCommentsClick(doc)}
@@ -1000,6 +1031,7 @@ export function DocumentRegisterView({
                           onHistory={() => void openReviewHistory(doc)}
                           onOpenFile={() => void handleViewDocumentPdf(doc)}
                           onDelete={() => handleDelete(doc)}
+                          onArchive={() => void handleArchive(doc)}
                         />
                       </td>
                     </tr>

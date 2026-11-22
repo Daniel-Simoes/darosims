@@ -1,5 +1,6 @@
 import type { DocumentArchiveRecord } from '../../../types/documentArchive';
 import { formatRevisionVersionLabel } from '../../../lib/documents/documentVersionRevision';
+import { formatDocumentCodeWithVersion } from '../../../lib/documents/documentCode';
 
 function csvCell(value: string | number | undefined): string {
   if (value === undefined || value === null) return '';
@@ -54,7 +55,7 @@ export function downloadDocumentArchivesCsv(
       joinCsvRow([
         formatRevisionVersionLabel(row.version),
         formatRevisionVersionLabel(row.supersededByVersion),
-        row.code,
+        formatDocumentCodeWithVersion(row.code, row.version) || row.code,
         row.title,
         row.type,
         row.process,

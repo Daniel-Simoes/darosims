@@ -1,4 +1,5 @@
 import type { DocumentRecord } from '../../../types/documents';
+import { getDocumentDisplayCode } from '../../../lib/search/documentSearch';
 import type { DocumentReviewHistoryRow, DocumentReviewTimelineStep } from './reviewHistory';
 
 function csvCell(value: string | number | undefined): string {
@@ -13,7 +14,7 @@ function joinCsvRow(cells: (string | number | undefined)[]): string {
 }
 
 function documentCodeLabel(doc: DocumentRecord): string {
-  return doc.documentOrigin === 'External' ? doc.externalRef?.trim() || 'External' : doc.code?.trim() || '—';
+  return getDocumentDisplayCode(doc) || '—';
 }
 
 function safeFileToken(value: string): string {
