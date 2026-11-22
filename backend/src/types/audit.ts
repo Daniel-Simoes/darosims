@@ -16,6 +16,8 @@ export interface DocumentEventMetadata {
   version?: string;
   previousVersion?: string;
   supersededByVersion?: string;
+  archivedId?: string;
+  retired?: string;
   recipientEmail?: string;
   rejectionStage?: 'review' | 'approval';
 }
