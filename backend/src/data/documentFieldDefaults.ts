@@ -3,7 +3,8 @@ export type DocumentFieldOptionCategory =
   | 'location'
   | 'retention_period'
   | 'disposition'
-  | 'distribution_department';
+  | 'distribution_department'
+  | 'review_frequency';
 
 export const DOCUMENT_FIELD_OPTION_DEFAULTS: Record<DocumentFieldOptionCategory, readonly string[]> = {
   repository: ['Physical Repository', 'Employee Personal File', 'Document Control', 'Quality System'],
@@ -17,6 +18,15 @@ export const DOCUMENT_FIELD_OPTION_DEFAULTS: Record<DocumentFieldOptionCategory,
     'Quality',
     'Production',
     'Operations',
+  ],
+  review_frequency: [
+    'Monthly',
+    'Quarterly',
+    'Every six months',
+    'Annually',
+    'Every two months',
+    'Every three months',
+    'Every four months',
   ],
 };
 

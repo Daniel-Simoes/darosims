@@ -35,6 +35,7 @@ import { ProcessMenu } from './ProcessMenu';
 import { ConfirmDialog } from '../../../components/dialogs/ConfirmDialog';
 import { DocumentWorkflowPeopleDialog } from '../../../components/dialogs/DocumentWorkflowPeopleDialog';
 import { hasOpenDocumentRevision } from '../../../lib/documents/documentPublishedBaseline';
+import { applyReviewScheduleNextDate } from '../../../lib/documents/reviewSchedule';
 import { RejectDocumentDialog } from '../../../components/dialogs/RejectDocumentDialog';
 import {
   recalculateDocumentCodeForTypeProcessChange,
@@ -255,7 +256,15 @@ export function DocumentDetailView({
   }, [document, usesDarosCode, form.type, form.process, registerCodes]);
 
   function updateField<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      if (key === 'effectiveDate') {
+        return applyReviewScheduleNextDate(prev, 'effectiveDate', String(value));
+      }
+      if (key === 'reviewFrequency') {
+        return applyReviewScheduleNextDate(prev, 'reviewFrequency', String(value));
+      }
+      return { ...prev, [key]: value };
+    });
   }
 
   function handleCancelEdit() {
@@ -1210,10 +1219,11 @@ export function DocumentDetailView({
                     />
                   </EditField>
                   <EditField label="Review Frequency">
-                    <input
-                      className="dd-input"
+                    <DocumentFieldSelectWithAdd
+                      category="review_frequency"
                       value={form.reviewFrequency}
-                      onChange={(e) => updateField('reviewFrequency', e.target.value)}
+                      onChange={(v) => updateField('reviewFrequency', v)}
+                      placeholder="Select frequency..."
                     />
                   </EditField>
                   <EditField label="Next Review Date">
@@ -1223,6 +1233,11 @@ export function DocumentDetailView({
                       value={form.nextReviewDate}
                       onChange={(e) => updateField('nextReviewDate', e.target.value)}
                     />
+                    {form.effectiveDate && form.reviewFrequency ? (
+                      <span className="dd-edit-hint">
+                        Filled automatically from effective date and review frequency; you can adjust if needed.
+                      </span>
+                    ) : null}
                   </EditField>
                 </div>
               </section>

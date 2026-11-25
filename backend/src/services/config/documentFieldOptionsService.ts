@@ -6,7 +6,10 @@ import {
   appendFieldOptionRecord,
   readAllFieldOptions,
 } from '@/repositories/config/documentFieldOptionsRepository';
+import { readAllDocuments } from '@/repositories/documents/documentRepository';
+import { isMissingTableError } from '@/lib/supabaseSchemaCheck';
 import type { DocumentFieldOptionRecord } from '@/types/documentFieldOptions';
+import { collectDocumentFieldValues } from '@/services/config/documentFieldValuesFromDocuments';
 
 function normalizeLabel(label: string): string {
   return label.trim().replace(/\s+/g, ' ');
@@ -35,16 +38,31 @@ export function mergeFieldOptions(
   return merged.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 }
 
+async function readSavedFieldOptionLabels(): Promise<DocumentFieldOptionRecord[]> {
+  try {
+    return await readAllFieldOptions();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (isMissingTableError(message)) return [];
+    throw err;
+  }
+}
+
+async function gatherSavedAndDocumentValues(
+  category: DocumentFieldOptionCategory,
+  extra?: string,
+): Promise<string[]> {
+  const documents = await readAllDocuments();
+  const fromDocs = collectDocumentFieldValues(category, documents);
+  const all = await readSavedFieldOptionLabels();
+  const fromTable = all.filter((item) => item.category === category).map((item) => item.label);
+  return mergeFieldOptions(category, [...fromTable, ...fromDocs], extra);
+}
+
 export async function listFieldOptionsByCategory(
   category: DocumentFieldOptionCategory,
 ): Promise<string[]> {
-  try {
-    const all = await readAllFieldOptions();
-    const saved = all.filter((item) => item.category === category).map((item) => item.label);
-    return mergeFieldOptions(category, saved);
-  } catch {
-    return mergeFieldOptions(category, []);
-  }
+  return gatherSavedAndDocumentValues(category);
 }
 
 export async function createFieldOption(
@@ -57,14 +75,6 @@ export async function createFieldOption(
     throw new Error('Option label is required and must be at most 120 characters');
   }
 
-  const all = await readAllFieldOptions();
-  const exists = all.some(
-    (item) => item.category === category && item.label.toLowerCase() === normalized.toLowerCase(),
-  );
-  if (exists) {
-    return { option: all.find((item) => item.category === category && item.label.toLowerCase() === normalized.toLowerCase())!, options: await listFieldOptionsByCategory(category) };
-  }
-
   const option: DocumentFieldOptionRecord = {
     id: crypto.randomUUID(),
     category,
@@ -73,7 +83,21 @@ export async function createFieldOption(
     createdBy,
   };
 
-  await appendFieldOptionRecord(option);
-  const options = await listFieldOptionsByCategory(category);
+  try {
+    const all = await readAllFieldOptions();
+    const exists = all.some(
+      (item) => item.category === category && item.label.toLowerCase() === normalized.toLowerCase(),
+    );
+    if (!exists) {
+      await appendFieldOptionRecord(option);
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (!isMissingTableError(message)) {
+      throw err;
+    }
+  }
+
+  const options = await gatherSavedAndDocumentValues(category, normalized);
   return { option, options };
 }

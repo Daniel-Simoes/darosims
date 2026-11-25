@@ -24,6 +24,7 @@ import { ListPageSizeSelect } from '../../../components/common/ListPageSizeSelec
 import { usePaginatedSlice } from '../../../lib/pagination/usePaginatedSlice';
 import { matchesTitleOrCode } from '../../../lib/search/documentSearch';
 import { RegisterSelect } from './RegisterSelect';
+import { DocumentFieldSelectWithAdd } from './DocumentFieldSelectWithAdd';
 import { DocumentReviewHistoryDialog } from './DocumentReviewHistoryDialog';
 import { DocumentCommentsChat } from './DocumentCommentsChat';
 import {
@@ -32,6 +33,7 @@ import {
 } from '../../../lib/documents/documentCommentsGate';
 import { buildDocumentReviewHistoryRows, buildDocumentReviewTimeline } from '../utils/reviewHistory';
 import { getDocumentRegisterOwnerDisplay, isRegisterOwnerMetaPositive } from '../utils/registerOwnerDisplay';
+import { applyReviewScheduleNextDate } from '../../../lib/documents/reviewSchedule';
 import { DocumentRegisterTableActions } from './DocumentRegisterTableActions';
 import { DocumentTypeIcon, getRegisterTypeAvatarClass } from '../utils/registerTypeAvatar';
 import type { DocumentEventRecord } from '../../../types/audit';
@@ -57,7 +59,6 @@ import './DocumentRegisterStats.css';
 
 const ORIGINS = ['Internal', 'External'];
 const DEPARTMENTS = ['Quality', 'Production', 'HR', 'Operations', 'Management'];
-const FREQUENCIES = ['Annual', 'Bi-annual', 'Quarterly', 'Monthly'];
 const LOCATIONS = ['Document Control', 'Quality System', 'Production', 'HR Files'];
 const ACCESS_LEVELS = ['All Staff', 'Management', 'Quality Team', 'Restricted'];
 const RETENTION_PERIODS = ['1 year', '3 years', '5 years', '7 years', 'Permanent'];
@@ -277,7 +278,15 @@ export function DocumentRegisterView({
 
 
   function updateField<K extends keyof typeof emptyForm>(key: K, value: (typeof emptyForm)[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      if (key === 'effectiveDate') {
+        return applyReviewScheduleNextDate(prev, 'effectiveDate', String(value));
+      }
+      if (key === 'reviewFrequency') {
+        return applyReviewScheduleNextDate(prev, 'reviewFrequency', String(value));
+      }
+      return { ...prev, [key]: value };
+    });
   }
 
   function handleClear() {
@@ -690,10 +699,10 @@ export function DocumentRegisterView({
             </FormField>
 
             <FormField label="Review Frequency" required>
-              <RegisterSelect
+              <DocumentFieldSelectWithAdd
+                category="review_frequency"
                 value={form.reviewFrequency}
                 onChange={(v) => updateField('reviewFrequency', v)}
-                options={FREQUENCIES}
                 placeholder="Select frequency..."
               />
             </FormField>
