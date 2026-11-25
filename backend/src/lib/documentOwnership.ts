@@ -3,6 +3,10 @@ import { normalizeTeamEmail } from '@/lib/legacyEmails';
 import { isAuthUserDesignatedApprover } from '@/lib/documentApproval';
 import { isRejectedDocument } from '@/lib/documentWorkflow';
 import {
+  isPendingDocumentApproval,
+  isPendingDocumentReview,
+} from '@/lib/documentApproval';
+import {
   isAuthUserInvolvedInOpenRevision,
 } from '@/lib/documentPublishedBaseline';
 import type { DocumentRecord } from '@/types';
@@ -96,13 +100,31 @@ export async function canAuthUserEditDocument(
 ): Promise<boolean> {
   if (document.status === 'Active') return false;
 
+  const email = auth.email.trim().toLowerCase();
+  const createdBy = document.createdBy?.trim().toLowerCase() ?? '';
+  const revisionStarter = document.revisionStartedBy?.trim().toLowerCase() ?? '';
+
+  const isCreator = Boolean(createdBy && email === createdBy);
+  const isRevisionStarter = Boolean(
+    document.publishedBaseline && revisionStarter && email === revisionStarter,
+  );
+  const isElaborator = isCreator || isRevisionStarter;
+
   if (isRejectedDocument(document)) {
-    const email = auth.email.trim().toLowerCase();
-    const createdBy = document.createdBy?.trim().toLowerCase() ?? '';
-    const starter = document.revisionStartedBy?.trim().toLowerCase() ?? '';
-    if (createdBy && email === createdBy) return true;
-    return Boolean(starter && email === starter);
+    return isElaborator;
   }
 
-  return isAuthUserInvolvedInOpenRevision(auth, document as DocumentRecord);
+  if (isPendingDocumentApproval(document)) {
+    return isAuthUserDesignatedApprover(email, document);
+  }
+
+  if (isPendingDocumentReview(document)) {
+    return isElaborator || (await isAuthUserDocumentOwner(email, document.owner));
+  }
+
+  if (document.status === 'Draft' && !document.submittedAt) {
+    return isElaborator || (await isAuthUserDocumentOwner(email, document.owner));
+  }
+
+  return isElaborator;
 }

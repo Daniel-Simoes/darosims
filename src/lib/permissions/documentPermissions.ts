@@ -1,6 +1,10 @@
 import type { AuthUser } from '../../types/auth';
 import type { DocumentRecord } from '../../types/documents';
-import { isRejectedDocument } from '../documentStatus';
+import {
+  isPendingApprovalDocument,
+  isPendingFinalApprovalDocument,
+  isRejectedDocument,
+} from '../documentStatus';
 
 export const DOCUMENT_USERS = [
   { name: 'Daniel', email: 'daniel@daros.com' },
@@ -147,7 +151,40 @@ export function isUserDocumentElaborator(
   return Boolean(createdBy && userEmail === createdBy);
 }
 
-/** Creator, reviewer, approver, and revision participants may edit in-flight workflow documents. */
+function isUserDesignatedFinalApprover(
+  user: AuthUser,
+  document: Pick<DocumentRecord, 'approver' | 'owner'>,
+): boolean {
+  const designated = document.approver?.trim() || document.owner?.trim() || '';
+  if (!designated) return false;
+  if (designated.includes('@')) {
+    return user.email.trim().toLowerCase() === designated.toLowerCase();
+  }
+  return isDocumentOwnerSameAsUser(user, designated);
+}
+
+function isUserDocumentReviewer(user: AuthUser, owner: string | undefined): boolean {
+  return isDocumentOwnerSameAsUser(user, owner);
+}
+
+function isUserDocumentCreator(
+  user: AuthUser,
+  document: Pick<DocumentRecord, 'createdBy' | 'revisionStartedBy' | 'publishedBaseline'>,
+): boolean {
+  const userEmail = user.email.trim().toLowerCase();
+  const createdBy = document.createdBy?.trim().toLowerCase() ?? '';
+  if (createdBy && userEmail === createdBy) return true;
+  const starter = document.revisionStartedBy?.trim().toLowerCase() ?? '';
+  return Boolean(document.publishedBaseline && starter && userEmail === starter);
+}
+
+/**
+ * Edit rights by workflow stage:
+ * - Before review: creator + reviewer (owner).
+ * - After review, before approval: designated approver only.
+ * - After approval (Active): none (new version only).
+ * - Rejected: creator / revision starter only.
+ */
 export function canUserEditDocument(
   user: AuthUser | null,
   document: Pick<
@@ -171,7 +208,23 @@ export function canUserEditDocument(
     return isUserDocumentElaborator(user, document);
   }
 
-  return isUserInvolvedInDocumentWorkflow(user, document);
+  if (isPendingFinalApprovalDocument(document)) {
+    return isUserDesignatedFinalApprover(user, document);
+  }
+
+  if (isPendingApprovalDocument(document)) {
+    return (
+      isUserDocumentCreator(user, document) || isUserDocumentReviewer(user, document.owner)
+    );
+  }
+
+  if (document.status === 'Draft' && !document.submittedAt) {
+    return (
+      isUserDocumentCreator(user, document) || isUserDocumentReviewer(user, document.owner)
+    );
+  }
+
+  return isUserDocumentCreator(user, document);
 }
 
 export function canUserCreateDocumentVersion(user: AuthUser | null): boolean {
