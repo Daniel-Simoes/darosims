@@ -89,6 +89,30 @@ function buildDisplay(primary: string, metaLines: string[]): DocumentRegisterOwn
   return { primary, metaLines: lines, secondary: joinMetaLines(lines) };
 }
 
+function primaryWithRole(name: string, role: string): string {
+  const label = name?.trim();
+  if (!label || label === '—') return label || '—';
+  return `${label} (${role})`;
+}
+
+function isSameWorkflowPerson(
+  left: string | undefined,
+  right: string | undefined,
+  teamUsers: TeamUser[],
+): boolean {
+  const a = resolvePersonLabel(left, teamUsers).trim().toLowerCase();
+  const b = resolvePersonLabel(right, teamUsers).trim().toLowerCase();
+  return Boolean(a && b && a === b);
+}
+
+function pendingReviewerRole(doc: DocumentRecord, teamUsers: TeamUser[]): string {
+  const designatedApprover = doc.approver?.trim() || doc.owner?.trim();
+  if (isSameWorkflowPerson(doc.owner, designatedApprover, teamUsers)) {
+    return 'Reviewer and Approver';
+  }
+  return 'Reviewer';
+}
+
 /** Pending review / approval: reflect the in-flight version workflow, not the prior approved snapshot. */
 export function getDocumentRegisterOwnerDisplay(
   doc: DocumentRecord,
@@ -102,15 +126,17 @@ export function getDocumentRegisterOwnerDisplay(
   }
 
   if (isPendingFinalApprovalDocument(doc)) {
-    return buildDisplay(approverPrimary(doc, teamUsers), [originator, reviewedByLine(doc, teamUsers)].filter(
-      (line): line is string => Boolean(line),
-    ));
+    return buildDisplay(
+      primaryWithRole(approverPrimary(doc, teamUsers), 'Approver'),
+      [originator, reviewedByLine(doc, teamUsers)].filter((line): line is string => Boolean(line)),
+    );
   }
 
   if (isPendingApprovalDocument(doc)) {
-    return buildDisplay(reviewerPrimary(doc, teamUsers), [originator, toBeApprovedByLine(doc, teamUsers)].filter(
-      (line): line is string => Boolean(line),
-    ));
+    return buildDisplay(
+      primaryWithRole(reviewerPrimary(doc, teamUsers), pendingReviewerRole(doc, teamUsers)),
+      [originator, toBeApprovedByLine(doc, teamUsers)].filter((line): line is string => Boolean(line)),
+    );
   }
 
   if (doc.status === 'Active' && !openRevision) {
@@ -121,10 +147,11 @@ export function getDocumentRegisterOwnerDisplay(
     return buildDisplay(finalOwnerPrimary(doc, teamUsers), meta);
   }
 
-  if (doc.status === 'Draft' && doc.submittedAt) {
-    return buildDisplay(reviewerPrimary(doc, teamUsers), [originator, toBeApprovedByLine(doc, teamUsers)].filter(
-      (line): line is string => Boolean(line),
-    ));
+  if (doc.status === 'Draft' && doc.submittedAt && !doc.reviewedAt) {
+    return buildDisplay(
+      primaryWithRole(reviewerPrimary(doc, teamUsers), pendingReviewerRole(doc, teamUsers)),
+      [originator, toBeApprovedByLine(doc, teamUsers)].filter((line): line is string => Boolean(line)),
+    );
   }
 
   const meta: string[] = originator ? [originator] : [];

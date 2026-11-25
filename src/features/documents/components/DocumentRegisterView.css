@@ -642,6 +642,59 @@
   color: #475569;
 }
 
+.doc-reg-created-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.doc-reg-table .doc-reg-code-cell .doc-reg-avatar-created {
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+.doc-reg-table .doc-reg-code-cell .doc-reg-avatar-created:hover {
+  background: #cbd5e1;
+}
+
+.doc-reg-table .doc-reg-code-cell .doc-reg-avatar-created:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.doc-reg-table .doc-reg-code-cell .doc-reg-avatar-created svg {
+  display: block;
+}
+
+.doc-reg-created-popover {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+}
+
+.doc-reg-created-popover-title {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.doc-reg-created-popover-body {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #334155;
+}
+
+.doc-reg-created-popover-body strong {
+  color: #0f172a;
+  font-weight: 600;
+}
+
 .doc-reg-avatar {
   width: 32px;
   height: 32px;
@@ -832,11 +885,6 @@
 }
 
 .doc-reg-more-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 40;
-  min-width: 168px;
   padding: 6px;
   border: 1px solid #e8edf3;
   border-radius: 12px;

@@ -1,7 +1,7 @@
 import { type FormEvent, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
 import { api, fetchDocumentFileBlob, type CreateDocumentPayload, type DocumentRecord } from '../../../lib/api';
 import { documentTypeBadgeClass } from '../../../data/documentRegister';
-import { DOCUMENT_TYPES, TYPE_PREFIX } from '../../../data/documentTypes';
+import { DOCUMENT_TYPES } from '../../../data/documentTypes';
 import { downloadDocumentRegisterCsv } from '../utils/documentRegisterExport';
 import { useTeamUsers } from '../../../context/TeamUsersContext';
 import { useAuth } from '../../../context/AuthContext';
@@ -35,7 +35,8 @@ import { buildDocumentReviewHistoryRows, buildDocumentReviewTimeline } from '../
 import { getDocumentRegisterOwnerDisplay, isRegisterOwnerMetaPositive } from '../utils/registerOwnerDisplay';
 import { applyReviewScheduleNextDate } from '../../../lib/documents/reviewSchedule';
 import { DocumentRegisterTableActions } from './DocumentRegisterTableActions';
-import { DocumentTypeIcon, getRegisterTypeAvatarClass } from '../utils/registerTypeAvatar';
+import { DocumentTypeIcon } from '../utils/registerTypeAvatar';
+import { DocumentCreatedInfoButton } from './DocumentCreatedInfoButton';
 import type { DocumentEventRecord } from '../../../types/audit';
 import type { DocumentArchiveRecord } from '../../../types/documentArchive';
 
@@ -99,13 +100,6 @@ function CalendarIcon() {
       <path d="M16 2v4M8 2v4M3 10h18" />
     </svg>
   );
-}
-
-function getTypeAvatarLetter(doc: DocumentRecord) {
-  const prefix = TYPE_PREFIX[doc.type];
-  if (prefix?.trim()) return prefix.trim().charAt(0).toUpperCase();
-  const type = doc.type?.trim();
-  return type ? type.charAt(0).toUpperCase() : '?';
 }
 
 function getRegisterStatusLabel(doc: DocumentRecord) {
@@ -978,9 +972,7 @@ export function DocumentRegisterView({
                       </td>
                       <td className="doc-reg-col-code">
                         <div className="doc-reg-code-cell">
-                          <span className={`doc-reg-avatar ${getRegisterTypeAvatarClass(doc.type)}`}>
-                            {getTypeAvatarLetter(doc)}
-                          </span>
+                          <DocumentCreatedInfoButton record={doc} teamUsers={teamUsers} />
                           <div className="doc-reg-code-text">
                             <button
                               type="button"

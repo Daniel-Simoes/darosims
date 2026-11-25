@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { AnchoredPopover } from '../../../components/common/AnchoredPopover';
 import type { DocumentRecord } from '../../../types/documents';
 import type { AuthUser } from '../../../types/auth';
 import { isRegisterPendingDocument } from '../../../lib/documentStatus';
@@ -42,7 +43,8 @@ export function DocumentRegisterTableActions({
   onArchive,
 }: DocumentRegisterTableActionsProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const menuAnchorRef = useRef<HTMLButtonElement>(null);
+  const menuPanelRef = useRef<HTMLDivElement>(null);
 
   const canEdit = canUserEditDocument(user, doc);
   const canRevision = canUserStartApprovedDocumentRevision(user, doc);
@@ -56,9 +58,10 @@ export function DocumentRegisterTableActions({
     if (!menuOpen) return;
 
     function handlePointerDown(event: MouseEvent) {
-      if (!menuRef.current?.contains(event.target as Node)) {
-        setMenuOpen(false);
-      }
+      const target = event.target as Node;
+      if (menuAnchorRef.current?.contains(target)) return;
+      if (menuPanelRef.current?.contains(target)) return;
+      setMenuOpen(false);
     }
 
     window.addEventListener('mousedown', handlePointerDown);
@@ -116,8 +119,9 @@ export function DocumentRegisterTableActions({
         </button>
       )}
 
-      <div className="doc-reg-more-wrap" ref={menuRef}>
+      <div className="doc-reg-more-wrap">
         <button
+          ref={menuAnchorRef}
           type="button"
           className="doc-reg-round-btn"
           title="More actions"
@@ -130,8 +134,17 @@ export function DocumentRegisterTableActions({
             <circle cx="19" cy="12" r="1.75" />
           </svg>
         </button>
-        {menuOpen ? (
-          <div className="doc-reg-more-menu" role="menu">
+        <AnchoredPopover
+          open={menuOpen}
+          anchorRef={menuAnchorRef}
+          panelRef={menuPanelRef}
+          align="end"
+          minWidth={168}
+          maxWidth={240}
+          estimatedHeight={260}
+          className="doc-reg-more-menu"
+        >
+          <div role="menu">
             {canEdit ? (
               <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onEdit(); }}>
                 Edit document
@@ -183,7 +196,7 @@ export function DocumentRegisterTableActions({
               </button>
             ) : null}
           </div>
-        ) : null}
+        </AnchoredPopover>
       </div>
     </div>
   );
