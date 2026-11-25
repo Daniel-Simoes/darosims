@@ -1017,10 +1017,15 @@ export function DocumentRegisterView({
                       </td>
                       <td className="doc-reg-col-owner">
                         <div className="doc-reg-stack">
-                          <span className="doc-reg-stack-primary">{ownerDisplay.primary}</span>
-                          {ownerDisplay.metaLines.map((line) => (
+                          <span
+                            className="doc-reg-stack-primary"
+                            title={ownerDisplay.primaryTitle ?? undefined}
+                          >
+                            {ownerDisplay.primary}
+                          </span>
+                          {ownerDisplay.metaLines.map((line, index) => (
                             <span
-                              key={line}
+                              key={`${line}-${index}`}
                               className={`doc-reg-stack-secondary${
                                 isRegisterOwnerMetaPositive(line) ? ' is-positive' : ''
                               }`}

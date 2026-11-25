@@ -60,7 +60,7 @@ export function downloadDocumentRegisterCsv(documents: DocumentRecord[], fileSte
         getDocumentStatusLabel(doc),
         doc.documentOrigin ?? 'Internal',
         doc.documentOrigin === 'External' ? doc.externalVersion ?? '' : doc.version,
-        ownerDisplay.primary,
+        ownerDisplay.primaryTitle ?? ownerDisplay.primary,
         ownerDisplay.secondary ?? '',
         doc.department ?? '',
         doc.effectiveDate ?? '',

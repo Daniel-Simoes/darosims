@@ -1,5 +1,6 @@
 import type { DocumentRecord } from '../../../types/documents';
 import { hasOpenDocumentRevision } from '../../../lib/documents/documentPublishedBaseline';
+import { formatDistributionAccessOwnerPrimary } from '../../../lib/documents/distributionAccess';
 import {
   isPendingApprovalDocument,
   isPendingFinalApprovalDocument,
@@ -9,6 +10,8 @@ type TeamUser = { name: string; email: string };
 
 export type DocumentRegisterOwnerDisplay = {
   primary: string;
+  /** Hover title when primary is truncated (register table). */
+  primaryTitle?: string;
   /** Workflow context lines under the primary name (register table). */
   metaLines: string[];
   /** Flattened for CSV export. */
@@ -55,15 +58,51 @@ function toBeApprovedByLine(doc: DocumentRecord, teamUsers: TeamUser[]): string 
   return `To be approved by ${approver}`;
 }
 
-/** Active documents: final owner is whoever gave final approval for the effective version. */
-function finalOwnerPrimary(doc: DocumentRecord, teamUsers: TeamUser[]): string {
-  const approved = doc.approvedBy?.trim();
-  if (approved) {
-    const label = resolvePersonLabel(approved, teamUsers);
-    return label || approved;
+/** Full approval trail as separate lines (created → reviewed → approved). */
+function approvedDocumentMetaLines(doc: DocumentRecord, teamUsers: TeamUser[]): string[] {
+  const lines: string[] = [];
+
+  const created = originatorLine(doc, teamUsers);
+  if (created) lines.push(created);
+
+  const reviewerRef =
+    doc.reviewedBy?.trim() ||
+    (doc.reviewedAt || doc.status === 'Active' ? doc.owner?.trim() : '');
+  if (reviewerRef) {
+    const reviewer = resolvePersonLabel(reviewerRef, teamUsers);
+    if (reviewer) lines.push(`Reviewed by ${reviewer}`);
   }
-  const approver = resolvePersonLabel(doc.approver?.trim(), teamUsers);
-  return approver || '—';
+
+  const approverRef =
+    doc.approvedBy?.trim() ||
+    doc.approver?.trim() ||
+    (doc.status === 'Active' ? doc.owner?.trim() : '');
+  if (approverRef) {
+    const approver = resolvePersonLabel(approverRef, teamUsers);
+    if (approver) lines.push(`Approved by ${approver}`);
+  }
+
+  return lines;
+}
+
+const DISTRIBUTION_OWNER_MAX_VISIBLE = 2;
+
+/** Approved documents: owner column shows distribution / access recipients. */
+function distributionAccessPrimary(doc: DocumentRecord): Pick<
+  DocumentRegisterOwnerDisplay,
+  'primary' | 'primaryTitle'
+> {
+  const full = formatDistributionAccessOwnerPrimary(doc.distribution, doc.distributionIndividuals);
+  if (full) {
+    const primary = formatDistributionAccessOwnerPrimary(doc.distribution, doc.distributionIndividuals, {
+      maxVisible: DISTRIBUTION_OWNER_MAX_VISIBLE,
+    });
+    return {
+      primary,
+      primaryTitle: primary !== full ? full : undefined,
+    };
+  }
+  return { primary: doc.distribution?.trim() || '—' };
 }
 
 function reviewerPrimary(doc: DocumentRecord, teamUsers: TeamUser[]): string {
@@ -84,9 +123,13 @@ function revisionStarterPrimary(doc: DocumentRecord, teamUsers: TeamUser[]): str
   return label || '—';
 }
 
-function buildDisplay(primary: string, metaLines: string[]): DocumentRegisterOwnerDisplay {
+function buildDisplay(
+  primary: string,
+  metaLines: string[],
+  extras?: Pick<DocumentRegisterOwnerDisplay, 'primaryTitle'>,
+): DocumentRegisterOwnerDisplay {
   const lines = metaLines.filter(Boolean);
-  return { primary, metaLines: lines, secondary: joinMetaLines(lines) };
+  return { primary, metaLines: lines, secondary: joinMetaLines(lines), ...extras };
 }
 
 function primaryWithRole(name: string, role: string): string {
@@ -95,23 +138,6 @@ function primaryWithRole(name: string, role: string): string {
   return `${label} (${role})`;
 }
 
-function isSameWorkflowPerson(
-  left: string | undefined,
-  right: string | undefined,
-  teamUsers: TeamUser[],
-): boolean {
-  const a = resolvePersonLabel(left, teamUsers).trim().toLowerCase();
-  const b = resolvePersonLabel(right, teamUsers).trim().toLowerCase();
-  return Boolean(a && b && a === b);
-}
-
-function pendingReviewerRole(doc: DocumentRecord, teamUsers: TeamUser[]): string {
-  const designatedApprover = doc.approver?.trim() || doc.owner?.trim();
-  if (isSameWorkflowPerson(doc.owner, designatedApprover, teamUsers)) {
-    return 'Reviewer and Approver';
-  }
-  return 'Reviewer';
-}
 
 /** Pending review / approval: reflect the in-flight version workflow, not the prior approved snapshot. */
 export function getDocumentRegisterOwnerDisplay(
@@ -134,22 +160,21 @@ export function getDocumentRegisterOwnerDisplay(
 
   if (isPendingApprovalDocument(doc)) {
     return buildDisplay(
-      primaryWithRole(reviewerPrimary(doc, teamUsers), pendingReviewerRole(doc, teamUsers)),
+      primaryWithRole(reviewerPrimary(doc, teamUsers), 'Reviewer'),
       [originator, toBeApprovedByLine(doc, teamUsers)].filter((line): line is string => Boolean(line)),
     );
   }
 
   if (doc.status === 'Active' && !openRevision) {
-    const meta: string[] = [];
-    if (originator) meta.push(originator);
-    const reviewed = reviewedByLine(doc, teamUsers);
-    if (reviewed) meta.push(reviewed);
-    return buildDisplay(finalOwnerPrimary(doc, teamUsers), meta);
+    const distribution = distributionAccessPrimary(doc);
+    return buildDisplay(distribution.primary, approvedDocumentMetaLines(doc, teamUsers), {
+      primaryTitle: distribution.primaryTitle,
+    });
   }
 
   if (doc.status === 'Draft' && doc.submittedAt && !doc.reviewedAt) {
     return buildDisplay(
-      primaryWithRole(reviewerPrimary(doc, teamUsers), pendingReviewerRole(doc, teamUsers)),
+      primaryWithRole(reviewerPrimary(doc, teamUsers), 'Reviewer'),
       [originator, toBeApprovedByLine(doc, teamUsers)].filter((line): line is string => Boolean(line)),
     );
   }

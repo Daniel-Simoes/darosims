@@ -1,3 +1,5 @@
+import { parseDistributionDepartments } from '../../data/documentFieldDefaults';
+
 export function parseDistributionIndividuals(value: string | undefined): string[] {
   if (!value?.trim()) return [];
   return value
@@ -13,8 +15,6 @@ export function joinDistributionIndividuals(values: string[]): string {
     .join(', ');
 }
 
-import { parseDistributionDepartments } from '../../data/documentFieldDefaults';
-
 export function formatDistributionAccessSummary(
   departments: string | undefined,
   individuals: string | undefined,
@@ -29,4 +29,39 @@ export function formatDistributionAccessSummary(
     parts.push(`Individuals: ${people.join(', ')}`);
   }
   return parts.join(' · ') || '';
+}
+
+function mergeDistributionAccessLabels(
+  departments: string | undefined,
+  individuals: string | undefined,
+): string[] {
+  const seen = new Set<string>();
+  const merged: string[] = [];
+  const push = (raw: string) => {
+    const label = raw.trim();
+    if (!label) return;
+    const key = label.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    merged.push(label);
+  };
+
+  for (const item of parseDistributionDepartments(departments)) push(item);
+  for (const item of parseDistributionIndividuals(individuals)) push(item);
+
+  return merged;
+}
+
+/** Document Control owner column: IT, Human Resources — no labels. */
+export function formatDistributionAccessOwnerPrimary(
+  departments: string | undefined,
+  individuals: string | undefined,
+  options?: { maxVisible?: number },
+): string {
+  const merged = mergeDistributionAccessLabels(departments, individuals);
+  const maxVisible = options?.maxVisible;
+  if (maxVisible != null && maxVisible > 0 && merged.length > maxVisible) {
+    return `${merged.slice(0, maxVisible).join(', ')}…`;
+  }
+  return merged.join(', ');
 }

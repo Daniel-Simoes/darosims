@@ -826,6 +826,11 @@
 }
 
 .doc-reg-stack-primary {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 13px;
   font-weight: 600;
   color: #0f172a;
