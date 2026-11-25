@@ -20,6 +20,7 @@ const CLIENT_EDIT_KEYS = [
   'repository',
   'location',
   'distribution',
+  'distributionIndividuals',
   'retentionPeriod',
   'retentionNotes',
   'disposition',

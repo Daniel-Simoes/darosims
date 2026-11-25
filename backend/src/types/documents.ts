@@ -22,6 +22,7 @@ export interface DocumentPublishedBaseline {
   repository?: string;
   location?: string;
   distribution?: string;
+  distributionIndividuals?: string;
   retentionPeriod?: string;
   retentionNotes?: string;
   disposition?: string;
@@ -56,6 +57,7 @@ export interface DocumentRecord {
   repository?: string;
   location?: string;
   distribution?: string;
+  distributionIndividuals?: string;
   retentionPeriod?: string;
   retentionNotes?: string;
   disposition?: string;
@@ -98,6 +100,7 @@ export interface CreateDocumentInput {
   repository?: string;
   location?: string;
   distribution?: string;
+  distributionIndividuals?: string;
   retentionPeriod?: string;
   retentionNotes?: string;
   disposition?: string;
@@ -127,6 +130,7 @@ export interface UpdateDocumentInput {
   repository?: string;
   location?: string;
   distribution?: string;
+  distributionIndividuals?: string;
   retentionPeriod?: string;
   retentionNotes?: string;
   disposition?: string;

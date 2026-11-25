@@ -1,0 +1,58 @@
+.add-recipient-dialog {
+  max-width: 440px;
+}
+
+.add-recipient-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.add-recipient-choice {
+  width: 100%;
+  justify-content: center;
+}
+
+.add-recipient-input {
+  width: 100%;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+}
+
+.add-recipient-individuals {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.add-recipient-individual-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.add-recipient-individual-row .doc-select-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.add-recipient-remove {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.add-recipient-remove:hover {
+  color: #b91c1c;
+}
+
+.add-recipient-more {
+  width: 100%;
+  margin-bottom: 12px;
+}

@@ -54,6 +54,8 @@ function documentRecordFromPublishedBaseline(
     repository: baseline.repository ?? document.repository,
     location: baseline.location ?? document.location,
     distribution: baseline.distribution ?? document.distribution,
+    distributionIndividuals:
+      baseline.distributionIndividuals ?? document.distributionIndividuals,
     retentionPeriod: baseline.retentionPeriod ?? document.retentionPeriod,
     retentionNotes: baseline.retentionNotes ?? document.retentionNotes,
     disposition: baseline.disposition ?? document.disposition,

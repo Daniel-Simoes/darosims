@@ -108,6 +108,8 @@ export async function updateDocument(
     repository: input.repository ?? existing.repository,
     location: input.location ?? existing.location,
     distribution: input.distribution ?? existing.distribution,
+    distributionIndividuals:
+      input.distributionIndividuals ?? existing.distributionIndividuals,
     retentionPeriod: input.retentionPeriod ?? existing.retentionPeriod,
     retentionNotes: input.retentionNotes ?? existing.retentionNotes,
     disposition: input.disposition ?? existing.disposition,
@@ -208,6 +210,7 @@ export async function createDocument(
     repository: input.repository,
     location: input.location,
     distribution: input.distribution,
+    distributionIndividuals: input.distributionIndividuals,
     retentionPeriod: input.retentionPeriod,
     retentionNotes: input.retentionNotes,
     disposition: input.disposition,

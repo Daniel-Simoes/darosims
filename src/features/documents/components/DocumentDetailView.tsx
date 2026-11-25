@@ -52,7 +52,8 @@ import { invalidateCachedData } from '../../../lib/data/clientDataCache';
 import { runWithMinDuration } from '../../../lib/ui/runWithMinDuration';
 import { DocumentWorkflowStepper } from './DocumentWorkflowStepper';
 import { DocumentFieldSelectWithAdd } from './DocumentFieldSelectWithAdd';
-import { DocumentFieldMultiSelectWithAdd } from './DocumentFieldMultiSelectWithAdd';
+import { DocumentDistributionAccessField } from './DocumentDistributionAccessField';
+import { formatDistributionAccessSummary } from '../../../lib/documents/distributionAccess';
 import './DocumentDetailView.css';
 
 const STATUSES: DocumentRecord['status'][] = ['Active', 'Draft', 'Obsolete'];
@@ -128,6 +129,7 @@ function documentToForm(doc: DocumentRecord) {
     repository: doc.repository ?? '',
     location: doc.location ?? '',
     distribution: doc.distribution ?? '',
+    distributionIndividuals: doc.distributionIndividuals ?? '',
     retentionPeriod: doc.retentionPeriod ?? '',
     retentionNotes: doc.retentionNotes ?? '',
     disposition: doc.disposition ?? '',
@@ -360,6 +362,7 @@ export function DocumentDetailView({
       repository: form.repository || undefined,
       location: form.location || undefined,
       distribution: form.distribution || undefined,
+      distributionIndividuals: form.distributionIndividuals || undefined,
       retentionPeriod: form.retentionPeriod || undefined,
       retentionNotes: form.retentionNotes || undefined,
       disposition: form.disposition || undefined,
@@ -1020,7 +1023,15 @@ export function DocumentDetailView({
                 <h3 className="dd-card-title">Retention & Access</h3>
                 <InfoRow label="Repository" value={document.repository} />
                 <InfoRow label="Location" value={document.location} />
-                <InfoRow label="Distribution / Access" value={document.distribution} />
+                <InfoRow
+                  label="Distribution / Access"
+                  value={
+                    formatDistributionAccessSummary(
+                      document.distribution,
+                      document.distributionIndividuals,
+                    ) || document.distribution
+                  }
+                />
                 <InfoRow label="Retention Period" value={document.retentionPeriod} />
                 <InfoRow label="Retention Notes" value={document.retentionNotes} />
                 <InfoRow label="Disposition" value={document.disposition} />
@@ -1262,10 +1273,12 @@ export function DocumentDetailView({
                     />
                   </EditField>
                   <EditField label="Distribution / Access" wide>
-                    <DocumentFieldMultiSelectWithAdd
-                      category="distribution_department"
-                      value={form.distribution}
-                      onChange={(v) => updateField('distribution', v)}
+                    <DocumentDistributionAccessField
+                      departments={form.distribution}
+                      individuals={form.distributionIndividuals}
+                      teamNames={ownerNames}
+                      onDepartmentsChange={(v) => updateField('distribution', v)}
+                      onIndividualsChange={(v) => updateField('distributionIndividuals', v)}
                     />
                   </EditField>
                   <EditField label="Retention Period">
