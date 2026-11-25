@@ -72,39 +72,12 @@ export function resolveDocumentVersionForCode(doc: {
   return Number.isFinite(current) ? current : 1;
 }
 
+/** Document code is type + process + series number; version is shown separately (1, 2, 3…). */
 export function formatDocumentCodeWithVersion(
   code: string | undefined,
-  version: number | undefined,
+  _version?: number,
 ): string {
-  const base = code?.trim();
-  if (!base) return '';
-
-  const v = Number(version);
-  if (!Number.isFinite(v) || v <= 1) {
-    return base;
-  }
-
-  let minorDigit: number;
-  if (Number.isInteger(v)) {
-    minorDigit = v;
-  } else {
-    const fractional = v - Math.floor(v);
-    if (fractional < 0.001) {
-      return base;
-    }
-    minorDigit = Math.round(fractional * 10);
-  }
-
-  if (minorDigit <= 0) {
-    return base;
-  }
-
-  const match = base.match(/^(.+\s)(\d+)$/);
-  if (match) {
-    return `${match[1]}${match[2]}.${minorDigit}`;
-  }
-
-  return `${base}.${minorDigit}`;
+  return code?.trim() || '';
 }
 
 export function formatDocumentCodeForRecord(doc: {

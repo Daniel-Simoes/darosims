@@ -753,9 +753,7 @@ export function DocumentDetailView({
   const displayCode = getDocumentDisplayCode(document) || document.code || '—';
   const displayVersion = isExternal
     ? document.externalVersion || '—'
-    : Number.isInteger(document.version)
-      ? String(document.version).padStart(2, '0')
-      : formatRevisionVersionLabel(document.version);
+    : String(formatRevisionVersionLabel(document.version)).padStart(2, '0');
 
   const showWorkflowStepper =
     !isEditing &&

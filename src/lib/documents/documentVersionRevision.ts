@@ -1,19 +1,24 @@
-/** Next controlled version (e.g. 1 → 1.1, 1.1 → 1.2, 2 → 2.1). */
-export function getNextDocumentVersion(current: number): number {
+/** Whole-number versions only (1, 2, 3, …). Legacy decimals map to their major step. */
+export function normalizeDocumentVersion(current: number): number {
   const value = Number.isFinite(current) ? current : 1;
-  if (Number.isInteger(value)) return Math.round((value + 0.1) * 10) / 10;
-  return Math.round((value + 0.1) * 10) / 10;
+  return Math.max(1, Math.floor(value));
+}
+
+/** Next controlled version (e.g. 1 → 2, 2 → 3). */
+export function getNextDocumentVersion(current: number): number {
+  return normalizeDocumentVersion(current) + 1;
+}
+
+export function isValidRevisionTargetVersion(current: number, next: number): boolean {
+  if (!Number.isFinite(next) || !Number.isInteger(next)) return false;
+  return next === getNextDocumentVersion(current);
 }
 
 export function formatRevisionVersionLabel(version: number): string {
-  if (Number.isInteger(version)) return String(version);
-  return String(version);
+  return String(normalizeDocumentVersion(version));
 }
 
-/** Prior controlled version (e.g. 1.1 → 1, 1.2 → 1.1). */
+/** Prior controlled version (e.g. 2 → 1). */
 export function getPreviousDocumentVersion(current: number): number {
-  const value = Number.isFinite(current) ? current : 1;
-  if (value <= 1 + 0.0001) return 1;
-  if (Number.isInteger(value)) return Math.max(value - 1, 1);
-  return Math.round((value - 0.1) * 10) / 10;
+  return Math.max(1, normalizeDocumentVersion(current) - 1);
 }
