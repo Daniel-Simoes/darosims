@@ -13,6 +13,11 @@ import {
   getDocumentDetailViewId,
   parseDocumentDetailViewId,
 } from '../../data/documentNavigation';
+import {
+  getLiveMeetingViewId,
+  parseLiveMeetingViewId,
+} from '../../data/liveMeetingNavigation';
+import { LiveMeetingJoinView } from '../../features/liveKit/components/LiveMeetingJoinView';
 import { DashboardHeaderActions } from '../../features/notifications/components/DashboardHeaderActions';
 import type { DashboardNotification } from '../../lib/notifications';
 import { DashboardSidebar } from '../../features/dashboard/components/DashboardSidebar';
@@ -181,13 +186,17 @@ export function DashboardPage() {
   const isLegalAccessibility = activeNav === 'legal-accessibility';
   const documentDetailId = parseDocumentDetailViewId(activeNav);
   const isDocumentDetail = documentDetailId !== null;
+  const liveMeetingId = parseLiveMeetingViewId(activeNav);
+  const isLiveMeetingJoin = liveMeetingId !== null;
   const isDocumentView = documentViews.includes(activeNav);
   const moduleId = parseModuleViewId(activeNav);
   const isModuleView = moduleId !== null;
   const activeModule = dashboardModules.find((m) => m.id === moduleId);
   const sidebarActiveNav = isDocumentDetail ? documentReturnNav : activeNav;
 
-  const pageTitle = isDocumentDetail
+  const pageTitle = isLiveMeetingJoin
+    ? 'Daros Live'
+    : isDocumentDetail
     ? 'Document Details'
     : isProfileSettings
       ? 'Profile Settings'
@@ -277,6 +286,23 @@ export function DashboardPage() {
       return;
     }
 
+    if (
+      notification.approvalMeetingId &&
+      (notification.type === 'live_meeting_invitation' ||
+        notification.type === 'live_meeting_rescheduled' ||
+        notification.type === 'live_meeting_ended')
+    ) {
+      setActiveNav(getLiveMeetingViewId(notification.approvalMeetingId));
+      bumpNotificationsRefresh();
+      return;
+    }
+
+    if (notification.type === 'live_meeting_cancelled' && notification.documentId) {
+      openDocument(notification.documentId, undefined, returnNav);
+      bumpNotificationsRefresh();
+      return;
+    }
+
     if (notification.documentId) {
       openDocument(notification.documentId, undefined, returnNav);
     } else if (returnNav !== 'documents') {
@@ -315,7 +341,7 @@ export function DashboardPage() {
       />
 
       <div className="dashboard-main">
-        {!isDocumentDetail && (
+        {!isDocumentDetail && !isLiveMeetingJoin && (
         <header
           className={`dashboard-header ${isChat ? 'dashboard-header-chat' : ''} ${isDocumentRegisterShell ? 'dashboard-header-register' : ''}`}
         >
@@ -362,8 +388,13 @@ export function DashboardPage() {
         </header>
         )}
 
-        <main className={`dashboard-content ${isDocumentView || isDocumentDetail || isChat || isNotifications || isNotificationHistory || isProfileSettings || isLegalPrivacy || isLegalAccessibility ? 'dashboard-content-full' : ''} ${isChat ? 'dashboard-content-chat' : ''} ${isDocumentRegisterShell ? 'dashboard-content-register' : ''}`}>
-          {isLegalPrivacy ? (
+        <main className={`dashboard-content ${isDocumentView || isDocumentDetail || isChat || isNotifications || isNotificationHistory || isProfileSettings || isLegalPrivacy || isLegalAccessibility || isLiveMeetingJoin ? 'dashboard-content-full' : ''} ${isChat ? 'dashboard-content-chat' : ''} ${isDocumentRegisterShell ? 'dashboard-content-register' : ''}`}>
+          {isLiveMeetingJoin && liveMeetingId ? (
+            <LiveMeetingJoinView
+              meetingId={liveMeetingId}
+              onLeave={() => setActiveNav('notifications')}
+            />
+          ) : isLegalPrivacy ? (
             <DashboardLegalView slug="privacy" />
           ) : isLegalAccessibility ? (
             <DashboardLegalView slug="accessibility" />
@@ -387,6 +418,10 @@ export function DashboardPage() {
               documentId={documentDetailId}
               initialEdit={documentDetailEdit}
               autoBeginRevision={documentDetailBeginRevision}
+              onOpenLiveMeeting={(meetingNavId) => {
+                setDocumentReturnNav(activeNav);
+                setActiveNav(meetingNavId);
+              }}
               onBack={() => {
                 setDocumentDetailEdit(false);
                 setDocumentDetailBeginRevision(false);

@@ -71,6 +71,8 @@ export interface DocumentRecord {
   revisionTargetVersion?: number;
   revisionFileUpdated?: boolean;
   lastSubmittedBy?: string;
+  approvalWorkflow?: 'standard' | 'live';
+  activeApprovalMeetingId?: string;
 }
 
 export interface CreateDocumentPayload {

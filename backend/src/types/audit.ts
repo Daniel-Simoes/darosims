@@ -7,7 +7,13 @@ export type DocumentEventType =
   | 'edited'
   | 'revision_started'
   | 'version_archived'
-  | 'approved';
+  | 'approved'
+  | 'approval_meeting_scheduled'
+  | 'approval_meeting_started'
+  | 'approval_meeting_ended'
+  | 'approval_meeting_cancelled'
+  | 'approval_meeting_rescheduled'
+  | 'approval_meeting_reviewed';
 
 export interface DocumentEventMetadata {
   reason?: string;
@@ -20,6 +26,8 @@ export interface DocumentEventMetadata {
   retired?: string;
   recipientEmail?: string;
   rejectionStage?: 'review' | 'approval';
+  approvalMeetingId?: string;
+  meetingDecisionId?: string;
 }
 
 export interface DocumentEventRecord {

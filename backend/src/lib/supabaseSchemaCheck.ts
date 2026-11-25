@@ -9,7 +9,11 @@ const CORE_TABLES = [
 ] as const;
 
 /** Optional; chat works without online/typing indicators. */
-const OPTIONAL_TABLES = ['document_chat_presence'] as const;
+const OPTIONAL_TABLES = [
+  'document_chat_presence',
+  'approval_meetings',
+  'meeting_decisions',
+] as const;
 
 const REQUIRED_TABLES = [...CORE_TABLES, ...OPTIONAL_TABLES] as const;
 
@@ -56,6 +60,9 @@ export function chatStorageHint(missingTables: string[]): string | undefined {
   }
   if (missingTables.includes('document_chat_presence')) {
     return 'Run backend/supabase/patch-document-chat-presence.sql in Supabase → SQL Editor for online/typing indicators.';
+  }
+  if (missingTables.includes('approval_meetings') || missingTables.includes('meeting_decisions')) {
+    return 'Run backend/supabase/patch-approval-meetings.sql in Supabase → SQL Editor for Daros Live meetings.';
   }
   return undefined;
 }

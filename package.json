@@ -13,9 +13,15 @@
     "build:backend": "npm run build --prefix backend",
     "lint": "oxlint",
     "preview": "vite preview",
-    "security:audit": "npm audit --audit-level=high && npm audit --prefix backend --audit-level=high"
+    "security:audit": "npm audit --audit-level=high && npm audit --prefix backend --audit-level=high",
+    "test:doc-viewer-sync": "node scripts/test-document-viewer-sync.mjs",
+    "test:live-approval": "node scripts/test-live-approval-workflow.mjs",
+    "test:live-notifications": "node scripts/test-live-meeting-notifications.mjs"
   },
   "dependencies": {
+    "@livekit/components-react": "^2.9.26",
+    "@livekit/components-styles": "^1.2.0",
+    "livekit-client": "^2.25.0",
     "lottie-react": "^3.1.1",
     "pdfjs-dist": "^6.3.289",
     "react": "^19.2.7",

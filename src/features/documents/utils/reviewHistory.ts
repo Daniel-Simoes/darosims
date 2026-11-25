@@ -1,7 +1,7 @@
 import type { DocumentEventRecord } from '../../../types/audit';
 import type { DocumentArchiveRecord } from '../../../types/documentArchive';
 import type { DocumentRecord } from '../../../types/documents';
-import { getDocumentEventDescription } from '../../../lib/documentEvents';
+import { getDocumentEventDescription, getDocumentEventLabel } from '../../../lib/documentEvents';
 import {
   formatRevisionVersionLabel,
   getPreviousDocumentVersion,
@@ -382,6 +382,12 @@ const TIMELINE_EVENT_TYPES = new Set<DocumentEventRecord['type']>([
   'approved',
   'rejected',
   'edited',
+  'approval_meeting_scheduled',
+  'approval_meeting_rescheduled',
+  'approval_meeting_started',
+  'approval_meeting_reviewed',
+  'approval_meeting_ended',
+  'approval_meeting_cancelled',
 ]);
 
 export function buildDocumentReviewTimeline(
@@ -538,6 +544,19 @@ export function buildDocumentReviewTimeline(
     }
 
     if (event.type === 'edited') {
+      continue;
+    }
+
+    if (event.type.startsWith('approval_meeting_')) {
+      const actorEmail =
+        pickEmail(event.actorEmail) || resolveEmail(event.actorName, teamUsers);
+      steps.push({
+        id: `${event.type}-${event.id}`,
+        title: getDocumentEventLabel(event.type),
+        description: eventDescription(event, doc),
+        date: formatReviewDateTime(event.createdAt),
+        byEmail: actorEmail,
+      });
       continue;
     }
 

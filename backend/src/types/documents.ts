@@ -76,6 +76,8 @@ export interface DocumentRecord {
   revisionFileUpdated?: boolean;
   /** Email of the user who last submitted the document for review. */
   lastSubmittedBy?: string;
+  approvalWorkflow?: 'standard' | 'live';
+  activeApprovalMeetingId?: string;
 }
 
 export interface CreateDocumentInput {
@@ -106,6 +108,8 @@ export interface CreateDocumentInput {
   disposition?: string;
   comments?: string;
   status?: DocumentStatus;
+  approvalWorkflow?: 'standard' | 'live';
+  activeApprovalMeetingId?: string;
 }
 
 export interface UpdateDocumentInput {
@@ -149,4 +153,6 @@ export interface UpdateDocumentInput {
   revisionFileUpdated?: boolean;
   /** Email of the user who last submitted the document for review. */
   lastSubmittedBy?: string;
+  approvalWorkflow?: 'standard' | 'live';
+  activeApprovalMeetingId?: string;
 }

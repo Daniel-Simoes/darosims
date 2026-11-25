@@ -1,0 +1,146 @@
+.livekit-meeting-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 420px;
+  height: min(72vh, 720px);
+}
+
+.livekit-meeting-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.livekit-meeting-title {
+  display: block;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.livekit-meeting-meta {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.livekit-meeting-stage {
+  flex: 1;
+  min-height: 360px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0f172a;
+}
+
+.livekit-btn {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  border: none;
+}
+
+.livekit-btn-primary {
+  background: #2563eb;
+  color: #fff;
+}
+
+.livekit-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.livekit-btn-outline {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+}
+
+.livekit-btn-leave {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.livekit-test-join {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.livekit-test-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.livekit-test-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.livekit-test-field input {
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.livekit-test-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.livekit-test-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.livekit-alert {
+  font-size: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  line-height: 1.45;
+}
+
+.livekit-alert-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.livekit-alert-warn {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.dl-join-page {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+.dl-join-title {
+  margin: 0 0 12px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.dl-join-message {
+  margin: 0 0 20px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #475569;
+}

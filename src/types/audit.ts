@@ -9,7 +9,13 @@ export type DocumentEventType =
   | 'edited'
   | 'revision_started'
   | 'version_archived'
-  | 'approved';
+  | 'approved'
+  | 'approval_meeting_scheduled'
+  | 'approval_meeting_started'
+  | 'approval_meeting_ended'
+  | 'approval_meeting_cancelled'
+  | 'approval_meeting_rescheduled'
+  | 'approval_meeting_reviewed';
 
 export interface DocumentEventRecord {
   id: string;
@@ -28,6 +34,8 @@ export interface DocumentEventRecord {
     recipientEmail?: string;
     /** Set on reject: owner declined at review vs approver declined at final approval. */
     rejectionStage?: 'review' | 'approval';
+    approvalMeetingId?: string;
+    meetingDecisionId?: string;
   };
 }
 

@@ -34,6 +34,29 @@
   image-rendering: auto;
 }
 
+.doc-pdf-page-nav {
+  display: flex;
+  gap: 8px;
+  margin-right: 12px;
+}
+
+.doc-pdf-page-nav-btn {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+  cursor: pointer;
+}
+
+.doc-pdf-page-nav-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .doc-pdf-toolbar-title {
   margin-left: auto;
   font-weight: 500;

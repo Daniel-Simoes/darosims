@@ -51,6 +51,7 @@ import { useFlashMessages } from '../../../hooks/useFlashMessages';
 import { invalidateCachedData } from '../../../lib/data/clientDataCache';
 import { runWithMinDuration } from '../../../lib/ui/runWithMinDuration';
 import { DocumentWorkflowStepper } from './DocumentWorkflowStepper';
+import { DocumentLiveMeetingsPanel } from './DocumentLiveMeetingsPanel';
 import { DocumentFieldSelectWithAdd } from './DocumentFieldSelectWithAdd';
 import { DocumentDistributionAccessField } from './DocumentDistributionAccessField';
 import { formatDistributionAccessSummary } from '../../../lib/documents/distributionAccess';
@@ -67,6 +68,7 @@ interface DocumentDetailViewProps {
   onArchived?: () => void;
   onApproved?: () => void;
   onSubmittedForApproval?: () => void;
+  onOpenLiveMeeting?: (meetingNavId: string) => void;
 }
 
 function InfoRow({ label, value }: { label: string; value: ReactNode }) {
@@ -146,6 +148,7 @@ export function DocumentDetailView({
   onArchived,
   onApproved,
   onSubmittedForApproval,
+  onOpenLiveMeeting,
 }: DocumentDetailViewProps) {
   const { user } = useAuth();
   const teamUsers = useTeamUsers();
@@ -914,6 +917,14 @@ export function DocumentDetailView({
       )}
 
       {showWorkflowStepper ? <DocumentWorkflowStepper document={document} /> : null}
+
+      {document.documentOrigin !== 'External' ? (
+        <DocumentLiveMeetingsPanel
+          documentId={documentId}
+          canJoin={Boolean(onOpenLiveMeeting)}
+          onJoinMeeting={(navId) => onOpenLiveMeeting?.(navId)}
+        />
+      ) : null}
 
       {openRevision && !document.submittedAt && isRevisionStarter ? (
         <div className="dd-revision-warning" role="status">

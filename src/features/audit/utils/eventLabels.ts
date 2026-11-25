@@ -20,6 +20,18 @@ export function getDocumentEventLabel(type: DocumentEventRecord['type']) {
       return 'Version archived';
     case 'approved':
       return 'Approved';
+    case 'approval_meeting_scheduled':
+      return 'Live review scheduled';
+    case 'approval_meeting_started':
+      return 'Live review started';
+    case 'approval_meeting_ended':
+      return 'Live review ended';
+    case 'approval_meeting_cancelled':
+      return 'Live review cancelled';
+    case 'approval_meeting_rescheduled':
+      return 'Live review rescheduled';
+    case 'approval_meeting_reviewed':
+      return 'Live review completed';
     default:
       return 'Event';
   }
@@ -74,6 +86,31 @@ export function getDocumentEventDescription(event: DocumentEventRecord) {
     }
     case 'approved':
       return `${event.actorName} approved this document.`;
+    case 'approval_meeting_scheduled':
+      return `${event.actorName} scheduled a live review and approval meeting.`;
+    case 'approval_meeting_started':
+      return `${event.actorName} started the live review meeting.`;
+    case 'approval_meeting_ended': {
+      const action = event.metadata?.action;
+      if (action === 'approved') {
+        return `${event.actorName} completed the live session with approval.`;
+      }
+      if (action === 'rejected') {
+        return `${event.actorName} completed the live session with rejection.`;
+      }
+      if (action === 'incomplete') {
+        return `${event.actorName} ended the live review meeting before the approval cycle finished.`;
+      }
+      return `${event.actorName} ended the live review meeting.`;
+    }
+    case 'approval_meeting_rescheduled':
+      return `${event.actorName} rescheduled the live review and approval meeting.`;
+    case 'approval_meeting_reviewed':
+      return `${event.actorName} marked the document as reviewed during the live session.`;
+    case 'approval_meeting_cancelled':
+      return event.metadata?.reason
+        ? `${event.actorName} cancelled the live review meeting. Reason: ${event.metadata.reason}`
+        : `${event.actorName} cancelled the live review meeting.`;
     default:
       return event.actorName;
   }

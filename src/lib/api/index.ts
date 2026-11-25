@@ -6,6 +6,7 @@ import { documentArchivesApi, fetchArchiveFileBlob } from './documentArchives';
 import { notificationsApi } from './notifications';
 import { auditApi } from './audit';
 import { chatsApi } from './chats';
+import { approvalMeetingsApi } from './approvalMeetings';
 import {
   fetchDocumentFileBlob,
   fetchDocumentSourceBlob,
@@ -25,6 +26,7 @@ export const api = {
   ...notificationsApi,
   ...auditApi,
   ...chatsApi,
+  ...approvalMeetingsApi,
   uploadDocumentFile,
   uploadDocumentSourceFile,
 };

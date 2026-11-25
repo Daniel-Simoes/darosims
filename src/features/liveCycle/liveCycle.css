@@ -1,0 +1,243 @@
+.live-cycle-section {
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.live-cycle-open-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  justify-content: center;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #1e40af;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.live-cycle-open-btn:hover:not(:disabled) {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.live-cycle-open-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.live-cycle-open-btn svg {
+  flex-shrink: 0;
+}
+
+.live-cycle-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.live-cycle-panel {
+  width: min(720px, 100%);
+  max-height: min(92vh, 900px);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15);
+  overflow: hidden;
+}
+
+.live-cycle-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.live-cycle-panel-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.live-cycle-panel-subtitle {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.live-cycle-panel-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.live-cycle-panel-close:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.live-cycle-panel-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 20px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.live-cycle-tab {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 10px 4px;
+  margin-bottom: -1px;
+  cursor: pointer;
+}
+
+.live-cycle-tab.is-active {
+  color: #1d4ed8;
+  border-bottom-color: #2563eb;
+}
+
+.live-cycle-panel-body {
+  padding: 20px;
+  overflow-y: auto;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.55;
+}
+
+.live-cycle-panel-placeholder {
+  margin: 0;
+  padding: 16px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.live-cycle-workflow-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.live-cycle-workflow-label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.live-cycle-workflow-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.live-cycle-workflow-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  background: #fff;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.live-cycle-workflow-card input {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.live-cycle-workflow-card strong {
+  display: block;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.live-cycle-workflow-card small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.live-cycle-workflow-card.active {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.live-cycle-live-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.live-cycle-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.live-cycle-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .live-cycle-field-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.live-cycle-textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.live-cycle-associated-doc {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+}

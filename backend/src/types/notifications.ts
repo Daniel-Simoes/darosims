@@ -5,7 +5,11 @@ export type NotificationType =
   | 'document_approved'
   | 'document_rejected'
   | 'document_message'
-  | 'lgpd_request';
+  | 'lgpd_request'
+  | 'live_meeting_invitation'
+  | 'live_meeting_rescheduled'
+  | 'live_meeting_cancelled'
+  | 'live_meeting_ended';
 
 export interface NotificationRecord {
   id: string;
@@ -17,6 +21,7 @@ export interface NotificationRecord {
   actorName: string;
   createdAt: string;
   read: boolean;
+  approvalMeetingId?: string;
 }
 
 export interface CreateNotificationInput {
@@ -26,4 +31,5 @@ export interface CreateNotificationInput {
   title: string;
   message: string;
   actorName: string;
+  approvalMeetingId?: string;
 }

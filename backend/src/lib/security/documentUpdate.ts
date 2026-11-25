@@ -30,6 +30,8 @@ const CLIENT_EDIT_KEYS = [
   'fileName',
   'sourceModified',
   'rejectionReason',
+  'approvalWorkflow',
+  'activeApprovalMeetingId',
 ] as const;
 
 export function buildClientDocumentUpdate(

@@ -1,0 +1,97 @@
+.dd-live-meetings {
+  margin: 20px 0;
+  padding: 16px 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.dd-live-meetings-title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.dd-live-meetings-intro,
+.dd-live-meetings-muted {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.dd-live-meetings-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dd-live-meeting-card {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.dd-live-meeting-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dd-live-meeting-status {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #475569;
+}
+
+.dd-live-meeting-when,
+.dd-live-meeting-decision,
+.dd-live-meeting-reject-reason {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #475569;
+}
+
+.dd-live-meeting-participants {
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.dd-live-meetings-label {
+  display: block;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 4px;
+}
+
+.dd-live-meeting-participants ul {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.dd-live-meeting-participants li {
+  margin: 2px 0;
+}
+
+.dd-live-participant-role {
+  display: inline-block;
+  min-width: 72px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-right: 6px;
+}
+
+.dd-live-meeting-join {
+  margin-top: 10px;
+}

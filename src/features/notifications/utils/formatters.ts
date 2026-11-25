@@ -9,6 +9,7 @@ export interface DashboardNotification {
   createdAt: string;
   unread?: boolean;
   documentId?: string;
+  approvalMeetingId?: string;
   type?: NotificationRecord['type'];
 }
 
@@ -40,6 +41,7 @@ export function toDashboardNotification(notification: NotificationRecord): Dashb
     createdAt: notification.createdAt,
     unread: !notification.read,
     documentId: notification.documentId,
+    approvalMeetingId: notification.approvalMeetingId,
     type: notification.type,
   };
 }
@@ -60,6 +62,14 @@ export function getNotificationTypeLabel(type?: NotificationRecord['type']) {
       return 'Document message';
     case 'lgpd_request':
       return 'LGPD request';
+    case 'live_meeting_invitation':
+      return 'Live meeting';
+    case 'live_meeting_rescheduled':
+      return 'Meeting rescheduled';
+    case 'live_meeting_cancelled':
+      return 'Meeting cancelled';
+    case 'live_meeting_ended':
+      return 'Meeting ended';
     default:
       return 'Notification';
   }

@@ -20,3 +20,5 @@ export const ARCHIVE_UPLOAD_DIR = joinPath(DATA_DIR, 'archive-uploads');
 export const REVISION_BASELINE_DIR = joinPath(DATA_DIR, 'revision-baselines');
 export const USER_PHOTOS_DIR = joinPath(DATA_DIR, 'user-photos');
 export const DOCUMENT_FIELD_OPTIONS_FILE = joinPath(DATA_DIR, 'document_field_options.json');
+export const APPROVAL_MEETINGS_FILE = joinPath(DATA_DIR, 'approval_meetings.json');
+export const MEETING_DECISIONS_FILE = joinPath(DATA_DIR, 'meeting_decisions.json');

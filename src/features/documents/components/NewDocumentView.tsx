@@ -28,6 +28,13 @@ import { DarosActionLoadingOverlay } from '../../../components/common/DarosActio
 import '../../../components/common/FlashAlert.css';
 import { useFlashMessages } from '../../../hooks/useFlashMessages';
 import { runWithMinDuration } from '../../../lib/ui/runWithMinDuration';
+import {
+  NewDocumentApprovalWorkflowFields,
+  NewDocumentLiveCycleSection,
+  type ApprovalWorkflowMode,
+} from '../../liveCycle';
+import { approvalMeetingsApi } from '../../../lib/api/approvalMeetings';
+import { browserTimezone, combineLocalDateAndTime } from '../../../lib/liveMeeting/schedule';
 import './NewDocumentView.css';
 
 const DEPARTMENTS = ['Quality', 'Production', 'HR', 'Operations', 'Management'];
@@ -181,6 +188,12 @@ export function NewDocumentView({
   const [customProcesses, setCustomProcesses] = useState<string[]>([]);
   const [customOwners, setCustomOwners] = useState<string[]>([]);
   const [customDepartments, setCustomDepartments] = useState<string[]>([]);
+  const [approvalWorkflow, setApprovalWorkflow] = useState<ApprovalWorkflowMode>('standard');
+  const [meetingTitle, setMeetingTitle] = useState('');
+  const [meetingDescription, setMeetingDescription] = useState('');
+  const [meetingDate, setMeetingDate] = useState('');
+  const [meetingTime, setMeetingTime] = useState('');
+  const liveSubmissionKeyRef = useRef<string | null>(null);
 
   const loadDocuments = useCallback(async () => {
     try {
@@ -243,6 +256,10 @@ export function NewDocumentView({
         return false;
       }
       if (usesOrganisationStructure && !form.documentCode.trim()) return false;
+      if (approvalWorkflow === 'live') {
+        const titleOk = meetingTitle.trim() || form.title.trim();
+        if (!titleOk || !meetingDate.trim() || !meetingTime.trim()) return false;
+      }
       return true;
     }
 
@@ -264,6 +281,10 @@ export function NewDocumentView({
     selectedFile,
     fileUploadStatus,
     usesOrganisationStructure,
+    approvalWorkflow,
+    meetingTitle,
+    meetingDate,
+    meetingTime,
   ]);
 
   function resetFileState() {
@@ -280,6 +301,12 @@ export function NewDocumentView({
     resetFileState();
     setSelfOwnerConfirmed(false);
     setPendingOwner('');
+    setApprovalWorkflow('standard');
+    setMeetingTitle('');
+    setMeetingDescription('');
+    setMeetingDate('');
+    setMeetingTime('');
+    liveSubmissionKeyRef.current = null;
     setSuccess('');
     setError('');
   }
@@ -391,6 +418,28 @@ export function NewDocumentView({
       return;
     }
 
+    if (!asDraft && origin === 'internal' && approvalWorkflow === 'live') {
+      if (!selectedFile) {
+        showFormError('Upload a document file before scheduling a live review.');
+        return;
+      }
+      const liveTitle = meetingTitle.trim() || activeForm.title.trim();
+      if (!liveTitle) {
+        showFormError('Meeting title is required for live approval.');
+        return;
+      }
+      if (!meetingDate.trim() || !meetingTime.trim()) {
+        showFormError('Meeting date and time are required for live approval.');
+        return;
+      }
+      try {
+        combineLocalDateAndTime(meetingDate, meetingTime);
+      } catch (err) {
+        showFormError(err instanceof Error ? err.message : 'Invalid meeting schedule');
+        return;
+      }
+    }
+
     if (!activeForm.type.trim()) {
       showFormError('Document type is required.');
       return;
@@ -476,6 +525,29 @@ export function NewDocumentView({
           };
         }
 
+        if (!asDraft && origin === 'internal' && approvalWorkflow === 'live') {
+          const savedLabel = savedDocument.code || savedDocument.title;
+          const liveTitle = meetingTitle.trim() || activeForm.title.trim();
+          const scheduledStartsAt = combineLocalDateAndTime(meetingDate, meetingTime);
+          if (!liveSubmissionKeyRef.current) {
+            liveSubmissionKeyRef.current = crypto.randomUUID();
+          }
+          await approvalMeetingsApi.createMeeting({
+            documentId: savedDocument.id,
+            scheduledStartsAt,
+            timezone: browserTimezone(),
+            title: liveTitle,
+            description: meetingDescription.trim() || undefined,
+            clientSubmissionKey: liveSubmissionKeyRef.current,
+            sendInvitations: true,
+          });
+          return {
+            savedDocument,
+            notify: `Live review scheduled for "${savedLabel}". Reviewer and approver were notified in Daros.`,
+            afterSave: () => onSubmittedForApproval?.(),
+          };
+        }
+
         if (!asDraft && origin === 'internal') {
           const savedLabel = savedDocument.code || savedDocument.title;
           await api.submitDocumentForApproval(savedDocument.id);
@@ -503,6 +575,12 @@ export function NewDocumentView({
       setInternalForm(emptyInternalForm);
       setExternalForm(emptyExternalForm);
       resetFileState();
+      setApprovalWorkflow('standard');
+      setMeetingTitle('');
+      setMeetingDescription('');
+      setMeetingDate('');
+      setMeetingTime('');
+      liveSubmissionKeyRef.current = null;
 
       if (result.notify) {
         showSuccess(result.notify);
@@ -756,6 +834,23 @@ export function NewDocumentView({
                     disabled={origin !== 'internal' || !internalDetailsEnabled}
                   />
                 </Field>
+                <NewDocumentApprovalWorkflowFields
+                  disabled={origin !== 'internal' || !internalDetailsEnabled}
+                  workflow={approvalWorkflow}
+                  onWorkflowChange={setApprovalWorkflow}
+                  meetingTitle={meetingTitle}
+                  onMeetingTitleChange={setMeetingTitle}
+                  meetingDescription={meetingDescription}
+                  onMeetingDescriptionChange={setMeetingDescription}
+                  meetingDate={meetingDate}
+                  onMeetingDateChange={setMeetingDate}
+                  meetingTime={meetingTime}
+                  onMeetingTimeChange={setMeetingTime}
+                  documentTitle={internalForm.title}
+                />
+                <NewDocumentLiveCycleSection
+                  disabled={origin !== 'internal' || !internalDetailsEnabled}
+                />
               </div>
             </div>
 
@@ -967,7 +1062,11 @@ export function NewDocumentView({
               disabled={isSaving || !isNewDocumentReady}
               onClick={handleSubmitForReviewClick}
             >
-              {isSaving ? 'Saving...' : 'Submit for Review'}
+              {isSaving
+                ? 'Saving...'
+                : origin === 'internal' && approvalWorkflow === 'live'
+                  ? 'Schedule live meeting'
+                  : 'Submit for Review'}
             </button>
           </div>
         </div>

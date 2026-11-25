@@ -6,3 +6,4 @@ export * from './documentComments';
 export * from './documentChatPresence';
 export * from './permissions';
 export * from './users';
+export * from './approvalMeetings';

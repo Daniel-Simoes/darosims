@@ -15,6 +15,10 @@ Local dev keeps **JSON files** unless you set the variables below.
 
 `backend/supabase/schema.sql`
 
+If the project already existed **before Daros Live meetings** were added, run:
+
+`backend/supabase/patch-approval-meetings.sql`
+
 If the project already existed **before chat** was added, run only:
 
 `backend/supabase/patch-document-comments.sql`

@@ -10,6 +10,14 @@ interface PdfDocumentPreviewProps {
   pdfUrl: string;
   /** Kept for call-site compatibility; page toolbar no longer repeats the document title. */
   title?: string;
+  /** When set, page is controlled externally (e.g. live meeting sync). */
+  pageIndex?: number;
+  onPageIndexChange?: (index: number) => void;
+  /** Disables thumbnails and paging controls (viewers following a presenter). */
+  readOnlyNavigation?: boolean;
+  /** Hides thumbnail strip (e.g. Daros Live follow mode). */
+  hideThumbnailSidebar?: boolean;
+  className?: string;
 }
 
 const THUMB_WIDTH = 136;
@@ -48,21 +56,49 @@ async function renderPageToDataUrl(
   return canvas.toDataURL('image/png');
 }
 
-export function PdfDocumentPreview({ pdfUrl }: PdfDocumentPreviewProps) {
+export function PdfDocumentPreview({
+  pdfUrl,
+  pageIndex,
+  onPageIndexChange,
+  readOnlyNavigation = false,
+  hideThumbnailSidebar = false,
+  className = '',
+}: PdfDocumentPreviewProps) {
   const mainCanvasRef = useRef<HTMLCanvasElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const [pageCount, setPageCount] = useState(0);
   const [thumbnails, setThumbnails] = useState<string[]>([]);
-  const [activePage, setActivePage] = useState(0);
+  const [internalPage, setInternalPage] = useState(0);
+  const activePage = pageIndex ?? internalPage;
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [viewportWidth, setViewportWidth] = useState(0);
   const pdfRef = useRef<PDFDocumentProxy | null>(null);
   const loadingTaskRef = useRef<PDFDocumentLoadingTask | null>(null);
 
+  function goToPage(index: number) {
+    if (readOnlyNavigation) return;
+    const next = Math.max(0, Math.min(index, Math.max(pageCount - 1, 0)));
+    if (pageIndex === undefined) {
+      setInternalPage(next);
+    }
+    onPageIndexChange?.(next);
+  }
+
   useEffect(() => {
-    setActivePage(0);
-  }, [pdfUrl]);
+    if (pageIndex === undefined) {
+      setInternalPage(0);
+    }
+  }, [pdfUrl, pageIndex]);
+
+  useEffect(() => {
+    if (pageIndex !== undefined && pageCount > 0) {
+      const clamped = Math.max(0, Math.min(pageIndex, pageCount - 1));
+      if (clamped !== pageIndex && onPageIndexChange) {
+        onPageIndexChange(clamped);
+      }
+    }
+  }, [pageCount, pageIndex, onPageIndexChange]);
 
   useEffect(() => {
     const node = viewportRef.current;
@@ -174,27 +210,52 @@ export function PdfDocumentPreview({ pdfUrl }: PdfDocumentPreviewProps) {
   }
 
   return (
-    <div className="doc-word-pages doc-pdf-pages">
-      <aside className="doc-word-pages-sidebar" aria-label="PDF pages">
-        {thumbnails.map((thumb, index) => (
-          <button
-            key={`pdf-page-${index + 1}`}
-            type="button"
-            className={`doc-word-page-thumb-btn ${activePage === index ? 'active' : ''}`}
-            onClick={() => setActivePage(index)}
-            aria-label={`Page ${index + 1}`}
-            aria-current={activePage === index ? 'page' : undefined}
-          >
-            <div className="doc-word-page-thumb doc-pdf-page-thumb">
-              <img src={thumb} alt="" className="doc-pdf-thumb-image" />
-            </div>
-            <span className="doc-word-page-label">Page {index + 1}</span>
-          </button>
-        ))}
-      </aside>
+    <div className={`doc-word-pages doc-pdf-pages${className ? ` ${className}` : ''}`}>
+      {!hideThumbnailSidebar ? (
+        <aside className="doc-word-pages-sidebar" aria-label="PDF pages">
+          {thumbnails.map((thumb, index) => (
+            <button
+              key={`pdf-page-${index + 1}`}
+              type="button"
+              className={`doc-word-page-thumb-btn ${activePage === index ? 'active' : ''}`}
+              onClick={() => goToPage(index)}
+              disabled={readOnlyNavigation}
+              aria-label={`Page ${index + 1}`}
+              aria-current={activePage === index ? 'page' : undefined}
+            >
+              <div className="doc-word-page-thumb doc-pdf-page-thumb">
+                <img src={thumb} alt="" className="doc-pdf-thumb-image" draggable={false} />
+              </div>
+              <span className="doc-word-page-label">Page {index + 1}</span>
+            </button>
+          ))}
+        </aside>
+      ) : null}
 
       <div className="doc-word-pages-main">
         <div className="doc-word-page-toolbar">
+          {!readOnlyNavigation && pageCount > 1 ? (
+            <div className="doc-pdf-page-nav">
+              <button
+                type="button"
+                className="doc-pdf-page-nav-btn"
+                disabled={activePage <= 0}
+                onClick={() => goToPage(activePage - 1)}
+                aria-label="Previous page"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                className="doc-pdf-page-nav-btn"
+                disabled={activePage >= pageCount - 1}
+                onClick={() => goToPage(activePage + 1)}
+                aria-label="Next page"
+              >
+                Next
+              </button>
+            </div>
+          ) : null}
           <span>
             Page {activePage + 1} of {pageCount}
           </span>
