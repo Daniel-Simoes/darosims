@@ -2,17 +2,59 @@ import { signToken, corsHeaders, jsonResponse, jsonResponseWithSession } from '@
 import { ensureServerBootstrap } from '@/lib/ensureServerBootstrap';
 import { validateCredentials } from '@/lib/users';
 import { checkRateLimit, getClientIp } from '@/lib/security/rateLimit';
-import { parseEmail } from '@/lib/security/input';
+import { parseEmail, assertHoneypotEmpty } from '@/lib/security/input';
 import { safeApiError } from '@/lib/security/errors';
-import { assertHoneypotEmpty } from '@/lib/security/input';
+import { isMissingTableError } from '@/lib/supabaseSchemaCheck';
 
 export async function OPTIONS() {
   return new Response(null, { status: 204, headers: corsHeaders() });
 }
 
+function configurationErrorResponse(err: unknown): Response | null {
+  const message = err instanceof Error ? err.message : '';
+  if (message.includes('JWT_SECRET')) {
+    return jsonResponse(
+      {
+        error:
+          'Login is unavailable: JWT_SECRET is not configured on the server. Set it in Vercel environment variables.',
+      },
+      503,
+    );
+  }
+  if (message.includes('SUPABASE_URL') || message.includes('SUPABASE_SERVICE_ROLE_KEY')) {
+    return jsonResponse(
+      {
+        error:
+          'Login is unavailable: Supabase is not configured correctly on the server (URL and service role key).',
+      },
+      503,
+    );
+  }
+  if (isMissingTableError(message) || message.includes('users table')) {
+    return jsonResponse(
+      {
+        error:
+          'Login is unavailable: the users table is missing in Supabase. Run backend/supabase/schema.sql in the SQL Editor.',
+      },
+      503,
+    );
+  }
+  return null;
+}
+
 export async function POST(request: Request) {
   try {
-    await ensureServerBootstrap();
+    try {
+      await ensureServerBootstrap();
+    } catch (bootstrapErr) {
+      console.error('[auth/login] bootstrap failed', bootstrapErr);
+      const configured = configurationErrorResponse(bootstrapErr);
+      if (configured) return configured;
+      return jsonResponse(
+        { error: safeApiError('Login unavailable', bootstrapErr, '[auth/login] bootstrap') },
+        503,
+      );
+    }
 
     const rate = checkRateLimit(`login:${getClientIp(request)}`, {
       limit: 10,
@@ -39,7 +81,19 @@ export async function POST(request: Request) {
       return jsonResponse({ error: 'Invalid credentials' }, 400);
     }
 
-    const user = await validateCredentials(email, password);
+    let user;
+    try {
+      user = await validateCredentials(email, password);
+    } catch (dbErr) {
+      console.error('[auth/login] credentials lookup failed', dbErr);
+      const configured = configurationErrorResponse(dbErr);
+      if (configured) return configured;
+      return jsonResponse(
+        { error: safeApiError('Login failed', dbErr, '[auth/login] credentials') },
+        500,
+      );
+    }
+
     if (!user) {
       return jsonResponse({ error: 'Invalid email or password' }, 401);
     }

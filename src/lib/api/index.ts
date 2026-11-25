@@ -1,6 +1,7 @@
 import { authApi } from './auth';
 import { usersApi } from './users';
 import { documentsApi } from './documents';
+import { documentFieldOptionsApi } from './documentFieldOptions';
 import { documentArchivesApi, fetchArchiveFileBlob } from './documentArchives';
 import { notificationsApi } from './notifications';
 import { auditApi } from './audit';
@@ -19,6 +20,7 @@ export const api = {
   ...authApi,
   ...usersApi,
   ...documentsApi,
+  ...documentFieldOptionsApi,
   ...documentArchivesApi,
   ...notificationsApi,
   ...auditApi,

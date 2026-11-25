@@ -10,7 +10,7 @@ import {
 } from '@/lib/documentApproval';
 import {
   canAuthUserEditDocument,
-  isAuthUserInvolvedInDocument,
+  canAuthUserStartDocumentRevision,
 } from '@/lib/documentOwnership';
 import {
   getNextDocumentVersion,
@@ -118,11 +118,19 @@ export async function PUT(
     if (isBeginningRevision) {
       const versionAuth = await requirePermission(auth, 'create_versions');
       if (versionAuth instanceof Response) return versionAuth;
-      if (!(await isAuthUserInvolvedInDocument(auth, existing))) {
+      if (existing.publishedBaseline || existing.revisionStartedBy) {
+        return jsonResponse(
+          { error: 'A new version revision is already in progress for this document' },
+          409,
+        );
+      }
+      if (!(await canAuthUserStartDocumentRevision(auth, existing))) {
         return jsonResponse({ error: 'You are not allowed to revise this document' }, 403);
       }
-      const nextVersion = getNextDocumentVersion(existing.version);
-      if (!isValidRevisionTargetVersion(existing.version, nextVersion)) {
+      const currentVersion = Number(existing.version);
+      const safeCurrent = Number.isFinite(currentVersion) ? currentVersion : 1;
+      const nextVersion = getNextDocumentVersion(safeCurrent);
+      if (!isValidRevisionTargetVersion(safeCurrent, nextVersion)) {
         return jsonResponse({ error: 'Invalid revision version number' }, 400);
       }
     } else {
@@ -163,8 +171,14 @@ export async function PUT(
     });
 
     if (isBeginningRevision) {
-      await stagePublishedRevisionFile(existing);
-      const nextRevisionVersion = getNextDocumentVersion(existing.version);
+      try {
+        await stagePublishedRevisionFile(existing);
+      } catch (stageError) {
+        console.error('Could not stage published revision file', stageError);
+      }
+      const currentVersion = Number(existing.version);
+      const safeCurrent = Number.isFinite(currentVersion) ? currentVersion : 1;
+      const nextRevisionVersion = getNextDocumentVersion(safeCurrent);
       input = {
         ...input,
         status: 'Draft',
@@ -230,16 +244,20 @@ export async function PUT(
     }
 
     if (isBeginningRevision) {
-      await createDocumentEvent({
-        documentId: document.id,
-        type: 'revision_started',
-        actorEmail: auth.email,
-        actorName: auth.name,
-        metadata: {
-          version: String(document.revisionTargetVersion ?? document.version),
-          previousVersion: String(existing.version),
-        },
-      });
+      try {
+        await createDocumentEvent({
+          documentId: document.id,
+          type: 'revision_started',
+          actorEmail: auth.email,
+          actorName: auth.name,
+          metadata: {
+            version: String(document.revisionTargetVersion ?? document.version),
+            previousVersion: String(existing.version),
+          },
+        });
+      } catch (eventError) {
+        console.error('Could not record revision_started event', eventError);
+      }
     }
 
     if (isApproving) {
@@ -304,6 +322,7 @@ export async function PUT(
 
     return jsonResponse({ document: await resolveDocumentForAuthUser(auth, document) });
   } catch (err) {
+    console.error('PUT /api/documents/[id] failed', err);
     const message = err instanceof Error ? err.message : 'Invalid request body';
     return jsonResponse({ error: message }, 400);
   }

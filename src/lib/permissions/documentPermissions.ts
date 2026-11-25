@@ -132,7 +132,22 @@ export function isUserInvolvedInDocumentWorkflow(
   return false;
 }
 
-/** Creator, reviewer, or approver may edit drafts; involved users may start a new version on Active docs. */
+/** Creator of the record or whoever started the current revision cycle. */
+export function isUserDocumentElaborator(
+  user: AuthUser | null,
+  document: Pick<DocumentRecord, 'createdBy' | 'revisionStartedBy' | 'publishedBaseline'>,
+): boolean {
+  if (!user) return false;
+  const userEmail = user.email.trim().toLowerCase();
+  const createdBy = document.createdBy?.trim().toLowerCase() ?? '';
+  const starter = document.revisionStartedBy?.trim().toLowerCase() ?? '';
+  if (document.publishedBaseline) {
+    return Boolean(starter && userEmail === starter);
+  }
+  return Boolean(createdBy && userEmail === createdBy);
+}
+
+/** Creator, reviewer, approver, and revision participants may edit in-flight workflow documents. */
 export function canUserEditDocument(
   user: AuthUser | null,
   document: Pick<
@@ -149,18 +164,14 @@ export function canUserEditDocument(
     | 'revisionStartedBy'
   >,
 ): boolean {
+  if (!user) return false;
   if (document.status === 'Active') return false;
 
-  if (document.submittedAt && !isRejectedDocument(document)) return false;
-
-  const userEmail = user?.email.trim().toLowerCase() ?? '';
-  const starter = document.revisionStartedBy?.trim().toLowerCase() ?? '';
-  if (document.publishedBaseline) {
-    return Boolean(starter && userEmail === starter);
+  if (isRejectedDocument(document)) {
+    return isUserDocumentElaborator(user, document);
   }
 
-  if (!isUserInvolvedInDocumentWorkflow(user, document)) return false;
-  return true;
+  return isUserInvolvedInDocumentWorkflow(user, document);
 }
 
 export function canUserCreateDocumentVersion(user: AuthUser | null): boolean {
@@ -173,6 +184,8 @@ export function canUserStartApprovedDocumentRevision(
     DocumentRecord,
     | 'status'
     | 'createdBy'
+    | 'revisionStartedBy'
+    | 'publishedBaseline'
     | 'owner'
     | 'approvedBy'
     | 'approver'
@@ -182,6 +195,8 @@ export function canUserStartApprovedDocumentRevision(
   >,
 ): boolean {
   if (document.status !== 'Active') return false;
+  if (document.publishedBaseline) return false;
   if (!canUserCreateDocumentVersion(user)) return false;
+  if (isUserDocumentElaborator(user, document)) return true;
   return isUserInvolvedInDocumentWorkflow(user, document);
 }

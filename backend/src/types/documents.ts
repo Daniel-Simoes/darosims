@@ -20,6 +20,7 @@ export interface DocumentPublishedBaseline {
   sourceContent?: string;
   reviewFrequency?: string;
   repository?: string;
+  location?: string;
   distribution?: string;
   retentionPeriod?: string;
   retentionNotes?: string;
@@ -53,6 +54,7 @@ export interface DocumentRecord {
   department?: string;
   reviewFrequency?: string;
   repository?: string;
+  location?: string;
   distribution?: string;
   retentionPeriod?: string;
   retentionNotes?: string;
@@ -94,6 +96,7 @@ export interface CreateDocumentInput {
   reviewFrequency?: string;
   nextReviewDate?: string;
   repository?: string;
+  location?: string;
   distribution?: string;
   retentionPeriod?: string;
   retentionNotes?: string;
@@ -122,6 +125,7 @@ export interface UpdateDocumentInput {
   reviewFrequency?: string;
   nextReviewDate?: string;
   repository?: string;
+  location?: string;
   distribution?: string;
   retentionPeriod?: string;
   retentionNotes?: string;

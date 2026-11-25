@@ -50,6 +50,8 @@ import { useFlashMessages } from '../../../hooks/useFlashMessages';
 import { invalidateCachedData } from '../../../lib/data/clientDataCache';
 import { runWithMinDuration } from '../../../lib/ui/runWithMinDuration';
 import { DocumentWorkflowStepper } from './DocumentWorkflowStepper';
+import { DocumentFieldSelectWithAdd } from './DocumentFieldSelectWithAdd';
+import { DocumentFieldMultiSelectWithAdd } from './DocumentFieldMultiSelectWithAdd';
 import './DocumentDetailView.css';
 
 const STATUSES: DocumentRecord['status'][] = ['Active', 'Draft', 'Obsolete'];
@@ -123,6 +125,7 @@ function documentToForm(doc: DocumentRecord) {
     reviewFrequency: doc.reviewFrequency ?? '',
     nextReviewDate: doc.nextReviewDate ?? '',
     repository: doc.repository ?? '',
+    location: doc.location ?? '',
     distribution: doc.distribution ?? '',
     retentionPeriod: doc.retentionPeriod ?? '',
     retentionNotes: doc.retentionNotes ?? '',
@@ -263,6 +266,14 @@ export function DocumentDetailView({
 
   async function handleStartVersionUpdate() {
     if (!document || document.status !== 'Active' || isExternal) return;
+    if (hasOpenDocumentRevision(document)) {
+      showError('A new version revision is already in progress.');
+      return;
+    }
+    if (!user || !canUserStartApprovedDocumentRevision(user, document)) {
+      showError('You are not allowed to start a new version for this document.');
+      return;
+    }
 
     setError('');
     setIsSaving(true);
@@ -338,6 +349,7 @@ export function DocumentDetailView({
       reviewFrequency: form.reviewFrequency || undefined,
       nextReviewDate: form.nextReviewDate || undefined,
       repository: form.repository || undefined,
+      location: form.location || undefined,
       distribution: form.distribution || undefined,
       retentionPeriod: form.retentionPeriod || undefined,
       retentionNotes: form.retentionNotes || undefined,
@@ -714,6 +726,10 @@ export function DocumentDetailView({
   const canArchive = canUserArchiveDocument(user, document);
   const showArchiveButton = canArchive && !pendingReview && !pendingFinalApproval;
   const canEditDocument = canUserEditDocument(user, document);
+  const canReplaceDocumentFile = canEditDocument && isDraftInternal && !isExternal;
+  const lockInternalVersion =
+    usesDarosCode &&
+    (openRevision || (Boolean(document.submittedAt) && !isRejected));
   const canStartVersionUpdate =
     canUserStartApprovedDocumentRevision(user, document) && !openRevision;
   const pendingRevisionVersion =
@@ -993,7 +1009,8 @@ export function DocumentDetailView({
 
               <section className="dd-card">
                 <h3 className="dd-card-title">Retention & Access</h3>
-                <InfoRow label="Repository / Location" value={document.repository} />
+                <InfoRow label="Repository" value={document.repository} />
+                <InfoRow label="Location" value={document.location} />
                 <InfoRow label="Distribution / Access" value={document.distribution} />
                 <InfoRow label="Retention Period" value={document.retentionPeriod} />
                 <InfoRow label="Retention Notes" value={document.retentionNotes} />
@@ -1078,13 +1095,14 @@ export function DocumentDetailView({
                           type="number"
                           min="0"
                           value={form.version}
+                          readOnly={lockInternalVersion}
                           onChange={(e) => updateField('version', e.target.value)}
                         />
                       </EditField>
                     </>
                   )}
                   <EditField label="Attached File" wide>
-                    {canReviseRejected ? (
+                    {canReplaceDocumentFile ? (
                       <div className="dd-revision-file">
                         <p className="dd-revision-file-current">
                           Current: {document.fileName || 'No file attached'}
@@ -1176,10 +1194,11 @@ export function DocumentDetailView({
                     />
                   </EditField>
                   <EditField label="Department">
-                    <input
-                      className="dd-input"
+                    <DocumentFieldSelectWithAdd
+                      category="distribution_department"
                       value={form.department}
-                      onChange={(e) => updateField('department', e.target.value)}
+                      onChange={(v) => updateField('department', v)}
+                      placeholder="Select department..."
                     />
                   </EditField>
                   <EditField label="Effective Date">
@@ -1211,39 +1230,52 @@ export function DocumentDetailView({
               <section className="dd-card">
                 <h3 className="dd-card-title">Retention & Access</h3>
                 <div className="dd-edit-grid">
-                  <EditField label="Repository / Location">
-                    <input
-                      className="dd-input"
+                  <EditField label="Repository">
+                    <DocumentFieldSelectWithAdd
+                      category="repository"
                       value={form.repository}
-                      onChange={(e) => updateField('repository', e.target.value)}
+                      onChange={(v) => updateField('repository', v)}
+                      placeholder="Select repository..."
                     />
                   </EditField>
-                  <EditField label="Distribution / Access">
-                    <input
-                      className="dd-input"
+                  <EditField label="Location">
+                    <DocumentFieldSelectWithAdd
+                      category="location"
+                      value={form.location}
+                      onChange={(v) => updateField('location', v)}
+                      placeholder="Select location..."
+                    />
+                  </EditField>
+                  <EditField label="Distribution / Access" wide>
+                    <DocumentFieldMultiSelectWithAdd
+                      category="distribution_department"
                       value={form.distribution}
-                      onChange={(e) => updateField('distribution', e.target.value)}
+                      onChange={(v) => updateField('distribution', v)}
                     />
                   </EditField>
                   <EditField label="Retention Period">
-                    <input
-                      className="dd-input"
+                    <DocumentFieldSelectWithAdd
+                      category="retention_period"
                       value={form.retentionPeriod}
-                      onChange={(e) => updateField('retentionPeriod', e.target.value)}
+                      onChange={(v) => updateField('retentionPeriod', v)}
+                      placeholder="Select period..."
                     />
                   </EditField>
                   <EditField label="Disposition">
-                    <input
-                      className="dd-input"
+                    <DocumentFieldSelectWithAdd
+                      category="disposition"
                       value={form.disposition}
-                      onChange={(e) => updateField('disposition', e.target.value)}
+                      onChange={(v) => updateField('disposition', v)}
+                      placeholder="Select disposition..."
                     />
                   </EditField>
                   <EditField label="Retention Notes" wide>
-                    <input
-                      className="dd-input"
+                    <textarea
+                      className="dd-input dd-textarea"
+                      rows={3}
                       value={form.retentionNotes}
                       onChange={(e) => updateField('retentionNotes', e.target.value)}
+                      placeholder="Justifications, special retention conditions..."
                     />
                   </EditField>
                   <EditField label="Comments" wide>

@@ -11,6 +11,7 @@ import { invalidateCachedData } from '../../../lib/data/clientDataCache';
 import {
   getDocumentStatusLabel,
   isPendingApprovalDocument,
+  isRegisterPendingDocument,
   isRejectedDocument,
 } from '../../../lib/documentStatus';
 import { DocumentTypeMenu } from './DocumentTypeMenu';
@@ -48,7 +49,7 @@ import { useFlashMessages } from '../../../hooks/useFlashMessages';
 import { runWithMinDuration } from '../../../lib/ui/runWithMinDuration';
 import { getCachedData } from '../../../lib/data/clientDataCache';
 import { runCachedScreenLoad } from '../../../lib/ui/skeletonLoading';
-import { DocumentRegisterStats } from './DocumentRegisterStats';
+import { DocumentRegisterStats, type DocumentRegisterStatusFilter } from './DocumentRegisterStats';
 import { DocumentTableSkeleton, RegisterStatsSkeleton } from '../../../components/common/skeletons/DashboardSkeletons';
 import './DocumentRegisterView.css';
 import './DocumentRegisterStats.css';
@@ -195,6 +196,7 @@ export function DocumentRegisterView({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<DocumentRegisterStatusFilter>('all');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [historyDocument, setHistoryDocument] = useState<DocumentRecord | null>(null);
   const [historyEvents, setHistoryEvents] = useState<DocumentEventRecord[]>([]);
@@ -395,10 +397,14 @@ export function DocumentRegisterView({
   const filteredDocuments = useMemo(
     () =>
       documents.filter((doc) => {
+        if (!isDraftsScope) {
+          if (statusFilter === 'active' && doc.status !== 'Active') return false;
+          if (statusFilter === 'pending' && !isRegisterPendingDocument(doc)) return false;
+        }
         if (typeFilter && doc.type !== typeFilter) return false;
         return matchesTitleOrCode(searchQuery, doc);
       }),
-    [documents, searchQuery, typeFilter],
+    [documents, searchQuery, typeFilter, statusFilter, isDraftsScope],
   );
 
   const typeOptionsInRegister = useMemo(() => {
@@ -778,7 +784,13 @@ export function DocumentRegisterView({
           (showSkeleton ? (
             <RegisterStatsSkeleton />
           ) : (
-            <DocumentRegisterStats documents={documents} archives={archives} onOpenArchives={onOpenArchives} />
+            <DocumentRegisterStats
+              documents={documents}
+              archives={archives}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              onOpenArchives={onOpenArchives}
+            />
           ))}
 
       <section className="doc-card doc-reg-card">

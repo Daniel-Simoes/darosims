@@ -2,7 +2,9 @@ import { findUserByEmail, findUserEmailByName } from '@/repositories/users/userR
 import { normalizeTeamEmail } from '@/lib/legacyEmails';
 import { isAuthUserDesignatedApprover } from '@/lib/documentApproval';
 import { isRejectedDocument } from '@/lib/documentWorkflow';
-import { isAuthUserInvolvedInOpenRevision } from '@/lib/documentPublishedBaseline';
+import {
+  isAuthUserInvolvedInOpenRevision,
+} from '@/lib/documentPublishedBaseline';
 import type { DocumentRecord } from '@/types';
 
 /** Resolve document owner field (display name or email) to a user email. */
@@ -53,6 +55,29 @@ export async function isAuthUserInvolvedInDocument(
   return false;
 }
 
+export async function canAuthUserStartDocumentRevision(
+  auth: { email: string; name: string },
+  document: Pick<
+    DocumentRecord,
+    | 'status'
+    | 'createdBy'
+    | 'owner'
+    | 'approvedBy'
+    | 'approver'
+    | 'reviewedBy'
+    | 'publishedBaseline'
+  >,
+): Promise<boolean> {
+  if (document.status !== 'Active') return false;
+  if (document.publishedBaseline) return false;
+
+  const email = auth.email.trim().toLowerCase();
+  const createdBy = document.createdBy?.trim().toLowerCase() ?? '';
+  if (createdBy && email === createdBy) return true;
+
+  return isAuthUserInvolvedInDocument(auth, document);
+}
+
 export async function canAuthUserEditDocument(
   auth: { email: string; name: string },
   document: Pick<
@@ -69,21 +94,15 @@ export async function canAuthUserEditDocument(
     | 'revisionStartedBy'
   >,
 ): Promise<boolean> {
-  const email = auth.email.trim().toLowerCase();
-  const createdBy = document.createdBy?.trim().toLowerCase() ?? '';
-
-  if (isRejectedDocument(document)) {
-    return Boolean(createdBy && email === createdBy);
-  }
-
   if (document.status === 'Active') return false;
 
-  if (document.submittedAt) return false;
-
-  if (document.publishedBaseline) {
+  if (isRejectedDocument(document)) {
+    const email = auth.email.trim().toLowerCase();
+    const createdBy = document.createdBy?.trim().toLowerCase() ?? '';
     const starter = document.revisionStartedBy?.trim().toLowerCase() ?? '';
+    if (createdBy && email === createdBy) return true;
     return Boolean(starter && email === starter);
   }
 
-  return isAuthUserInvolvedInDocument(auth, document);
+  return isAuthUserInvolvedInOpenRevision(auth, document as DocumentRecord);
 }

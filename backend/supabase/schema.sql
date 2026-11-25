@@ -36,6 +36,11 @@ create table if not exists public.document_archives (
   body jsonb not null
 );
 
+create table if not exists public.document_field_options (
+  id text primary key,
+  body jsonb not null
+);
+
 create index if not exists documents_body_created_by_idx on public.documents ((body->>'createdBy'));
 create index if not exists documents_body_status_idx on public.documents ((body->>'status'));
 create index if not exists notifications_body_recipient_idx on public.notifications ((body->>'recipientEmail'));
@@ -51,6 +56,7 @@ alter table public.document_events enable row level security;
 alter table public.document_comments enable row level security;
 alter table public.document_chat_presence enable row level security;
 alter table public.document_archives enable row level security;
+alter table public.document_field_options enable row level security;
 
 revoke all on public.documents from anon, authenticated;
 revoke all on public.users from anon, authenticated;
@@ -59,6 +65,7 @@ revoke all on public.document_events from anon, authenticated;
 revoke all on public.document_comments from anon, authenticated;
 revoke all on public.document_chat_presence from anon, authenticated;
 revoke all on public.document_archives from anon, authenticated;
+revoke all on public.document_field_options from anon, authenticated;
 
 grant all on public.documents to service_role;
 grant all on public.users to service_role;
@@ -67,6 +74,7 @@ grant all on public.document_events to service_role;
 grant all on public.document_comments to service_role;
 grant all on public.document_chat_presence to service_role;
 grant all on public.document_archives to service_role;
+grant all on public.document_field_options to service_role;
 
 drop policy if exists "service role only documents" on public.documents;
 create policy "service role only documents" on public.documents
@@ -94,6 +102,10 @@ create policy "service role only document_chat_presence" on public.document_chat
 
 drop policy if exists "service role only document_archives" on public.document_archives;
 create policy "service role only document_archives" on public.document_archives
+  for all to service_role using (true) with check (true);
+
+drop policy if exists "service role only document_field_options" on public.document_field_options;
+create policy "service role only document_field_options" on public.document_field_options
   for all to service_role using (true) with check (true);
 
 -- Private bucket for PDFs / source files (create in Storage if this insert fails)

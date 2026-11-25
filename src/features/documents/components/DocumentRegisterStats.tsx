@@ -1,7 +1,9 @@
 import { useId, useMemo, type ReactNode } from 'react';
 import type { DocumentArchiveRecord } from '../../../types/documentArchive';
 import type { DocumentRecord } from '../../../types/documents';
-import { isPendingApprovalDocument } from '../../../lib/documentStatus';
+import { isRegisterPendingDocument } from '../../../lib/documentStatus';
+
+export type DocumentRegisterStatusFilter = 'all' | 'active' | 'pending';
 import { buildRegisterWeeklyMetrics, formatWeeklyDeltaLabel } from '../utils/registerWeeklyStats';
 import './DocumentRegisterStats.css';
 
@@ -73,6 +75,7 @@ function StatCard({
   deltaLabel,
   deltaTrend = 'up',
   onClick,
+  selected = false,
   iconVariant = 'soft',
 }: {
   label: string;
@@ -82,10 +85,11 @@ function StatCard({
   deltaLabel?: string;
   deltaTrend?: 'up' | 'down' | 'flat';
   onClick?: () => void;
+  selected?: boolean;
   iconVariant?: 'soft' | 'solid';
 }) {
   const gradientId = useId().replace(/:/g, '');
-  const className = `doc-reg-stat-card doc-reg-stat-${tone}${onClick ? ' doc-reg-stat-card-interactive' : ''}`;
+  const className = `doc-reg-stat-card doc-reg-stat-${tone}${onClick ? ' doc-reg-stat-card-interactive' : ''}${selected ? ' doc-reg-stat-card-selected' : ''}`;
   const inner = (
     <div className="doc-reg-stat-body">
       <div className="doc-reg-stat-row">
@@ -130,10 +134,14 @@ function deltaTrendFromPercent(percent: number): 'up' | 'down' | 'flat' {
 export function DocumentRegisterStats({
   documents,
   archives = [],
+  statusFilter = 'all',
+  onStatusFilterChange,
   onOpenArchives,
 }: {
   documents: DocumentRecord[];
   archives?: DocumentArchiveRecord[];
+  statusFilter?: DocumentRegisterStatusFilter;
+  onStatusFilterChange?: (filter: DocumentRegisterStatusFilter) => void;
   onOpenArchives?: () => void;
 }) {
   const stats = useMemo(() => {
@@ -142,7 +150,7 @@ export function DocumentRegisterStats({
 
     for (const doc of documents) {
       if (doc.status === 'Active') active += 1;
-      else if (isPendingApprovalDocument(doc)) pending += 1;
+      else if (isRegisterPendingDocument(doc)) pending += 1;
     }
 
     return {
@@ -163,6 +171,8 @@ export function DocumentRegisterStats({
         deltaLabel={formatWeeklyDeltaLabel(weekly.total.changePercent)}
         deltaTrend={deltaTrendFromPercent(weekly.total.changePercent)}
         tone="blue"
+        selected={statusFilter === 'all'}
+        onClick={onStatusFilterChange ? () => onStatusFilterChange('all') : undefined}
         iconVariant="soft"
         icon={
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
@@ -177,6 +187,8 @@ export function DocumentRegisterStats({
         deltaLabel={formatWeeklyDeltaLabel(weekly.active.changePercent)}
         deltaTrend={deltaTrendFromPercent(weekly.active.changePercent)}
         tone="green"
+        selected={statusFilter === 'active'}
+        onClick={onStatusFilterChange ? () => onStatusFilterChange('active') : undefined}
         iconVariant="solid"
         icon={
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25">
@@ -190,6 +202,8 @@ export function DocumentRegisterStats({
         deltaLabel={formatWeeklyDeltaLabel(weekly.pending.changePercent)}
         deltaTrend={deltaTrendFromPercent(weekly.pending.changePercent)}
         tone="amber"
+        selected={statusFilter === 'pending'}
+        onClick={onStatusFilterChange ? () => onStatusFilterChange('pending') : undefined}
         iconVariant="solid"
         icon={
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

@@ -21,6 +21,12 @@ export function isPendingFinalApprovalDocument(
 
 export const isPendingReviewDocument = isPendingApprovalDocument;
 
+export function isRegisterPendingDocument(
+  document: Pick<DocumentRecord, 'status' | 'submittedAt' | 'reviewedAt'>,
+): boolean {
+  return isPendingApprovalDocument(document) || isPendingFinalApprovalDocument(document);
+}
+
 export function isRejectedDocument(document: DocumentStatusInput): boolean {
   return (
     document.status === 'Draft' &&

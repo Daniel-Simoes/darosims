@@ -18,6 +18,7 @@ const CLIENT_EDIT_KEYS = [
   'reviewFrequency',
   'nextReviewDate',
   'repository',
+  'location',
   'distribution',
   'retentionPeriod',
   'retentionNotes',

@@ -52,6 +52,7 @@ function documentRecordFromPublishedBaseline(
     sourceContent: baseline.sourceContent,
     reviewFrequency: baseline.reviewFrequency ?? document.reviewFrequency,
     repository: baseline.repository ?? document.repository,
+    location: baseline.location ?? document.location,
     distribution: baseline.distribution ?? document.distribution,
     retentionPeriod: baseline.retentionPeriod ?? document.retentionPeriod,
     retentionNotes: baseline.retentionNotes ?? document.retentionNotes,

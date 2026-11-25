@@ -419,6 +419,47 @@
   color: #b91c1c;
 }
 
+.dd-field-select-add,
+.dd-field-multi {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.dd-field-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.dd-field-add-row .dd-input {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.dd-multi-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 4px 2px;
+}
+
+.dd-multi-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #334155;
+  cursor: pointer;
+}
+
+.dd-multi-add-btn {
+  width: fit-content;
+}
+
 .dd-layout {
   display: grid;
   grid-template-columns: minmax(360px, 480px) minmax(360px, 1fr);

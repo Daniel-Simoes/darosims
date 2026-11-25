@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DocumentRecord } from '../../../types/documents';
 import type { AuthUser } from '../../../types/auth';
+import { isRegisterPendingDocument } from '../../../lib/documentStatus';
 import {
   canUserArchiveDocument,
   canUserDeleteDocument,
   canUserEditDocument,
   canUserStartApprovedDocumentRevision,
+  isUserDocumentElaborator,
 } from '../../../lib/documentUsers';
 
 interface DocumentRegisterTableActionsProps {
@@ -46,6 +48,9 @@ export function DocumentRegisterTableActions({
   const canRevision = canUserStartApprovedDocumentRevision(user, doc);
   const canDelete = canUserDeleteDocument(user, doc);
   const canArchive = canUserArchiveDocument(user, doc);
+  const isElaborator = isUserDocumentElaborator(user, doc);
+  const pendingWorkflow = isRegisterPendingDocument(doc);
+  const showSubmissionFollowUp = isElaborator && pendingWorkflow && !canEdit;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -77,6 +82,19 @@ export function DocumentRegisterTableActions({
         <button type="button" className="doc-reg-round-btn doc-reg-round-btn-primary" title="Edit" onClick={onEdit}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
             <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
+          </svg>
+        </button>
+      ) : showSubmissionFollowUp ? (
+        <button
+          type="button"
+          className="doc-reg-round-btn doc-reg-round-btn-primary"
+          title="View submission"
+          onClick={onView}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+            <rect x="9" y="3" width="6" height="4" rx="1" />
+            <path d="M9 12h6M9 16h6" />
           </svg>
         </button>
       ) : canRevision ? (
@@ -114,6 +132,16 @@ export function DocumentRegisterTableActions({
         </button>
         {menuOpen ? (
           <div className="doc-reg-more-menu" role="menu">
+            {canEdit ? (
+              <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onEdit(); }}>
+                Edit document
+              </button>
+            ) : null}
+            {showSubmissionFollowUp ? (
+              <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onView(); }}>
+                View submission
+              </button>
+            ) : null}
             <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onHistory(); }}>
               Review history
             </button>
