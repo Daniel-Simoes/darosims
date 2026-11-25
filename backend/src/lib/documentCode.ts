@@ -43,24 +43,19 @@ export function generateDocumentCode(
   return `${prefix} ${String(maxNumber + 1).padStart(2, '0')}`;
 }
 
-/** Keep the numeric suffix when type/process changes; fall back if that code is taken. */
+/**
+ * When type or process changes, assign the next code in that series (01 if none exist yet).
+ * `existingCodes` must exclude the document being edited.
+ */
 export function recalculateDocumentCodeForTypeProcessChange(
   type: string,
   process: string,
   currentCode: string,
   existingCodes: string[],
 ): string {
-  const prefix = getDocumentCodePrefix(type, process);
-  if (!prefix) return currentCode;
-
-  const suffixMatch = currentCode.trim().match(/ (\d+)$/);
-  const suffix = suffixMatch ? suffixMatch[1] : '01';
-  const candidate = `${prefix} ${suffix}`;
-
-  const taken = existingCodes.some((code) => code.toLowerCase() === candidate.toLowerCase());
-  if (!taken) return candidate;
-
-  return generateDocumentCode(type, process, existingCodes);
+  const next = generateDocumentCode(type, process, existingCodes);
+  if (next) return next;
+  return currentCode.trim();
 }
 
 export function resolveDocumentVersionForCode(doc: {
