@@ -1,24 +1,52 @@
 .dd-live-meetings {
-  margin: 20px 0;
-  padding: 16px 18px;
-  border: 1px solid #e2e8f0;
+  margin: 24px 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+.dd-live-meetings-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.dd-live-meetings-hero-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
   border-radius: 12px;
-  background: #f8fafc;
+  background: linear-gradient(145deg, #3b82f6, #2563eb);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+}
+
+.dd-live-meetings-hero-text {
+  min-width: 0;
 }
 
 .dd-live-meetings-title {
-  margin: 0 0 6px;
-  font-size: 15px;
+  margin: 0 0 4px;
+  font-size: 18px;
   font-weight: 700;
   color: #0f172a;
+  letter-spacing: -0.01em;
 }
 
 .dd-live-meetings-intro,
 .dd-live-meetings-muted {
-  margin: 0 0 12px;
+  margin: 0;
   font-size: 13px;
   color: #64748b;
-  line-height: 1.45;
+  line-height: 1.5;
+}
+
+.dd-live-meetings-muted {
+  margin-top: 8px;
 }
 
 .dd-live-meetings-list {
@@ -27,71 +55,233 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .dd-live-meeting-card {
-  padding: 12px 14px;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
+  padding: 20px 22px 18px;
+  border-radius: 16px;
+  border: 1px solid #e8edf4;
   background: #fff;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 12px 40px rgba(15, 23, 42, 0.06);
 }
 
-.dd-live-meeting-card-head {
+.dd-live-meeting-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.dd-live-meeting-name {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.dd-live-meeting-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.dd-live-meeting-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.dd-live-meeting-status-in_progress {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.dd-live-meeting-status-in_progress .dd-live-meeting-status-dot {
+  background: #10b981;
+}
+
+.dd-live-meeting-status-scheduled {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.dd-live-meeting-status-scheduled .dd-live-meeting-status-dot {
+  background: #3b82f6;
+}
+
+.dd-live-meeting-status-completed {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.dd-live-meeting-status-completed .dd-live-meeting-status-dot {
+  background: #94a3b8;
+}
+
+.dd-live-meeting-status-cancelled {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.dd-live-meeting-status-cancelled .dd-live-meeting-status-dot {
+  background: #ef4444;
+}
+
+.dd-live-meeting-meta-row {
+  margin-bottom: 8px;
+}
+
+.dd-live-meeting-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.45;
+}
+
+.dd-live-meeting-meta svg {
+  flex-shrink: 0;
+  color: #64748b;
+}
+
+.dd-live-meeting-meta strong {
+  font-weight: 700;
+  color: #334155;
+}
+
+.dd-live-meeting-reject-reason {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: #b91c1c;
+}
+
+.dd-live-meeting-participants-block {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.dd-live-meeting-participants-label {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
-}
-
-.dd-live-meeting-status {
+  margin-bottom: 12px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #475569;
+  color: #64748b;
 }
 
-.dd-live-meeting-when,
-.dd-live-meeting-decision,
-.dd-live-meeting-reject-reason {
-  margin: 6px 0 0;
-  font-size: 12px;
-  color: #475569;
+.dd-live-meeting-participants-label svg {
+  color: #94a3b8;
 }
 
-.dd-live-meeting-participants {
-  margin-top: 10px;
-  font-size: 12px;
+.dd-live-meeting-participants-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
 }
 
-.dd-live-meetings-label {
-  display: block;
-  font-weight: 600;
-  color: #334155;
-  margin-bottom: 4px;
-}
-
-.dd-live-meeting-participants ul {
-  margin: 0;
-  padding-left: 0;
-  list-style: none;
-}
-
-.dd-live-meeting-participants li {
-  margin: 2px 0;
+.dd-live-meeting-participant-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .dd-live-participant-role {
-  display: inline-block;
-  min-width: 72px;
   font-size: 10px;
   font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #64748b;
-  margin-right: 6px;
+  color: #94a3b8;
 }
 
-.dd-live-meeting-join {
-  margin-top: 10px;
+.dd-live-participant-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.dd-live-meeting-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.dd-live-meeting-join-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(145deg, #3b82f6, #2563eb);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  transition: filter 0.15s, transform 0.1s;
+}
+
+.dd-live-meeting-join-btn:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.dd-live-meeting-join-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dd-live-meeting-more-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.dd-live-meeting-more-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .dd-live-meeting-participants-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .dd-live-meeting-card-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
