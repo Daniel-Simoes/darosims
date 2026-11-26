@@ -418,10 +418,6 @@ export function DashboardPage() {
               documentId={documentDetailId}
               initialEdit={documentDetailEdit}
               autoBeginRevision={documentDetailBeginRevision}
-              onOpenLiveMeeting={(meetingNavId) => {
-                setDocumentReturnNav(activeNav);
-                setActiveNav(meetingNavId);
-              }}
               onBack={() => {
                 setDocumentDetailEdit(false);
                 setDocumentDetailBeginRevision(false);

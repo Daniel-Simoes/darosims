@@ -701,6 +701,16 @@
   border-color: #fecaca;
 }
 
+.dl-decision-btn-outline {
+  background: #fff;
+  color: #334155;
+  border-color: #e2e8f0;
+}
+
+.dl-decision-btn-outline:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
 .dl-decision-error {
   width: 100%;
   margin: 0;

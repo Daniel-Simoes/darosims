@@ -244,9 +244,29 @@
   transition: filter 0.15s, transform 0.1s;
 }
 
-.dd-live-meeting-join-btn:hover {
+.dd-live-meeting-join-btn:hover:not(:disabled) {
   filter: brightness(1.05);
   transform: translateY(-1px);
+}
+
+.dd-live-meeting-join-btn:disabled,
+.dd-live-meeting-join-btn.is-loading {
+  cursor: wait;
+  opacity: 0.92;
+}
+
+.dd-join-btn-spinner {
+  animation: dd-join-btn-spin 0.75s linear infinite;
+}
+
+@keyframes dd-join-btn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.dd-live-meetings-prepare-error {
+  color: #b91c1c;
 }
 
 .dd-live-meeting-join-icon {

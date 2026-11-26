@@ -5,7 +5,7 @@ import type {
   ApprovalMeetingRecord,
   MeetingDecisionRecord,
 } from '../../../types/approvalMeetings';
-import { getLiveMeetingViewId } from '../../../data/liveMeetingNavigation';
+import { LiveMeetingJoinDialog } from '../../liveKit/components/LiveMeetingJoinDialog';
 import './DocumentLiveMeetingsPanel.css';
 
 type MeetingBundle = {
@@ -16,7 +16,22 @@ type MeetingBundle = {
 interface DocumentLiveMeetingsPanelProps {
   documentId: string;
   canJoin: boolean;
-  onJoinMeeting: (navId: string) => void;
+}
+
+function JoinButtonSpinner() {
+  return (
+    <svg
+      className="dd-join-btn-spinner"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" strokeOpacity="0.35" />
+      <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
 }
 
 function formatWhen(meeting: ApprovalMeetingRecord): string {
@@ -78,11 +93,33 @@ function LiveMeetingsSectionHeader() {
 export function DocumentLiveMeetingsPanel({
   documentId,
   canJoin,
-  onJoinMeeting,
 }: DocumentLiveMeetingsPanelProps) {
   const [bundles, setBundles] = useState<MeetingBundle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [prepareJoinId, setPrepareJoinId] = useState<string | null>(null);
+  const [prepareError, setPrepareError] = useState<string | null>(null);
+  const [joinDialog, setJoinDialog] = useState<{
+    meetingId: string;
+    meeting: ApprovalMeetingRecord;
+  } | null>(null);
+
+  const handlePrepareJoin = async (meeting: ApprovalMeetingRecord) => {
+    setPrepareError(null);
+    setPrepareJoinId(meeting.id);
+    try {
+      const bundle = await approvalMeetingsApi.getMeeting(meeting.id);
+      if (!bundle.authorization.canAccess) {
+        setPrepareError('You are not allowed to join this meeting.');
+        return;
+      }
+      setJoinDialog({ meetingId: meeting.id, meeting: bundle.meeting });
+    } catch (err) {
+      setPrepareError(err instanceof Error ? err.message : 'Could not open meeting');
+    } finally {
+      setPrepareJoinId(null);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -119,6 +156,11 @@ export function DocumentLiveMeetingsPanel({
   return (
     <section className="dd-live-meetings" aria-label="Daros Live meetings">
       <LiveMeetingsSectionHeader />
+      {prepareError ? (
+        <p className="dd-live-meetings-muted dd-live-meetings-prepare-error" role="alert">
+          {prepareError}
+        </p>
+      ) : null}
       <ul className="dd-live-meetings-list">
         {bundles.map(({ meeting, decision }) => {
           const decisionStatus = decision?.status ?? 'pending';
@@ -167,16 +209,22 @@ export function DocumentLiveMeetingsPanel({
                 {showJoin ? (
                   <button
                     type="button"
-                    className="dd-live-meeting-join-btn"
-                    onClick={() => onJoinMeeting(getLiveMeetingViewId(meeting.id))}
+                    className={`dd-live-meeting-join-btn${prepareJoinId === meeting.id ? ' is-loading' : ''}`}
+                    disabled={prepareJoinId === meeting.id}
+                    aria-busy={prepareJoinId === meeting.id}
+                    onClick={() => void handlePrepareJoin(meeting)}
                   >
-                    <span className="dd-live-meeting-join-icon" aria-hidden="true">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <rect x="3" y="5" width="14" height="14" rx="2" />
-                        <path d="M17 9l4-2v10l-4-2" />
-                      </svg>
-                    </span>
-                    Join meeting
+                    {prepareJoinId === meeting.id ? (
+                      <JoinButtonSpinner />
+                    ) : (
+                      <span className="dd-live-meeting-join-icon" aria-hidden="true">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <rect x="3" y="5" width="14" height="14" rx="2" />
+                          <path d="M17 9l4-2v10l-4-2" />
+                        </svg>
+                      </span>
+                    )}
+                    {prepareJoinId === meeting.id ? 'Opening…' : 'Join meeting'}
                   </button>
                 ) : null}
                 <button
@@ -197,6 +245,14 @@ export function DocumentLiveMeetingsPanel({
           );
         })}
       </ul>
+
+      {joinDialog ? (
+        <LiveMeetingJoinDialog
+          meetingId={joinDialog.meetingId}
+          initialMeeting={joinDialog.meeting}
+          onClose={() => setJoinDialog(null)}
+        />
+      ) : null}
     </section>
   );
 }

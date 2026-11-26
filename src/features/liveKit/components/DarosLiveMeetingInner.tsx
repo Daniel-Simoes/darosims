@@ -36,7 +36,9 @@ export function DarosLiveMeetingInner({ meeting, onLeave }: DarosLiveMeetingInne
   const { document: docRecord, fileUrl, loading, error } = useMeetingDocumentPreview(meeting.documentId);
   const decisionState = useLiveMeetingDecisionState(meeting.id);
   const documentSession = useLiveMeetingDocumentSession(meeting, docRecord, fileUrl);
-  const isPresenting = Boolean(documentSession.syncEnabled && documentSession.canControl);
+  const isHost = Boolean(
+    documentSession.syncEnabled && documentSession.canControl && decisionState.role === 'author',
+  );
 
   const toggleFullscreen = useCallback(() => {
     const root = window.document.querySelector('.dl-meeting-viewport');
@@ -54,7 +56,7 @@ export function DarosLiveMeetingInner({ meeting, onLeave }: DarosLiveMeetingInne
         document={docRecord}
         connectionState={formatConnectionState(connectionState)}
         onToggleFullscreen={toggleFullscreen}
-        isPresenting={isPresenting}
+        isHost={isHost}
         workflowSlot={
           <DarosLiveMeetingDecisionBar
             variant="header"
@@ -62,12 +64,18 @@ export function DarosLiveMeetingInner({ meeting, onLeave }: DarosLiveMeetingInne
             loading={decisionState.loading}
             actionBusy={decisionState.actionBusy}
             error={decisionState.error}
-            canMarkReviewed={decisionState.canMarkReviewed}
-            canApprove={decisionState.canApprove}
-            canReject={decisionState.canReject}
-            onMarkReviewed={decisionState.runReview}
-            onApprove={decisionState.runApprove}
-            onReject={decisionState.runReject}
+            canApproveReview={decisionState.canApproveReview}
+            canRejectReview={decisionState.canRejectReview}
+            canApproveDocument={decisionState.canApproveDocument}
+            canRejectDocument={decisionState.canRejectDocument}
+            showAuthorDocument={decisionState.showAuthorDocument}
+            canFinishCycle={decisionState.canFinishCycle}
+            onApproveReview={decisionState.runReview}
+            onRejectReview={decisionState.runRejectReview}
+            onApproveDocument={decisionState.runApprove}
+            onRejectDocument={decisionState.runReject}
+            onAuthorDocument={decisionState.focusDocumentPane}
+            onFinishCycle={decisionState.runFinishCycle}
           />
         }
       />

@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RoomEvent } from 'livekit-client';
-import { useLocalParticipant, useRoomContext } from '@livekit/components-react';
+import { useLocalParticipant, useParticipants, useRoomContext } from '@livekit/components-react';
 import { approvalMeetingsApi } from '../../../lib/api/approvalMeetings';
+import { api } from '../../../lib/api';
 import type { ApprovalMeetingRecord, MeetingDecisionRecord } from '../../../types/approvalMeetings';
 import { parseLiveKitParticipantMetadata } from '../utils/participantRole';
 import {
@@ -9,25 +10,16 @@ import {
   encodeDecisionBroadcast,
   parseDecisionBroadcast,
 } from '../documentViewerSync/decisionSync';
-
-function decisionLabel(status: MeetingDecisionRecord['status'] | undefined): string {
-  switch (status) {
-    case 'pending':
-      return 'Awaiting reviewer';
-    case 'reviewed':
-      return 'Awaiting approver';
-    case 'approved':
-      return 'Approved';
-    case 'rejected':
-      return 'Rejected';
-    default:
-      return 'Decision pending';
-  }
-}
+import {
+  buildLiveWorkflowStatusLabel,
+  getConnectedWorkflowRoles,
+  missingWorkflowRoles,
+} from '../utils/liveMeetingWorkflowUi';
 
 export function useLiveMeetingDecisionState(meetingId: string) {
   const room = useRoomContext();
   const { localParticipant } = useLocalParticipant();
+  const participants = useParticipants();
   const role = parseLiveKitParticipantMetadata(localParticipant?.metadata).role;
 
   const [meeting, setMeeting] = useState<ApprovalMeetingRecord | null>(null);
@@ -36,6 +28,10 @@ export function useLiveMeetingDecisionState(meetingId: string) {
   const [actionBusy, setActionBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const broadcastSeq = useRef(0);
+
+  const connectedRoles = useMemo(() => getConnectedWorkflowRoles(participants), [participants]);
+  const missingRoles = useMemo(() => missingWorkflowRoles(connectedRoles), [connectedRoles]);
+  const allParticipantsPresent = missingRoles.length === 0;
 
   const refresh = useCallback(async () => {
     const bundle = await approvalMeetingsApi.getMeeting(meetingId);
@@ -158,11 +154,76 @@ export function useLiveMeetingDecisionState(meetingId: string) {
     [meetingId, publishDecisionBroadcast],
   );
 
-  const canMarkReviewed =
-    role === 'reviewer' && meeting?.status === 'in_progress' && decision?.status === 'pending';
-  const canApprove =
-    role === 'approver' && meeting?.status === 'in_progress' && decision?.status === 'reviewed';
-  const canReject = canApprove;
+  const runRejectReview = useCallback(
+    async (reason: string) => {
+      if (!meeting) return;
+      setActionBusy(true);
+      setError(null);
+      try {
+        await api.rejectDocumentForApproval(meeting.documentId, reason);
+        await refresh();
+        publishDecisionBroadcast('rejected');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not reject review');
+        throw err;
+      } finally {
+        setActionBusy(false);
+      }
+    },
+    [meeting, publishDecisionBroadcast, refresh],
+  );
+
+  const runFinishCycle = useCallback(async () => {
+    setActionBusy(true);
+    setError(null);
+    try {
+      const bundle = await refresh();
+      if (bundle.meeting.status === 'in_progress') {
+        const result = await approvalMeetingsApi.endMeeting(meetingId);
+        setMeeting(result.meeting);
+      }
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not finish cycle');
+      throw err;
+    } finally {
+      setActionBusy(false);
+    }
+  }, [meetingId, refresh]);
+
+  const focusDocumentPane = useCallback(() => {
+    const pane = window.document.querySelector('.dl-document-pane');
+    if (pane instanceof HTMLElement) {
+      pane.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      pane.focus({ preventScroll: true });
+    }
+  }, []);
+
+  const meetingLive = meeting?.status === 'in_progress';
+  const showWorkflowActions = allParticipantsPresent && meetingLive;
+
+  const statusLabel = buildLiveWorkflowStatusLabel({
+    loading,
+    decision,
+    allPresent: allParticipantsPresent,
+    missing: missingRoles,
+  });
+
+  const canApproveReview =
+    showWorkflowActions && role === 'reviewer' && decision?.status === 'pending';
+  const canRejectReview = canApproveReview;
+
+  const canApproveDocument =
+    showWorkflowActions && role === 'approver' && decision?.status === 'reviewed';
+  const canRejectDocument = canApproveDocument;
+
+  const showAuthorDocument =
+    showWorkflowActions &&
+    role === 'author' &&
+    (decision?.status === 'pending' || decision?.status === 'reviewed');
+
+  const canFinishCycle =
+    allParticipantsPresent && role === 'author' && decision?.status === 'approved';
 
   return {
     meeting,
@@ -170,14 +231,22 @@ export function useLiveMeetingDecisionState(meetingId: string) {
     loading,
     actionBusy,
     error,
-    statusLabel: decisionLabel(decision?.status),
+    statusLabel,
     role,
-    canMarkReviewed,
-    canApprove,
-    canReject,
+    allParticipantsPresent,
+    missingRoles,
+    canApproveReview,
+    canRejectReview,
+    canApproveDocument,
+    canRejectDocument,
+    showAuthorDocument,
+    canFinishCycle,
     runReview,
     runApprove,
     runReject,
+    runRejectReview,
+    runFinishCycle,
+    focusDocumentPane,
     refresh,
   };
 }

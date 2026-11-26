@@ -1,0 +1,141 @@
+.dl-join-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+}
+
+.dl-join-dialog {
+  width: min(440px, 100%);
+  padding: 24px 22px 20px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.15);
+}
+
+.dl-join-dialog-title {
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.dl-join-dialog-meeting-name {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.35;
+}
+
+.dl-join-dialog-schedule {
+  margin: 0 0 20px;
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.dl-join-dialog-schedule-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+
+.dl-join-dialog-timezone {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.dl-join-dialog-message {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.dl-join-dialog-inline-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dl-join-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dl-join-dialog-btn {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 10px 18px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+}
+
+.dl-join-dialog-btn:disabled {
+  opacity: 0.85;
+  cursor: wait;
+}
+
+.dl-join-dialog-btn-primary {
+  background: linear-gradient(145deg, #3b82f6, #2563eb);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+}
+
+.dl-join-dialog-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.dl-join-dialog-btn-outline {
+  background: #fff;
+  border-color: #e2e8f0;
+  color: #334155;
+}
+
+.dl-join-dialog-btn-outline:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
+.dl-join-dialog-btn-spinner {
+  animation: dl-join-dialog-spin 0.75s linear infinite;
+}
+
+@keyframes dl-join-dialog-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.dl-join-dialog-error {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #b91c1c;
+  line-height: 1.45;
+}
+
+.dl-join-dialog-warn {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #92400e;
+  line-height: 1.45;
+}

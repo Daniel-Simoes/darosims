@@ -7,7 +7,8 @@ interface DarosLiveMeetingHeaderProps {
   connectionState: string;
   onToggleFullscreen: () => void;
   workflowSlot?: ReactNode;
-  isPresenting?: boolean;
+  /** Document author is presenting the document in the live session. */
+  isHost?: boolean;
 }
 
 function formatDocumentCreated(iso: string | undefined): string {
@@ -26,7 +27,7 @@ export function DarosLiveMeetingHeader({
   connectionState,
   onToggleFullscreen,
   workflowSlot,
-  isPresenting = false,
+  isHost = false,
 }: DarosLiveMeetingHeaderProps) {
   const duration = useMeetingDurationFromFirstJoin();
   const live = connectionState === 'Connected';
@@ -51,10 +52,10 @@ export function DarosLiveMeetingHeader({
       </div>
 
       <div className="dl-meeting-header-center" aria-live="polite">
-        {isPresenting ? (
+        {isHost ? (
           <span className="dl-presenting-badge-header">
             <span className="dl-presenting-rec-dot" aria-hidden="true" />
-            You are presenting
+            You are the host
           </span>
         ) : null}
       </div>
