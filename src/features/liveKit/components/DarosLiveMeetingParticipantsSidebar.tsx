@@ -40,17 +40,34 @@ function ParticipantRow({ participant, roomState }: { participant: Participant; 
   const meta = parseLiveKitParticipantMetadata(participant.metadata);
   const roleLabel = formatParticipantRole(meta.role);
   const connection = participantConnectionLabel(participant, roomState);
+  const displayName = participant.name || participant.identity;
+  const micOff = !participant.isMicrophoneEnabled;
 
   return (
     <div className="dl-participant-row">
       <div className="dl-participant-tile-wrap">
         <ParticipantVideo participant={participant} />
-      </div>
-      <div className="dl-participant-meta">
-        <span className="dl-participant-name">{participant.name || participant.identity}</span>
-        <span className="dl-participant-role">{roleLabel}</span>
-        <span className="dl-participant-connection">{connection}</span>
-        <ConnectionQualityIndicator participant={participant} className="dl-connection-quality" />
+        <div className="dl-participant-overlay">
+          <span className="dl-participant-overlay-name">
+            <span className="dl-participant-overlay-dot" aria-hidden="true" />
+            {displayName}
+          </span>
+          <div className="dl-participant-overlay-icons">
+            {micOff ? (
+              <span className="dl-participant-overlay-icon" title="Microphone off" aria-label="Microphone off">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                  <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V5a3 3 0 0 0-5.94-.6" />
+                  <path d="M17 16.95A7 7 0 0 1 5 12v-2M12 18v4M8 22h8" />
+                </svg>
+              </span>
+            ) : null}
+            <ConnectionQualityIndicator participant={participant} className="dl-connection-quality" />
+          </div>
+        </div>
+        <span className="dl-participant-sr-only">
+          {roleLabel} · {connection}
+        </span>
       </div>
     </div>
   );
@@ -62,10 +79,6 @@ export function DarosLiveMeetingParticipantsSidebar() {
 
   return (
     <aside className="dl-participants-sidebar" aria-label="Participants">
-      <div className="dl-participants-head">
-        <h2 className="dl-participants-title">Participants</h2>
-        <span className="dl-participants-count">{participants.length}</span>
-      </div>
       <div className="dl-participants-list">
         {participants.map((participant) => (
           <ParticipantRow key={participant.identity} participant={participant} roomState={roomState} />

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ConfirmDialog } from '../../../components/dialogs/ConfirmDialog';
 
 interface DarosLiveMeetingDecisionBarProps {
+  variant?: 'header' | 'footer';
   statusLabel: string;
   loading: boolean;
   actionBusy: boolean;
@@ -15,6 +16,7 @@ interface DarosLiveMeetingDecisionBarProps {
 }
 
 export function DarosLiveMeetingDecisionBar({
+  variant = 'footer',
   statusLabel,
   loading,
   actionBusy,
@@ -31,7 +33,10 @@ export function DarosLiveMeetingDecisionBar({
   const [confirmApproveOpen, setConfirmApproveOpen] = useState(false);
 
   return (
-    <section className="dl-decision-bar" aria-label="Live approval decisions">
+    <section
+      className={`dl-decision-bar${variant === 'header' ? ' dl-decision-bar-header' : ''}`}
+      aria-label="Live approval decisions"
+    >
       <div className="dl-decision-status">
         <span className="dl-decision-status-label">Workflow</span>
         <strong>{loading ? 'Loading…' : statusLabel}</strong>

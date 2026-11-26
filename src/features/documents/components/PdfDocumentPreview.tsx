@@ -17,6 +17,9 @@ interface PdfDocumentPreviewProps {
   readOnlyNavigation?: boolean;
   /** Hides thumbnail strip (e.g. Daros Live follow mode). */
   hideThumbnailSidebar?: boolean;
+  /** Hides built-in page toolbar (e.g. when rendered in Daros Live pane head). */
+  hidePageToolbar?: boolean;
+  onPageCountChange?: (count: number) => void;
   className?: string;
 }
 
@@ -62,6 +65,8 @@ export function PdfDocumentPreview({
   onPageIndexChange,
   readOnlyNavigation = false,
   hideThumbnailSidebar = false,
+  hidePageToolbar = false,
+  onPageCountChange,
   className = '',
 }: PdfDocumentPreviewProps) {
   const mainCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -99,6 +104,10 @@ export function PdfDocumentPreview({
       }
     }
   }, [pageCount, pageIndex, onPageIndexChange]);
+
+  useEffect(() => {
+    onPageCountChange?.(pageCount);
+  }, [pageCount, onPageCountChange]);
 
   useEffect(() => {
     const node = viewportRef.current;
@@ -233,33 +242,35 @@ export function PdfDocumentPreview({
       ) : null}
 
       <div className="doc-word-pages-main">
-        <div className="doc-word-page-toolbar">
-          {!readOnlyNavigation && pageCount > 1 ? (
-            <div className="doc-pdf-page-nav">
-              <button
-                type="button"
-                className="doc-pdf-page-nav-btn"
-                disabled={activePage <= 0}
-                onClick={() => goToPage(activePage - 1)}
-                aria-label="Previous page"
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                className="doc-pdf-page-nav-btn"
-                disabled={activePage >= pageCount - 1}
-                onClick={() => goToPage(activePage + 1)}
-                aria-label="Next page"
-              >
-                Next
-              </button>
-            </div>
-          ) : null}
-          <span>
-            Page {activePage + 1} of {pageCount}
-          </span>
-        </div>
+        {!hidePageToolbar ? (
+          <div className="doc-word-page-toolbar">
+            {!readOnlyNavigation && pageCount > 1 ? (
+              <div className="doc-pdf-page-nav">
+                <button
+                  type="button"
+                  className="doc-pdf-page-nav-btn"
+                  disabled={activePage <= 0}
+                  onClick={() => goToPage(activePage - 1)}
+                  aria-label="Previous page"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  className="doc-pdf-page-nav-btn"
+                  disabled={activePage >= pageCount - 1}
+                  onClick={() => goToPage(activePage + 1)}
+                  aria-label="Next page"
+                >
+                  Next
+                </button>
+              </div>
+            ) : null}
+            <span>
+              Page {activePage + 1} of {pageCount}
+            </span>
+          </div>
+        ) : null}
         <div ref={viewportRef} className="doc-word-page-viewport doc-pdf-page-viewport">
           <article className="doc-word-page-sheet doc-pdf-page-sheet">
             <canvas ref={mainCanvasRef} className="doc-pdf-main-canvas" />
